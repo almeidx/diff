@@ -6,9 +6,9 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({
-			routes: {
-				include: ['/*'],
-				exclude: ['<all>']
+			platformProxy: {
+				environment: undefined,
+				persist: './wrangler-local-state'
 			}
 		})
 	}
