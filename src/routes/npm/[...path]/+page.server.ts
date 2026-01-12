@@ -3,7 +3,10 @@ import type { PageServerLoad } from './$types';
 import { npmRegistry } from '$lib/server/registries/npm';
 import { fetchAndExtract } from '$lib/server/archive/extractor';
 import { computeDiff } from '$lib/server/diff/engine';
+import { getCached } from '$lib/server/cache';
 import type { DiffResult } from '$lib/types/index.js';
+
+const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
 interface ParsedPath {
 	packageName: string;
@@ -70,23 +73,22 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	const [fromUrl, toUrl] = await Promise.all([
-		npmRegistry.getDownloadUrl(packageName, fromVersion),
-		npmRegistry.getDownloadUrl(packageName, toVersion)
-	]);
+	const diff = await getCached(
+		`diff:npm:${packageName}:${fromVersion}:${toVersion}`,
+		async () => {
+			const [fromUrl, toUrl] = await Promise.all([
+				npmRegistry.getDownloadUrl(packageName, fromVersion),
+				npmRegistry.getDownloadUrl(packageName, toVersion)
+			]);
 
-	const [fromTree, toTree] = await Promise.all([
-		fetchAndExtract(fromUrl, 'tgz'),
-		fetchAndExtract(toUrl, 'tgz')
-	]);
+			const [fromTree, toTree] = await Promise.all([
+				fetchAndExtract(fromUrl, 'tgz'),
+				fetchAndExtract(toUrl, 'tgz')
+			]);
 
-	const diff: DiffResult = computeDiff(
-		fromTree,
-		toTree,
-		'npm',
-		packageName,
-		fromVersion,
-		toVersion
+			return computeDiff(fromTree, toTree, 'npm', packageName, fromVersion, toVersion);
+		},
+		{ ttlSeconds: DIFF_CACHE_TTL }
 	);
 
 	return {

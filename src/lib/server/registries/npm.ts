@@ -1,32 +1,33 @@
 import type { Registry, NpmPackageMetadata } from './types.js';
+import { getCached } from '../cache.js';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
+const METADATA_TTL = 300; // 5 minutes
 
 export class NpmRegistry implements Registry {
-	private metadataCache = new Map<string, NpmPackageMetadata>();
-
 	private async getMetadata(packageName: string): Promise<NpmPackageMetadata> {
-		const cached = this.metadataCache.get(packageName);
-		if (cached) return cached;
+		return getCached(
+			`npm:metadata:${packageName}`,
+			async () => {
+				const encodedName = packageName.startsWith('@')
+					? `@${encodeURIComponent(packageName.slice(1))}`
+					: encodeURIComponent(packageName);
 
-		const encodedName = packageName.startsWith('@')
-			? `@${encodeURIComponent(packageName.slice(1))}`
-			: encodeURIComponent(packageName);
+				const response = await fetch(`${NPM_REGISTRY}/${encodedName}`, {
+					headers: { Accept: 'application/json' }
+				});
 
-		const response = await fetch(`${NPM_REGISTRY}/${encodedName}`, {
-			headers: { Accept: 'application/json' }
-		});
+				if (!response.ok) {
+					if (response.status === 404) {
+						throw new Error(`Package "${packageName}" not found on npm`);
+					}
+					throw new Error(`Failed to fetch npm package: ${response.statusText}`);
+				}
 
-		if (!response.ok) {
-			if (response.status === 404) {
-				throw new Error(`Package "${packageName}" not found on npm`);
-			}
-			throw new Error(`Failed to fetch npm package: ${response.statusText}`);
-		}
-
-		const metadata = (await response.json()) as NpmPackageMetadata;
-		this.metadataCache.set(packageName, metadata);
-		return metadata;
+				return (await response.json()) as NpmPackageMetadata;
+			},
+			{ ttlSeconds: METADATA_TTL }
+		);
 	}
 
 	async getVersions(packageName: string): Promise<string[]> {

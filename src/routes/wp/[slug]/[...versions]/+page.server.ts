@@ -3,7 +3,10 @@ import type { PageServerLoad } from './$types';
 import { wordpressRegistry } from '$lib/server/registries/wordpress';
 import { fetchAndExtract } from '$lib/server/archive/extractor';
 import { computeDiff } from '$lib/server/diff/engine';
+import { getCached } from '$lib/server/cache';
 import type { DiffResult } from '$lib/types/index.js';
+
+const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
 function parseVersions(versionsPath: string): { fromVersion: string; toVersion: string } | null {
 	const match = versionsPath.match(/^(.+?)\.\.\.(.+)$/);
@@ -49,17 +52,23 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	const [fromUrl, toUrl] = await Promise.all([
-		wordpressRegistry.getDownloadUrl(slug, fromVersion),
-		wordpressRegistry.getDownloadUrl(slug, toVersion)
-	]);
+	const diff = await getCached(
+		`diff:wp:${slug}:${fromVersion}:${toVersion}`,
+		async () => {
+			const [fromUrl, toUrl] = await Promise.all([
+				wordpressRegistry.getDownloadUrl(slug, fromVersion),
+				wordpressRegistry.getDownloadUrl(slug, toVersion)
+			]);
 
-	const [fromTree, toTree] = await Promise.all([
-		fetchAndExtract(fromUrl, 'zip'),
-		fetchAndExtract(toUrl, 'zip')
-	]);
+			const [fromTree, toTree] = await Promise.all([
+				fetchAndExtract(fromUrl, 'zip'),
+				fetchAndExtract(toUrl, 'zip')
+			]);
 
-	const diff: DiffResult = computeDiff(fromTree, toTree, 'wp', slug, fromVersion, toVersion);
+			return computeDiff(fromTree, toTree, 'wp', slug, fromVersion, toVersion);
+		},
+		{ ttlSeconds: DIFF_CACHE_TTL }
+	);
 
 	return {
 		diff,
