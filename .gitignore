@@ -1,0 +1,6 @@
+.claude/
+.svelte-kit/
+.wrangler/
+node_modules/
+*.md
+!README.md

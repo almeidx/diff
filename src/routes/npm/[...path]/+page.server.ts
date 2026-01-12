@@ -1,0 +1,99 @@
+import { error } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { npmRegistry } from '$lib/server/registries/npm';
+import { fetchAndExtract } from '$lib/server/archive/extractor';
+import { computeDiff } from '$lib/server/diff/engine';
+import type { DiffResult } from '$lib/types/index.js';
+
+interface ParsedPath {
+	packageName: string;
+	fromVersion: string;
+	toVersion: string;
+}
+
+function parsePath(path: string): ParsedPath | null {
+	const parts = path.split('/');
+
+	let packageName: string;
+	let versionPart: string;
+
+	if (parts[0]?.startsWith('@')) {
+		if (parts.length < 3) return null;
+		packageName = `${parts[0]}/${parts[1]}`;
+		versionPart = parts.slice(2).join('/');
+	} else {
+		if (parts.length < 2) return null;
+		packageName = parts[0];
+		versionPart = parts.slice(1).join('/');
+	}
+
+	const versionMatch = versionPart.match(/^(.+?)\.\.\.(.+)$/);
+	if (!versionMatch) return null;
+
+	return {
+		packageName,
+		fromVersion: versionMatch[1],
+		toVersion: versionMatch[2]
+	};
+}
+
+export const load: PageServerLoad = async ({ params }) => {
+	const parsed = parsePath(params.path);
+
+	if (!parsed) {
+		error(400, 'Invalid URL format. Expected: /npm/package/version1...version2');
+	}
+
+	const { packageName, fromVersion, toVersion } = parsed;
+
+	let versions: string[];
+	try {
+		versions = await npmRegistry.getVersions(packageName);
+	} catch (e) {
+		error(404, `Package "${packageName}" not found on npm`);
+	}
+
+	const fromValid = await npmRegistry.validateVersion(packageName, fromVersion);
+	const toValid = await npmRegistry.validateVersion(packageName, toVersion);
+
+	if (!fromValid || !toValid) {
+		return {
+			error: {
+				type: 'invalid_version' as const,
+				message: `Invalid version${!fromValid && !toValid ? 's' : ''}: ${!fromValid ? fromVersion : ''}${!fromValid && !toValid ? ', ' : ''}${!toValid ? toVersion : ''}`,
+				availableVersions: versions
+			},
+			packageName,
+			fromVersion,
+			toVersion,
+			versions
+		};
+	}
+
+	const [fromUrl, toUrl] = await Promise.all([
+		npmRegistry.getDownloadUrl(packageName, fromVersion),
+		npmRegistry.getDownloadUrl(packageName, toVersion)
+	]);
+
+	const [fromTree, toTree] = await Promise.all([
+		fetchAndExtract(fromUrl, 'tgz'),
+		fetchAndExtract(toUrl, 'tgz')
+	]);
+
+	const diff: DiffResult = computeDiff(
+		fromTree,
+		toTree,
+		'npm',
+		packageName,
+		fromVersion,
+		toVersion
+	);
+
+	return {
+		diff,
+		packageName,
+		fromVersion,
+		toVersion,
+		versions
+	};
+};
