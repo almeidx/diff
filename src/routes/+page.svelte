@@ -212,31 +212,7 @@
 				{/if}
 			</button>
 		</form>
-
-		<div class="examples">
-			<h2>Examples</h2>
-			<div class="example-list">
-				<a href="/npm/lodash/4.17.20...4.17.21" class="example">
-					<span class="example-type">npm</span>
-					<span class="example-name">lodash 4.17.20 → 4.17.21</span>
-				</a>
-				<a href="/npm/@types/node/18.0.0...20.0.0" class="example">
-					<span class="example-type">npm</span>
-					<span class="example-name">@types/node 18.0.0 → 20.0.0</span>
-				</a>
-				<a href="/wp/akismet/5.0...5.1" class="example">
-					<span class="example-type">wp</span>
-					<span class="example-name">akismet 5.0 → 5.1</span>
-				</a>
-			</div>
-		</div>
 	</main>
-
-	<footer class="footer">
-		<p>
-			Keyboard shortcuts: <kbd>j</kbd>/<kbd>k</kbd> navigate files, <kbd>n</kbd>/<kbd>p</kbd> navigate hunks
-		</p>
-	</footer>
 </div>
 
 <style>
@@ -451,78 +427,6 @@
 		to {
 			transform: rotate(360deg);
 		}
-	}
-
-	.examples {
-		margin-top: 48px;
-		width: 100%;
-	}
-
-	.examples h2 {
-		font-size: 14px;
-		font-weight: 500;
-		color: var(--text-secondary);
-		margin-bottom: 12px;
-	}
-
-	.example-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.example {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 16px;
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-		color: var(--text-primary);
-		text-decoration: none;
-		transition: all 0.15s ease;
-	}
-
-	.example:hover {
-		border-color: var(--link-color);
-		background: var(--bg-secondary);
-	}
-
-	.example-type {
-		padding: 2px 8px;
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-		font-size: 11px;
-		font-weight: 500;
-		color: var(--text-muted);
-		text-transform: uppercase;
-	}
-
-	.example-name {
-		font-family: ui-monospace, monospace;
-		font-size: 13px;
-	}
-
-	.footer {
-		padding: 16px 24px;
-		border-top: 1px solid var(--border-color);
-		text-align: center;
-	}
-
-	.footer p {
-		font-size: 12px;
-		color: var(--text-muted);
-	}
-
-	.footer kbd {
-		display: inline-block;
-		padding: 2px 6px;
-		margin: 0 2px;
-		background: var(--bg-tertiary);
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		font-family: ui-monospace, monospace;
-		font-size: 11px;
 	}
 
 	@media (max-width: 480px) {

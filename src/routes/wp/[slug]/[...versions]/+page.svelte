@@ -6,7 +6,6 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import ViewToggle from '$lib/components/ViewToggle.svelte';
 	import VersionSelector from '$lib/components/VersionSelector.svelte';
-	import { setFiles } from '$lib/stores/keyboard';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import type { DiffFile } from '$lib/types/index.js';
@@ -16,12 +15,6 @@
 	let selectedPath = $state<string | undefined>(undefined);
 
 	let isNavigating = $derived(!!$navigating);
-
-	$effect(() => {
-		if (data.diff) {
-			setFiles(data.diff.files);
-		}
-	});
 
 	function handleFileSelect(file: DiffFile) {
 		selectedPath = file.path;

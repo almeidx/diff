@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import { theme } from '$lib/stores/ui';
-	import { nextFile, prevFile, nextHunk, prevHunk } from '$lib/stores/keyboard';
 	import { browser } from '$app/environment';
 
 	let { children } = $props();
@@ -23,38 +22,7 @@
 			localStorage.setItem('theme', $theme);
 		}
 	});
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (
-			event.target instanceof HTMLInputElement ||
-			event.target instanceof HTMLTextAreaElement ||
-			event.target instanceof HTMLSelectElement
-		) {
-			return;
-		}
-
-		switch (event.key) {
-			case 'j':
-				event.preventDefault();
-				nextFile();
-				break;
-			case 'k':
-				event.preventDefault();
-				prevFile();
-				break;
-			case 'n':
-				event.preventDefault();
-				nextHunk();
-				break;
-			case 'p':
-				event.preventDefault();
-				prevHunk();
-				break;
-		}
-	}
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 <div class="app">
 	{@render children()}
