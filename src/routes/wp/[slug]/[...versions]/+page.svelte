@@ -8,11 +8,14 @@
 	import VersionSelector from '$lib/components/VersionSelector.svelte';
 	import { setFiles } from '$lib/stores/keyboard';
 	import { goto } from '$app/navigation';
+	import { navigating } from '$app/stores';
 	import type { DiffFile } from '$lib/types/index.js';
 
 	let { data }: { data: PageData } = $props();
 
 	let selectedPath = $state<string | undefined>(undefined);
+
+	let isNavigating = $derived(!!$navigating);
 
 	$effect(() => {
 		if (data.diff) {
@@ -57,6 +60,8 @@
 			onchange={(v) => navigateToVersions(v, data.toVersion)}
 			label="From"
 			id="from-version"
+			disabledVersion={data.toVersion}
+			loading={isNavigating}
 		/>
 		<span class="version-arrow">→</span>
 		<VersionSelector
@@ -65,6 +70,8 @@
 			onchange={(v) => navigateToVersions(data.fromVersion, v)}
 			label="To"
 			id="to-version"
+			disabledVersion={data.fromVersion}
+			loading={isNavigating}
 		/>
 	</div>
 

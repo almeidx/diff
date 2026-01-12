@@ -5,9 +5,11 @@
 		onchange: (version: string) => void;
 		label: string;
 		id: string;
+		disabledVersion?: string;
+		loading?: boolean;
 	}
 
-	let { versions, value, onchange, label, id }: Props = $props();
+	let { versions, value, onchange, label, id, disabledVersion, loading = false }: Props = $props();
 
 	let search = $state('');
 	let isOpen = $state(false);
@@ -21,6 +23,7 @@
 	);
 
 	function selectVersion(version: string) {
+		if (version === disabledVersion) return;
 		onchange(version);
 		isOpen = false;
 		search = '';
@@ -52,9 +55,10 @@
 				bind:value={manualValue}
 				placeholder="Enter version..."
 				onkeydown={(e) => e.key === 'Enter' && handleManualSubmit()}
+				disabled={loading}
 			/>
-			<button type="button" onclick={handleManualSubmit}>OK</button>
-			<button type="button" class="cancel" onclick={() => (showManualInput = false)}>
+			<button type="button" onclick={handleManualSubmit} disabled={loading}>OK</button>
+			<button type="button" class="cancel" onclick={() => (showManualInput = false)} disabled={loading}>
 				Cancel
 			</button>
 		</div>
@@ -63,19 +67,28 @@
 			<button
 				type="button"
 				class="dropdown-trigger"
+				class:loading
 				{id}
-				onclick={() => (isOpen = !isOpen)}
+				onclick={() => !loading && (isOpen = !isOpen)}
 				aria-expanded={isOpen}
+				disabled={loading}
 			>
-				<span class="selected-value">{value || 'Select version'}</span>
-				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-					<path
-						d="M4.427 9.573l3.396-3.396a.25.25 0 01.354 0l3.396 3.396a.25.25 0 01-.177.427H4.604a.25.25 0 01-.177-.427z"
-					/>
-				</svg>
+				{#if loading}
+					<span class="loading-content">
+						<span class="spinner"></span>
+						<span class="selected-value">Loading...</span>
+					</span>
+				{:else}
+					<span class="selected-value">{value || 'Select version'}</span>
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+						<path
+							d="M4.427 9.573l3.396-3.396a.25.25 0 01.354 0l3.396 3.396a.25.25 0 01-.177.427H4.604a.25.25 0 01-.177-.427z"
+						/>
+					</svg>
+				{/if}
 			</button>
 
-			{#if isOpen}
+			{#if isOpen && !loading}
 				<div class="dropdown-menu">
 					<div class="search-container">
 						<input
@@ -92,9 +105,14 @@
 									type="button"
 									class="version-option"
 									class:selected={version === value}
+									class:disabled={version === disabledVersion}
 									onclick={() => selectVersion(version)}
+									disabled={version === disabledVersion}
 								>
 									{version}
+									{#if version === disabledVersion}
+										<span class="disabled-hint">(selected in other)</span>
+									{/if}
 								</button>
 							</li>
 						{/each}
@@ -154,8 +172,17 @@
 		text-align: left;
 	}
 
-	.dropdown-trigger:hover {
+	.dropdown-trigger:hover:not(:disabled) {
 		border-color: var(--text-muted);
+	}
+
+	.dropdown-trigger:disabled {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.dropdown-trigger.loading {
+		background: var(--bg-secondary);
 	}
 
 	.dropdown-trigger svg {
@@ -171,6 +198,27 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.loading-content {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid var(--border-color);
+		border-top-color: var(--link-color);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.dropdown-menu {
@@ -210,7 +258,9 @@
 	}
 
 	.version-option {
-		display: block;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		width: 100%;
 		padding: 8px 12px;
 		border: none;
@@ -220,13 +270,25 @@
 		cursor: pointer;
 	}
 
-	.version-option:hover {
+	.version-option:hover:not(:disabled) {
 		background: var(--bg-secondary);
 	}
 
 	.version-option.selected {
 		background: var(--bg-tertiary);
 		font-weight: 500;
+	}
+
+	.version-option.disabled,
+	.version-option:disabled {
+		color: var(--text-muted);
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+
+	.disabled-hint {
+		font-size: 11px;
+		color: var(--text-muted);
 	}
 
 	.more-indicator,
@@ -265,6 +327,11 @@
 		color: var(--text-primary);
 	}
 
+	.manual-input input:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
 	.manual-input button {
 		padding: 8px 16px;
 		border: 1px solid var(--border-color);
@@ -273,8 +340,13 @@
 		color: var(--text-primary);
 	}
 
-	.manual-input button:hover {
+	.manual-input button:hover:not(:disabled) {
 		background: var(--bg-tertiary);
+	}
+
+	.manual-input button:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 
 	.manual-input button.cancel {

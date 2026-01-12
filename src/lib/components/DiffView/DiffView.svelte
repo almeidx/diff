@@ -137,10 +137,11 @@
 
 	.collapse-toggle svg {
 		transition: transform 0.15s ease;
+		transform: rotate(90deg);
 	}
 
 	.collapse-toggle svg.collapsed {
-		transform: rotate(-90deg);
+		transform: rotate(0deg);
 	}
 
 	.file-path {

@@ -1,20 +1,30 @@
 import type { DiffFile, TreeNode, DiffStatus } from '$lib/types/index.js';
 
 export function buildFileTree(files: DiffFile[]): TreeNode[] {
-	const root: Map<string, TreeNode> = new Map();
+	const root: TreeNode = {
+		name: '',
+		path: '',
+		isDirectory: true,
+		children: []
+	};
 
 	for (const file of files) {
 		const parts = file.path.split('/');
-		let currentLevel = root;
-		let currentPath = '';
+		let current = root;
 
 		for (let i = 0; i < parts.length; i++) {
 			const part = parts[i];
-			currentPath = currentPath ? `${currentPath}/${part}` : part;
 			const isLast = i === parts.length - 1;
+			const currentPath = parts.slice(0, i + 1).join('/');
 
-			if (!currentLevel.has(part)) {
-				const node: TreeNode = {
+			if (!current.children) {
+				current.children = [];
+			}
+
+			let child = current.children.find((c) => c.name === part);
+
+			if (!child) {
+				child = {
 					name: part,
 					path: currentPath,
 					isDirectory: !isLast,
@@ -22,28 +32,16 @@ export function buildFileTree(files: DiffFile[]): TreeNode[] {
 					file: isLast ? file : undefined,
 					status: isLast ? file.status : undefined
 				};
-				currentLevel.set(part, node);
+				current.children.push(child);
 			}
 
-			const node = currentLevel.get(part)!;
-
 			if (!isLast) {
-				if (!node.children) {
-					node.children = [];
-				}
-
-				const childMap = new Map<string, TreeNode>();
-				for (const child of node.children) {
-					childMap.set(child.name, child);
-				}
-				currentLevel = childMap;
-
-				node.children = Array.from(childMap.values());
+				current = child;
 			}
 		}
 	}
 
-	return sortTreeNodes(Array.from(root.values()));
+	return sortTreeNodes(root.children || []);
 }
 
 function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
