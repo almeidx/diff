@@ -1,13 +1,59 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import VersionSelector from '$lib/components/VersionSelector.svelte';
 
 	let packageType = $state<'npm' | 'wp'>('npm');
 	let packageName = $state('');
 	let fromVersion = $state('');
 	let toVersion = $state('');
 	let isLoading = $state(false);
+	let isLoadingVersions = $state(false);
+	let versions = $state<string[]>([]);
 	let error = $state<string | null>(null);
+
+	$effect(() => {
+		packageType;
+		versions = [];
+		fromVersion = '';
+		toVersion = '';
+	});
+
+	async function loadVersions() {
+		if (!packageName.trim()) {
+			error = 'Please enter a package name';
+			return;
+		}
+
+		error = null;
+		isLoadingVersions = true;
+		versions = [];
+
+		try {
+			const response = await fetch(
+				`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`
+			);
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.message || 'Failed to fetch versions');
+			}
+
+			const data = await response.json();
+			versions = data.versions;
+
+			if (versions.length >= 2) {
+				toVersion = versions[0];
+				fromVersion = versions[1];
+			} else if (versions.length === 1) {
+				toVersion = versions[0];
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'Failed to fetch versions';
+		} finally {
+			isLoadingVersions = false;
+		}
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -81,38 +127,76 @@
 				</button>
 			</div>
 
-			<div class="form-group">
-				<label for="package-name">
-					{packageType === 'npm' ? 'Package name' : 'Plugin slug'}
-				</label>
-				<input
-					type="text"
-					id="package-name"
-					bind:value={packageName}
-					placeholder={packageType === 'npm' ? 'e.g. lodash, @types/node' : 'e.g. akismet, jetpack'}
-				/>
+			<div class="package-input-group">
+				<div class="form-group package-name-group">
+					<label for="package-name">
+						{packageType === 'npm' ? 'Package name' : 'Plugin slug'}
+					</label>
+					<input
+						type="text"
+						id="package-name"
+						bind:value={packageName}
+						placeholder={packageType === 'npm' ? 'e.g. lodash, @types/node' : 'e.g. akismet, jetpack'}
+						onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), loadVersions())}
+					/>
+				</div>
+				<button
+					type="button"
+					class="load-versions-btn"
+					onclick={loadVersions}
+					disabled={isLoadingVersions || !packageName.trim()}
+				>
+					{#if isLoadingVersions}
+						<span class="spinner"></span>
+						Loading...
+					{:else}
+						Load versions
+					{/if}
+				</button>
 			</div>
 
 			<div class="version-inputs">
-				<div class="form-group">
-					<label for="from-version">From version</label>
-					<input
-						type="text"
+				{#if versions.length > 0}
+					<VersionSelector
+						{versions}
+						value={fromVersion}
+						onchange={(v) => (fromVersion = v)}
+						label="From version"
 						id="from-version"
-						bind:value={fromVersion}
-						placeholder="e.g. 1.0.0"
+						disabledVersion={toVersion}
+						loading={isLoading}
 					/>
-				</div>
-				<span class="arrow">→</span>
-				<div class="form-group">
-					<label for="to-version">To version</label>
-					<input
-						type="text"
+					<span class="arrow">→</span>
+					<VersionSelector
+						{versions}
+						value={toVersion}
+						onchange={(v) => (toVersion = v)}
+						label="To version"
 						id="to-version"
-						bind:value={toVersion}
-						placeholder="e.g. 2.0.0"
+						disabledVersion={fromVersion}
+						loading={isLoading}
 					/>
-				</div>
+				{:else}
+					<div class="form-group">
+						<label for="from-version">From version</label>
+						<input
+							type="text"
+							id="from-version"
+							bind:value={fromVersion}
+							placeholder="e.g. 1.0.0"
+						/>
+					</div>
+					<span class="arrow">→</span>
+					<div class="form-group">
+						<label for="to-version">To version</label>
+						<input
+							type="text"
+							id="to-version"
+							bind:value={toVersion}
+							placeholder="e.g. 2.0.0"
+						/>
+					</div>
+				{/if}
 			</div>
 
 			{#if error}
@@ -242,6 +326,42 @@
 		color: var(--link-color);
 	}
 
+	.package-input-group {
+		display: flex;
+		gap: 12px;
+		align-items: flex-end;
+	}
+
+	.package-name-group {
+		flex: 1;
+	}
+
+	.load-versions-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 10px 16px;
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		font-size: 14px;
+		font-weight: 500;
+		white-space: nowrap;
+		transition: all 0.15s ease;
+	}
+
+	.load-versions-btn:hover:not(:disabled) {
+		border-color: var(--link-color);
+		color: var(--link-color);
+	}
+
+	.load-versions-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
 	.form-group {
 		display: flex;
 		flex-direction: column;
@@ -274,7 +394,8 @@
 		gap: 12px;
 	}
 
-	.version-inputs .form-group {
+	.version-inputs .form-group,
+	.version-inputs :global(.version-selector) {
 		flex: 1;
 	}
 
@@ -415,6 +536,11 @@
 
 		.type-selector {
 			flex-direction: column;
+		}
+
+		.package-input-group {
+			flex-direction: column;
+			align-items: stretch;
 		}
 	}
 </style>
