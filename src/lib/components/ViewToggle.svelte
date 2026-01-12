@@ -1,12 +1,30 @@
 <script lang="ts">
-	import { viewMode, type ViewMode } from '$lib/stores/ui';
+	import { viewMode, wordWrap, type ViewMode } from '$lib/stores/ui';
 
 	function setMode(mode: ViewMode) {
 		viewMode.set(mode);
 	}
+
+	function toggleWordWrap() {
+		wordWrap.update((v) => !v);
+	}
 </script>
 
-<div class="view-toggle" role="radiogroup" aria-label="Diff view mode">
+<div class="view-options">
+	<button
+		type="button"
+		class="option-btn"
+		class:active={$wordWrap}
+		onclick={toggleWordWrap}
+		aria-pressed={$wordWrap}
+		title="Toggle word wrap"
+	>
+		<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+			<path d="M2 4h12v1H2V4zm0 3h9v1H2V7zm0 3h5v1H2v-1zm9.5-1.5a2.5 2.5 0 010 5h-1v-1h1a1.5 1.5 0 000-3H9v2L6 9l3-2.5v2h2.5z"/>
+		</svg>
+		Wrap
+	</button>
+	<div class="view-toggle" role="radiogroup" aria-label="Diff view mode">
 	<button
 		type="button"
 		class="toggle-btn"
@@ -37,9 +55,41 @@
 		</svg>
 		Split
 	</button>
+	</div>
 </div>
 
 <style>
+	.view-options {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.option-btn {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		background: var(--bg-secondary);
+		color: var(--text-secondary);
+		font-size: 12px;
+		font-weight: 500;
+		transition: all 0.15s ease;
+	}
+
+	.option-btn:hover {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+	}
+
+	.option-btn.active {
+		border-color: var(--link-color);
+		background: color-mix(in srgb, var(--link-color) 10%, transparent);
+		color: var(--link-color);
+	}
+
 	.view-toggle {
 		display: flex;
 		border: 1px solid var(--border-color);

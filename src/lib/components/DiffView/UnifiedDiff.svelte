@@ -24,7 +24,7 @@
 		<colgroup>
 			<col class="line-num-col" />
 			<col class="line-num-col" />
-			<col class="content-col" />
+			<col />
 		</colgroup>
 		<tbody>
 			{#each hunks as hunk, hunkIndex (hunkIndex)}
@@ -49,17 +49,12 @@
 	}
 
 	.diff-table {
-		width: 100%;
+		min-width: 100%;
 		border-collapse: collapse;
-		table-layout: fixed;
 	}
 
 	.line-num-col {
 		width: 50px;
-	}
-
-	.content-col {
-		width: auto;
 	}
 
 	.hunk-header {

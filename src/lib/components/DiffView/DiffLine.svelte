@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffLine as DiffLineType } from '$lib/types/index.js';
+	import { wordWrap } from '$lib/stores/ui';
 
 	interface Props {
 		line: DiffLineType;
@@ -31,7 +32,7 @@
 	}
 </script>
 
-<tr class="diff-line {getLineClass(line.type)}">
+<tr class="diff-line {getLineClass(line.type)}" class:wrap={$wordWrap}>
 	<td class="line-num old-num">
 		{line.oldNumber ?? ''}
 	</td>
@@ -62,6 +63,15 @@
 		padding: 0 12px;
 		white-space: pre;
 		overflow: visible;
+	}
+
+	.wrap {
+		height: auto;
+	}
+
+	.wrap .line-content {
+		white-space: pre-wrap;
+		word-break: break-all;
 	}
 
 	.prefix {

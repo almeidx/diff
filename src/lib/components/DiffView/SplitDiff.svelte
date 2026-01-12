@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DiffHunk, DiffLine } from '$lib/types/index.js';
+	import { wordWrap } from '$lib/stores/ui';
 
 	interface Props {
 		hunks: DiffHunk[];
@@ -69,9 +70,9 @@
 	<table class="diff-table">
 		<colgroup>
 			<col class="line-num-col" />
-			<col class="content-col" />
+			<col />
 			<col class="line-num-col" />
-			<col class="content-col" />
+			<col />
 		</colgroup>
 		<tbody>
 			{#each hunks as hunk, hunkIndex (hunkIndex)}
@@ -81,7 +82,7 @@
 					</td>
 				</tr>
 				{#each splitLines(hunk) as splitLine, lineIndex (`${hunkIndex}-${lineIndex}`)}
-					<tr class="split-line">
+					<tr class="split-line" class:wrap={$wordWrap}>
 						<td
 							class="line-num"
 							class:line-delete={splitLine.left?.type === 'delete'}
@@ -121,17 +122,12 @@
 	}
 
 	.diff-table {
-		width: 100%;
+		min-width: 100%;
 		border-collapse: collapse;
-		table-layout: fixed;
 	}
 
 	.line-num-col {
 		width: 50px;
-	}
-
-	.content-col {
-		width: calc(50% - 50px);
 	}
 
 	.hunk-header {
@@ -165,6 +161,17 @@
 		white-space: pre;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.wrap {
+		height: auto;
+	}
+
+	.wrap .line-content {
+		white-space: pre-wrap;
+		word-break: break-all;
+		overflow: visible;
+		text-overflow: clip;
 	}
 
 	.line-content.left {
