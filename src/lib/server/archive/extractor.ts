@@ -3,7 +3,7 @@ import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
 const MAX_ARCHIVE_SIZE = 30 * 1024 * 1024; // 30MB
-const MAX_FILES = 1000;
+const MAX_FILES = 5000;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB per file
 
 export async function fetchAndExtract(
