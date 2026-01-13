@@ -4,10 +4,9 @@
 
 	interface Props {
 		line: DiffLineType;
-		highlighted?: string;
 	}
 
-	let { line, highlighted }: Props = $props();
+	let { line }: Props = $props();
 
 	function getLineClass(type: string): string {
 		switch (type) {
@@ -39,7 +38,7 @@
 	<td class="line-num new-num">
 		{line.newNumber ?? ''}
 	</td>
-	<td class="line-content"><span class="prefix">{getPrefix(line.type)}</span>{#if line.wordDiff && line.wordDiff.length > 0}{#each line.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else if highlighted}{@html highlighted}{:else}{line.content}{/if}</td>
+	<td class="line-content"><span class="prefix">{getPrefix(line.type)}</span>{#if line.wordDiff && line.wordDiff.length > 0}{#each line.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else if line.highlightedContent}{@html line.highlightedContent}{:else}{line.content}{/if}</td>
 </tr>
 
 <style>

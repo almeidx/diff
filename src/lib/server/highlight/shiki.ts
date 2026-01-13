@@ -117,4 +117,69 @@ function escapeHtml(text: string): string {
 		.replace(/'/g, '&#039;');
 }
 
+export async function highlightDiffResult(
+	diff: import('$lib/types/index.js').DiffResult
+): Promise<void> {
+	let highlighter;
+	try {
+		highlighter = await getHighlighter();
+	} catch {
+		return;
+	}
+
+	for (const file of diff.files) {
+		if (file.isBinary || file.hunks.length === 0) continue;
+
+		const lang = detectLanguage(file.path);
+		if (!lang || !SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)) {
+			for (const hunk of file.hunks) {
+				for (const line of hunk.lines) {
+					line.highlightedContent = escapeHtml(line.content);
+				}
+			}
+			continue;
+		}
+
+		const allLines: string[] = [];
+		const lineIndices: { hunkIdx: number; lineIdx: number }[] = [];
+
+		for (let hunkIdx = 0; hunkIdx < file.hunks.length; hunkIdx++) {
+			const hunk = file.hunks[hunkIdx];
+			for (let lineIdx = 0; lineIdx < hunk.lines.length; lineIdx++) {
+				allLines.push(hunk.lines[lineIdx].content);
+				lineIndices.push({ hunkIdx, lineIdx });
+			}
+		}
+
+		try {
+			const code = allLines.join('\n');
+			const tokens = highlighter.codeToTokensBase(code, {
+				lang: lang as BundledLanguage,
+				theme: 'github-dark'
+			});
+
+			for (let i = 0; i < tokens.length && i < lineIndices.length; i++) {
+				const { hunkIdx, lineIdx } = lineIndices[i];
+				const lineTokens = tokens[i];
+				const highlighted = lineTokens
+					.map((token) => {
+						const escaped = escapeHtml(token.content);
+						if (token.color) {
+							return `<span style="color:${token.color}">${escaped}</span>`;
+						}
+						return escaped;
+					})
+					.join('');
+				file.hunks[hunkIdx].lines[lineIdx].highlightedContent = highlighted;
+			}
+		} catch {
+			for (const hunk of file.hunks) {
+				for (const line of hunk.lines) {
+					line.highlightedContent = escapeHtml(line.content);
+				}
+			}
+		}
+	}
+}
+
 export { detectLanguage };

@@ -6,10 +6,9 @@
 
 	interface Props {
 		files: DiffFile[];
-		highlightedLines?: Map<string, string[]>;
 	}
 
-	let { files, highlightedLines = new Map() }: Props = $props();
+	let { files }: Props = $props();
 
 	$effect(() => {
 		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
@@ -76,17 +75,9 @@
 							{/if}
 						</div>
 					{:else if $viewMode === 'unified'}
-						<UnifiedDiff
-							hunks={file.hunks}
-							filePath={file.path}
-							highlightedLines={highlightedLines.get(file.path)}
-						/>
+						<UnifiedDiff hunks={file.hunks} />
 					{:else}
-						<SplitDiff
-							hunks={file.hunks}
-							filePath={file.path}
-							highlightedLines={highlightedLines.get(file.path)}
-						/>
+						<SplitDiff hunks={file.hunks} />
 					{/if}
 				</div>
 			{/if}

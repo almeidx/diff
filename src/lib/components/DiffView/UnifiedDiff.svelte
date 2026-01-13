@@ -4,11 +4,9 @@
 
 	interface Props {
 		hunks: DiffHunk[];
-		filePath: string;
-		highlightedLines?: string[];
 	}
 
-	let { hunks, filePath, highlightedLines }: Props = $props();
+	let { hunks }: Props = $props();
 
 	function formatHunkHeader(hunk: DiffHunk): string {
 		const oldRange =
@@ -34,7 +32,7 @@
 					</td>
 				</tr>
 				{#each hunk.lines as line, lineIndex (`${hunkIndex}-${lineIndex}`)}
-					<DiffLine {line} highlighted={highlightedLines?.[lineIndex]} />
+					<DiffLine {line} />
 				{/each}
 			{/each}
 		</tbody>

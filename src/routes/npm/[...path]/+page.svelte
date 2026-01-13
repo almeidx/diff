@@ -174,6 +174,10 @@
 		border-bottom: 1px solid var(--border-color);
 	}
 
+	.version-bar :global(.version-selector) {
+		min-width: 200px;
+	}
+
 	.version-arrow {
 		padding-bottom: 10px;
 		color: var(--text-muted);
@@ -192,7 +196,8 @@
 	.main-content {
 		display: flex;
 		flex: 1;
-		overflow: hidden;
+		align-items: flex-start;
+		background: linear-gradient(to right, var(--bg-secondary) 280px, transparent 280px);
 	}
 
 	.sidebar {
@@ -202,12 +207,15 @@
 		border-right: 1px solid var(--border-color);
 		background: var(--bg-secondary);
 		overflow-y: auto;
+		position: sticky;
+		top: 0;
+		max-height: 100vh;
 	}
 
 	.diff-content {
 		flex: 1;
-		overflow: auto;
 		padding: 16px;
+		min-width: 0;
 	}
 
 	.error-container {

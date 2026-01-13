@@ -31,6 +31,7 @@ export interface DiffLine {
 	newNumber: number | null;
 	content: string;
 	wordDiff?: WordChange[];
+	highlightedContent?: string;
 }
 
 export interface DiffHunk {
