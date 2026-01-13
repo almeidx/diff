@@ -2,8 +2,16 @@ import type { Handle } from '@sveltejs/kit';
 
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60000;
+const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
 
 const ipCounts = new Map<string, { count: number; resetAt: number }>();
+
+function generateToken(): string {
+	const array = new Uint8Array(32);
+	crypto.getRandomValues(array);
+	return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const ip =
@@ -37,5 +45,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	return resolve(event);
+	if (event.url.pathname.startsWith('/api/')) {
+		const csrfToken = event.cookies.get(CSRF_COOKIE_NAME);
+		const headerToken = event.request.headers.get(CSRF_HEADER_NAME);
+
+		if (!csrfToken || !headerToken || csrfToken !== headerToken) {
+			return new Response('Forbidden', { status: 403 });
+		}
+	}
+
+	const response = await resolve(event);
+
+	if (!event.cookies.get(CSRF_COOKIE_NAME)) {
+		const token = generateToken();
+		response.headers.append(
+			'Set-Cookie',
+			`${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure`
+		);
+	}
+
+	return response;
 };

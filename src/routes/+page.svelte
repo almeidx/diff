@@ -12,6 +12,11 @@
 	let versions = $state<string[]>([]);
 	let error = $state<string | null>(null);
 
+	function getCsrfToken(): string {
+		const match = document.cookie.match(/csrf_token=([^;]+)/);
+		return match ? match[1] : '';
+	}
+
 	$effect(() => {
 		packageType;
 		versions = [];
@@ -31,7 +36,12 @@
 
 		try {
 			const response = await fetch(
-				`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`
+				`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`,
+				{
+					headers: {
+						'x-csrf-token': getCsrfToken()
+					}
+				}
 			);
 
 			if (!response.ok) {
