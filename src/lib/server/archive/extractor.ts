@@ -2,6 +2,10 @@ import { unzipSync, gunzipSync } from 'fflate';
 import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
+const MAX_ARCHIVE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_FILES = 500;
+const MAX_FILE_SIZE = 500 * 1024; // 500KB per file
+
 export async function fetchAndExtract(
 	url: string,
 	format: 'tgz' | 'zip'
@@ -13,6 +17,11 @@ export async function fetchAndExtract(
 	}
 
 	const buffer = await response.arrayBuffer();
+
+	if (buffer.byteLength > MAX_ARCHIVE_SIZE) {
+		throw new Error(`Package too large (${Math.round(buffer.byteLength / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`);
+	}
+
 	const data = new Uint8Array(buffer);
 
 	if (format === 'tgz') {
@@ -32,6 +41,8 @@ function extractTar(data: Uint8Array): FileTree {
 	let offset = 0;
 
 	while (offset < data.length - 512) {
+		if (files.size >= MAX_FILES) break;
+
 		const header = data.slice(offset, offset + 512);
 
 		if (header.every((b) => b === 0)) {
@@ -64,10 +75,10 @@ function extractTar(data: Uint8Array): FileTree {
 		offset += 512;
 
 		if (typeFlag === 0 || typeFlag === 48) {
-			const content = data.slice(offset, offset + size);
 			const filterResult = shouldInclude(name);
 
-			if (filterResult.include && name && !name.endsWith('/')) {
+			if (filterResult.include && name && !name.endsWith('/') && size <= MAX_FILE_SIZE) {
+				const content = data.slice(offset, offset + size);
 				const isBinary = filterResult.isBinary || isBinaryContent(content);
 
 				files.set(name, {
@@ -91,9 +102,15 @@ function extractZip(data: Uint8Array): FileTree {
 	const unzipped = unzipSync(data);
 
 	for (const [path, content] of Object.entries(unzipped)) {
+		if (files.size >= MAX_FILES) break;
+
 		let normalizedPath = path.replace(/^[^/]+\//, '');
 
 		if (!normalizedPath || normalizedPath.endsWith('/')) {
+			continue;
+		}
+
+		if (content.length > MAX_FILE_SIZE) {
 			continue;
 		}
 

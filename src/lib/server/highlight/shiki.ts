@@ -6,106 +6,26 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 const SUPPORTED_LANGUAGES: BundledLanguage[] = [
 	'javascript',
 	'typescript',
-	'jsx',
-	'tsx',
 	'json',
 	'php',
 	'css',
-	'scss',
 	'html',
-	'xml',
 	'markdown',
 	'yaml',
-	'toml',
-	'bash',
-	'python',
-	'ruby',
-	'go',
-	'rust',
-	'java',
-	'kotlin',
-	'swift',
-	'c',
-	'cpp',
-	'csharp',
-	'sql',
-	'vue',
-	'svelte'
+	'bash'
 ];
+
+const MAX_FILES_FOR_HIGHLIGHTING = 50;
+const MAX_LINES_FOR_HIGHLIGHTING = 5000;
 
 async function getHighlighter(): Promise<Highlighter> {
 	if (!highlighterPromise) {
 		highlighterPromise = createHighlighter({
-			themes: ['github-dark', 'github-light'],
+			themes: ['github-dark'],
 			langs: SUPPORTED_LANGUAGES
 		});
 	}
 	return highlighterPromise;
-}
-
-export interface HighlightedLine {
-	content: string;
-	html: string;
-}
-
-export async function highlightCode(
-	code: string,
-	filePath: string,
-	theme: 'light' | 'dark' = 'dark'
-): Promise<string> {
-	const highlighter = await getHighlighter();
-	const lang = detectLanguage(filePath);
-
-	const themeName = theme === 'dark' ? 'github-dark' : 'github-light';
-
-	if (!lang || !SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)) {
-		return escapeHtml(code);
-	}
-
-	try {
-		return highlighter.codeToHtml(code, {
-			lang: lang as BundledLanguage,
-			theme: themeName
-		});
-	} catch {
-		return escapeHtml(code);
-	}
-}
-
-export async function highlightLines(
-	lines: string[],
-	filePath: string,
-	theme: 'light' | 'dark' = 'dark'
-): Promise<string[]> {
-	const highlighter = await getHighlighter();
-	const lang = detectLanguage(filePath);
-	const themeName = theme === 'dark' ? 'github-dark' : 'github-light';
-
-	if (!lang || !SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)) {
-		return lines.map(escapeHtml);
-	}
-
-	try {
-		const code = lines.join('\n');
-		const tokens = highlighter.codeToTokensBase(code, {
-			lang: lang as BundledLanguage,
-			theme: themeName
-		});
-
-		return tokens.map((lineTokens) => {
-			return lineTokens
-				.map((token) => {
-					const escaped = escapeHtml(token.content);
-					if (token.color) {
-						return `<span style="color:${token.color}">${escaped}</span>`;
-					}
-					return escaped;
-				})
-				.join('');
-		});
-	} catch {
-		return lines.map(escapeHtml);
-	}
 }
 
 function escapeHtml(text: string): string {
@@ -120,10 +40,22 @@ function escapeHtml(text: string): string {
 export async function highlightDiffResult(
 	diff: import('$lib/types/index.js').DiffResult
 ): Promise<void> {
+	let totalLines = 0;
+	for (const file of diff.files) {
+		for (const hunk of file.hunks) {
+			totalLines += hunk.lines.length;
+		}
+	}
+
+	if (diff.files.length > MAX_FILES_FOR_HIGHLIGHTING || totalLines > MAX_LINES_FOR_HIGHLIGHTING) {
+		return;
+	}
+
 	let highlighter;
 	try {
 		highlighter = await getHighlighter();
-	} catch {
+	} catch (e) {
+		console.error('Failed to load syntax highlighter:', e);
 		return;
 	}
 
@@ -132,11 +64,6 @@ export async function highlightDiffResult(
 
 		const lang = detectLanguage(file.path);
 		if (!lang || !SUPPORTED_LANGUAGES.includes(lang as BundledLanguage)) {
-			for (const hunk of file.hunks) {
-				for (const line of hunk.lines) {
-					line.highlightedContent = escapeHtml(line.content);
-				}
-			}
 			continue;
 		}
 
@@ -173,11 +100,7 @@ export async function highlightDiffResult(
 				file.hunks[hunkIdx].lines[lineIdx].highlightedContent = highlighted;
 			}
 		} catch {
-			for (const hunk of file.hunks) {
-				for (const line of hunk.lines) {
-					line.highlightedContent = escapeHtml(line.content);
-				}
-			}
+			// Skip highlighting for this file on error
 		}
 	}
 }
