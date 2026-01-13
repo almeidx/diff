@@ -26,6 +26,18 @@
 	function isCollapsed(path: string): boolean {
 		return $collapsedFiles.has(path);
 	}
+
+	function getFileStats(file: DiffFile): { additions: number; deletions: number } {
+		let additions = 0;
+		let deletions = 0;
+		for (const hunk of file.hunks) {
+			for (const line of hunk.lines) {
+				if (line.type === 'add') additions++;
+				else if (line.type === 'delete') deletions++;
+			}
+		}
+		return { additions, deletions };
+	}
 </script>
 
 <div class="diff-view">
@@ -57,6 +69,13 @@
 				{/if}
 				{#if file.isMinified}
 					<span class="badge">Minified</span>
+				{/if}
+				{#if getFileStats(file).additions > 0 || getFileStats(file).deletions > 0}
+					{@const stats = getFileStats(file)}
+					<span class="file-stats">
+						{#if stats.additions > 0}<span class="additions">+{stats.additions}</span>{/if}
+						{#if stats.deletions > 0}<span class="deletions">-{stats.deletions}</span>{/if}
+					</span>
 				{/if}
 			</div>
 
@@ -171,6 +190,21 @@
 		border-radius: 4px;
 		background: var(--bg-tertiary);
 		color: var(--text-muted);
+	}
+
+	.file-stats {
+		display: flex;
+		gap: 6px;
+		font-size: 12px;
+		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+	}
+
+	.file-stats .additions {
+		color: var(--diff-add-text);
+	}
+
+	.file-stats .deletions {
+		color: var(--diff-delete-text);
 	}
 
 	.file-content {
