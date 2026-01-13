@@ -100,45 +100,49 @@ function extractTar(data: Uint8Array): FileTree {
 
 function extractZip(data: Uint8Array): FileTree {
 	const files = new Map<string, FileEntry>();
-	const unzipped = unzipSync(data);
+	const filterCache = new Map<string, { include: boolean; isBinary: boolean; isMinified: boolean }>();
+
+	let skippedPreFilter = 0;
+	let skippedBinaryContent = 0;
+
+	const unzipped = unzipSync(data, {
+		filter: (file) => {
+			const normalizedPath = file.name.replace(/^[^/]+\//, '');
+
+			if (!normalizedPath || normalizedPath.endsWith('/')) {
+				return false;
+			}
+
+			if (file.originalSize > MAX_FILE_SIZE) {
+				skippedPreFilter++;
+				return false;
+			}
+
+			const filterResult = shouldInclude(normalizedPath);
+
+			if (!filterResult.include || filterResult.isBinary) {
+				skippedPreFilter++;
+				return false;
+			}
+
+			filterCache.set(file.name, filterResult);
+			return true;
+		}
+	});
 
 	const entries = Object.entries(unzipped);
-	console.log(`[extractZip] Total entries in zip: ${entries.length}`);
-
-	let skippedSize = 0;
-	let skippedFilter = 0;
-	let skippedDir = 0;
-	let skippedBinary = 0;
+	console.log(`[extractZip] Pre-filtered to ${entries.length} entries (skipped ${skippedPreFilter} before decompression)`);
 
 	for (const [path, content] of entries) {
 		if (files.size >= MAX_FILES) break;
 
-		let normalizedPath = path.replace(/^[^/]+\//, '');
+		const normalizedPath = path.replace(/^[^/]+\//, '');
+		const filterResult = filterCache.get(path);
 
-		if (!normalizedPath || normalizedPath.endsWith('/')) {
-			skippedDir++;
-			continue;
-		}
-
-		const filterResult = shouldInclude(normalizedPath);
-
-		if (!filterResult.include) {
-			skippedFilter++;
-			continue;
-		}
-
-		if (filterResult.isBinary) {
-			skippedBinary++;
-			continue;
-		}
-
-		if (content.length > MAX_FILE_SIZE) {
-			skippedSize++;
-			continue;
-		}
+		if (!filterResult) continue;
 
 		if (isBinaryContent(content)) {
-			skippedBinary++;
+			skippedBinaryContent++;
 			continue;
 		}
 
@@ -151,7 +155,7 @@ function extractZip(data: Uint8Array): FileTree {
 		});
 	}
 
-	console.log(`[extractZip] Extracted ${files.size} files, skipped: ${skippedDir} dirs, ${skippedSize} too large, ${skippedFilter} filtered, ${skippedBinary} binary`);
+	console.log(`[extractZip] Extracted ${files.size} files (skipped ${skippedBinaryContent} binary content)`);
 
 	return { files };
 }
