@@ -11,9 +11,7 @@ import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-docker';
-import 'prismjs/components/prism-nginx';
 import 'prismjs/components/prism-ini';
-import 'prismjs/components/prism-diff';
 import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-handlebars';
 
@@ -30,33 +28,11 @@ const extToLang: Record<string, string> = {
 	json: 'json',
 	md: 'markdown',
 	mdx: 'markdown',
-	sh: 'bash',
-	bash: 'bash',
-	zsh: 'bash',
 	yml: 'yaml',
 	yaml: 'yaml',
 	php: 'php',
-	py: 'python',
-	rs: 'rust',
-	go: 'go',
-	java: 'java',
-	c: 'c',
-	h: 'c',
-	cpp: 'cpp',
-	cc: 'cpp',
-	cxx: 'cpp',
-	hpp: 'cpp',
-	cs: 'csharp',
 	sql: 'sql',
-	graphql: 'graphql',
-	gql: 'graphql',
-	rb: 'ruby',
-	swift: 'swift',
-	kt: 'kotlin',
-	kts: 'kotlin',
 	dockerfile: 'docker',
-	nginx: 'nginx',
-	toml: 'toml',
 	ini: 'ini',
 	conf: 'ini',
 	cfg: 'ini',
