@@ -236,7 +236,7 @@
 		</form>
 
 		<div class="local-notice">
-			<p>Need to compare larger packages? Run locally for unlimited size/memory.</p>
+			<p>Need to compare larger packages? Run locally to bypass size limits.</p>
 			<p><a href="https://github.com/almeidx/differ" target="_blank" rel="noopener">View on GitHub</a></p>
 		</div>
 	</main>
