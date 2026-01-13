@@ -2,7 +2,7 @@ import { unzipSync, gunzipSync } from 'fflate';
 import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
-const MAX_ARCHIVE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_ARCHIVE_SIZE = 30 * 1024 * 1024; // 30MB
 const MAX_FILES = 500;
 const MAX_FILE_SIZE = 500 * 1024; // 500KB per file
 
