@@ -47,18 +47,23 @@ export async function highlightDiffResult(
 		}
 	}
 
+	console.log(`[highlight] files=${diff.files.length}, lines=${totalLines}`);
+
 	if (diff.files.length > MAX_FILES_FOR_HIGHLIGHTING || totalLines > MAX_LINES_FOR_HIGHLIGHTING) {
+		console.log('[highlight] Skipping: too many files or lines');
 		return;
 	}
 
 	let highlighter;
 	try {
 		highlighter = await getHighlighter();
+		console.log('[highlight] Highlighter loaded successfully');
 	} catch (e) {
-		console.error('Failed to load syntax highlighter:', e);
+		console.error('[highlight] Failed to load syntax highlighter:', e);
 		return;
 	}
 
+	let highlightedFiles = 0;
 	for (const file of diff.files) {
 		if (file.isBinary || file.hunks.length === 0) continue;
 
@@ -99,10 +104,12 @@ export async function highlightDiffResult(
 					.join('');
 				file.hunks[hunkIdx].lines[lineIdx].highlightedContent = highlighted;
 			}
-		} catch {
-			// Skip highlighting for this file on error
+			highlightedFiles++;
+		} catch (e) {
+			console.error(`[highlight] Failed to highlight ${file.path}:`, e);
 		}
 	}
+	console.log(`[highlight] Highlighted ${highlightedFiles} files`);
 }
 
 export { detectLanguage };
