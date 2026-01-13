@@ -77,17 +77,18 @@ function extractTar(data: Uint8Array): FileTree {
 		if (typeFlag === 0 || typeFlag === 48) {
 			const filterResult = shouldInclude(name);
 
-			if (filterResult.include && name && !name.endsWith('/') && size <= MAX_FILE_SIZE) {
+			if (filterResult.include && !filterResult.isBinary && name && !name.endsWith('/') && size <= MAX_FILE_SIZE) {
 				const content = data.slice(offset, offset + size);
-				const isBinary = filterResult.isBinary || isBinaryContent(content);
 
-				files.set(name, {
-					path: name,
-					content: isBinary ? null : new TextDecoder().decode(content),
-					isBinary,
-					isMinified: filterResult.isMinified,
-					size
-				});
+				if (!isBinaryContent(content)) {
+					files.set(name, {
+						path: name,
+						content: new TextDecoder().decode(content),
+						isBinary: false,
+						isMinified: filterResult.isMinified,
+						size
+					});
+				}
 			}
 		}
 
@@ -107,6 +108,7 @@ function extractZip(data: Uint8Array): FileTree {
 	let skippedSize = 0;
 	let skippedFilter = 0;
 	let skippedDir = 0;
+	let skippedBinary = 0;
 
 	for (const [path, content] of entries) {
 		if (files.size >= MAX_FILES) break;
@@ -118,11 +120,6 @@ function extractZip(data: Uint8Array): FileTree {
 			continue;
 		}
 
-		if (content.length > MAX_FILE_SIZE) {
-			skippedSize++;
-			continue;
-		}
-
 		const filterResult = shouldInclude(normalizedPath);
 
 		if (!filterResult.include) {
@@ -130,18 +127,31 @@ function extractZip(data: Uint8Array): FileTree {
 			continue;
 		}
 
-		const isBinary = filterResult.isBinary || isBinaryContent(content);
+		if (filterResult.isBinary) {
+			skippedBinary++;
+			continue;
+		}
+
+		if (content.length > MAX_FILE_SIZE) {
+			skippedSize++;
+			continue;
+		}
+
+		if (isBinaryContent(content)) {
+			skippedBinary++;
+			continue;
+		}
 
 		files.set(normalizedPath, {
 			path: normalizedPath,
-			content: isBinary ? null : new TextDecoder().decode(content),
-			isBinary,
+			content: new TextDecoder().decode(content),
+			isBinary: false,
 			isMinified: filterResult.isMinified,
 			size: content.length
 		});
 	}
 
-	console.log(`[extractZip] Extracted ${files.size} files, skipped: ${skippedDir} dirs, ${skippedSize} too large, ${skippedFilter} filtered`);
+	console.log(`[extractZip] Extracted ${files.size} files, skipped: ${skippedDir} dirs, ${skippedSize} too large, ${skippedFilter} filtered, ${skippedBinary} binary`);
 
 	return { files };
 }
