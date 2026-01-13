@@ -86,7 +86,7 @@ const MINIFIED_PATTERNS = [
 	/\.bundle\.js$/,
 	/-min\.js$/,
 	/\.prod\.js$/,
-	/\.(js|mjs|cjs|css)\.map$/
+	/\.(js|mjs|cjs|ts|mts|cts|css)\.map$/,
 ];
 
 export interface FilterResult {
