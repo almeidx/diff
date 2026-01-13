@@ -234,6 +234,11 @@
 				{/if}
 			</button>
 		</form>
+
+		<div class="local-notice">
+			<p>Need to compare larger packages? Run locally for unlimited size/memory.</p>
+			<p><a href="https://github.com/almeidx/differ" target="_blank" rel="noopener">View on GitHub</a></p>
+		</div>
 	</main>
 </div>
 
@@ -466,6 +471,34 @@
 		border-top-color: currentColor;
 		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
+	}
+
+	.local-notice {
+		margin-top: 32px;
+		padding: 16px;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		text-align: center;
+	}
+
+	.local-notice p {
+		margin: 0;
+		font-size: 14px;
+		color: var(--text-secondary);
+	}
+
+	.local-notice p + p {
+		margin-top: 8px;
+	}
+
+	.local-notice a {
+		color: var(--link-color);
+		text-decoration: none;
+	}
+
+	.local-notice a:hover {
+		text-decoration: underline;
 	}
 
 	@keyframes spin {

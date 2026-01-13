@@ -1,4 +1,5 @@
 import { unzipSync, gunzipSync } from 'fflate';
+import { dev } from '$app/environment';
 import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
@@ -18,7 +19,7 @@ export async function fetchAndExtract(
 
 	const buffer = await response.arrayBuffer();
 
-	if (buffer.byteLength > MAX_ARCHIVE_SIZE) {
+	if (!dev && buffer.byteLength > MAX_ARCHIVE_SIZE) {
 		throw new Error(`Package too large (${Math.round(buffer.byteLength / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`);
 	}
 
@@ -49,7 +50,7 @@ function extractTar(data: Uint8Array): FileTree {
 	let offset = 0;
 
 	while (offset < data.length - 512) {
-		if (files.size >= MAX_FILES) break;
+		if (!dev && files.size >= MAX_FILES) break;
 
 		const header = data.slice(offset, offset + 512);
 
@@ -85,7 +86,7 @@ function extractTar(data: Uint8Array): FileTree {
 		if (typeFlag === 0 || typeFlag === 48) {
 			const filterResult = shouldInclude(name);
 
-			if (filterResult.include && !filterResult.isBinary && name && !name.endsWith('/') && size <= MAX_FILE_SIZE) {
+			if (filterResult.include && !filterResult.isBinary && name && !name.endsWith('/') && (dev || size <= MAX_FILE_SIZE)) {
 				const content = data.slice(offset, offset + size);
 
 				if (!isBinaryContent(content)) {
@@ -123,7 +124,7 @@ function extractZip(data: Uint8Array): FileTree {
 					return false;
 				}
 
-				if (file.originalSize > MAX_FILE_SIZE) {
+				if (!dev && file.originalSize > MAX_FILE_SIZE) {
 					skippedPreFilter++;
 					return false;
 				}
@@ -150,7 +151,7 @@ function extractZip(data: Uint8Array): FileTree {
 	console.log(`[extractZip] Pre-filtered to ${entries.length} entries (skipped ${skippedPreFilter} before decompression)`);
 
 	for (const [path, content] of entries) {
-		if (files.size >= MAX_FILES) break;
+		if (!dev && files.size >= MAX_FILES) break;
 
 		const normalizedPath = path.replace(/^[^/]+\//, '');
 		const filterResult = filterCache.get(path);

@@ -6,11 +6,19 @@ interface CacheOptions {
 
 const DEFAULT_TTL = 300; // 5 minutes
 
+function isCacheAvailable(): boolean {
+	return typeof caches !== 'undefined';
+}
+
 export async function getCached<T>(
 	key: string,
 	fetcher: () => Promise<T>,
 	options: CacheOptions = { ttlSeconds: DEFAULT_TTL }
 ): Promise<T> {
+	if (!isCacheAvailable()) {
+		return fetcher();
+	}
+
 	const cache = await caches.open(CACHE_NAME);
 	const cacheKey = new Request(`https://cache.internal/${encodeURIComponent(key)}`);
 
@@ -38,6 +46,10 @@ export async function getCached<T>(
 }
 
 export async function invalidateCache(key: string): Promise<void> {
+	if (!isCacheAvailable()) {
+		return;
+	}
+
 	const cache = await caches.open(CACHE_NAME);
 	const cacheKey = new Request(`https://cache.internal/${encodeURIComponent(key)}`);
 	await cache.delete(cacheKey);

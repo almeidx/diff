@@ -4,3 +4,6 @@
 node_modules/
 *.md
 !README.md
+!AGENTS.md
+!CLAUDE.md
+!LICENSE.md
