@@ -17,6 +17,8 @@ import 'prismjs/components/prism-handlebars';
 
 const extToLang: Record<string, string> = {
 	ts: 'typescript',
+	mts: 'typescript',
+	cts: 'typescript',
 	tsx: 'tsx',
 	js: 'javascript',
 	mjs: 'javascript',
