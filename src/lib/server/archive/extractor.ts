@@ -3,8 +3,8 @@ import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
 const MAX_ARCHIVE_SIZE = 30 * 1024 * 1024; // 30MB
-const MAX_FILES = 500;
-const MAX_FILE_SIZE = 500 * 1024; // 500KB per file
+const MAX_FILES = 1000;
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB per file
 
 export async function fetchAndExtract(
 	url: string,
@@ -101,22 +101,32 @@ function extractZip(data: Uint8Array): FileTree {
 	const files = new Map<string, FileEntry>();
 	const unzipped = unzipSync(data);
 
-	for (const [path, content] of Object.entries(unzipped)) {
+	const entries = Object.entries(unzipped);
+	console.log(`[extractZip] Total entries in zip: ${entries.length}`);
+
+	let skippedSize = 0;
+	let skippedFilter = 0;
+	let skippedDir = 0;
+
+	for (const [path, content] of entries) {
 		if (files.size >= MAX_FILES) break;
 
 		let normalizedPath = path.replace(/^[^/]+\//, '');
 
 		if (!normalizedPath || normalizedPath.endsWith('/')) {
+			skippedDir++;
 			continue;
 		}
 
 		if (content.length > MAX_FILE_SIZE) {
+			skippedSize++;
 			continue;
 		}
 
 		const filterResult = shouldInclude(normalizedPath);
 
 		if (!filterResult.include) {
+			skippedFilter++;
 			continue;
 		}
 
@@ -130,6 +140,8 @@ function extractZip(data: Uint8Array): FileTree {
 			size: content.length
 		});
 	}
+
+	console.log(`[extractZip] Extracted ${files.size} files, skipped: ${skippedDir} dirs, ${skippedSize} too large, ${skippedFilter} filtered`);
 
 	return { files };
 }
