@@ -92,7 +92,7 @@
 							class:line-delete={splitLine.left?.type === 'delete'}
 							class:line-context={splitLine.left?.type === 'context'}
 							class:line-empty={!splitLine.left}
-						>{#if splitLine.left}{#if splitLine.left.wordDiff}{#each splitLine.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else if splitLine.left.highlightedContent}{@html splitLine.left.highlightedContent}{:else}{splitLine.left.content}{/if}{/if}</td>
+						>{#if splitLine.left}{#if splitLine.left.wordDiff}{#each splitLine.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else}{splitLine.left.content}{/if}{/if}</td>
 						<td
 							class="line-num"
 							class:line-add={splitLine.right?.type === 'add'}
@@ -104,7 +104,7 @@
 							class:line-add={splitLine.right?.type === 'add'}
 							class:line-context={splitLine.right?.type === 'context'}
 							class:line-empty={!splitLine.right}
-						>{#if splitLine.right}{#if splitLine.right.wordDiff}{#each splitLine.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{/if}{/each}{:else if splitLine.right.highlightedContent}{@html splitLine.right.highlightedContent}{:else}{splitLine.right.content}{/if}{/if}</td>
+						>{#if splitLine.right}{#if splitLine.right.wordDiff}{#each splitLine.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{/if}{/each}{:else}{splitLine.right.content}{/if}{/if}</td>
 					</tr>
 				{/each}
 			{/each}

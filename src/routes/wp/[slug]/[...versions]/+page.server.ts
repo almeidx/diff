@@ -4,7 +4,6 @@ import { wordpressRegistry } from '$lib/server/registries/wordpress';
 import { fetchAndExtract } from '$lib/server/archive/extractor';
 import { computeDiff } from '$lib/server/diff/engine';
 import { getCached } from '$lib/server/cache';
-import { highlightDiffResult } from '$lib/server/highlight/shiki';
 import type { DiffResult } from '$lib/types/index.js';
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
@@ -70,8 +69,6 @@ export const load: PageServerLoad = async ({ params }) => {
 		},
 		{ ttlSeconds: DIFF_CACHE_TTL }
 	);
-
-	await highlightDiffResult(diff);
 
 	return {
 		diff,
