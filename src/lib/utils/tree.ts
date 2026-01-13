@@ -107,3 +107,22 @@ export function propagateStatus(nodes: TreeNode[]): TreeNode[] {
 		return node;
 	});
 }
+
+export function sortFilesLikeTree(files: DiffFile[]): DiffFile[] {
+	const tree = buildFileTree(files);
+	const orderedPaths = flattenTreePaths(tree);
+	const fileMap = new Map(files.map((f) => [f.path, f]));
+	return orderedPaths.map((path) => fileMap.get(path)!).filter(Boolean);
+}
+
+function flattenTreePaths(nodes: TreeNode[]): string[] {
+	const paths: string[] = [];
+	for (const node of nodes) {
+		if (node.isDirectory && node.children) {
+			paths.push(...flattenTreePaths(node.children));
+		} else {
+			paths.push(node.path);
+		}
+	}
+	return paths;
+}

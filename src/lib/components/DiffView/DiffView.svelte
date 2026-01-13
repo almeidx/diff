@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types/index.js';
 	import { viewMode, collapsedFiles, toggleFileCollapse } from '$lib/stores/ui';
+	import { sortFilesLikeTree } from '$lib/utils/tree';
 	import UnifiedDiff from './UnifiedDiff.svelte';
 	import SplitDiff from './SplitDiff.svelte';
 
@@ -9,6 +10,8 @@
 	}
 
 	let { files }: Props = $props();
+
+	const sortedFiles = $derived(sortFilesLikeTree(files));
 
 	$effect(() => {
 		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
@@ -41,7 +44,7 @@
 </script>
 
 <div class="diff-view">
-	{#each files as file (file.path)}
+	{#each sortedFiles as file (file.path)}
 		<div class="file-diff" id="file-{file.path.replace(/[^\w]/g, '-')}">
 			<div class="file-header">
 				<button
