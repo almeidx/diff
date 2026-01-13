@@ -32,7 +32,15 @@ export async function fetchAndExtract(
 }
 
 function extractTgz(data: Uint8Array): FileTree {
-	const decompressed = gunzipSync(data);
+	let decompressed: Uint8Array;
+	try {
+		decompressed = gunzipSync(data);
+	} catch (e) {
+		if (e instanceof RangeError && e.message.includes('typed array length')) {
+			throw new Error('Package too large when decompressed. This package exceeds memory limits.');
+		}
+		throw e;
+	}
 	return extractTar(decompressed);
 }
 
@@ -105,30 +113,38 @@ function extractZip(data: Uint8Array): FileTree {
 	let skippedPreFilter = 0;
 	let skippedBinaryContent = 0;
 
-	const unzipped = unzipSync(data, {
-		filter: (file) => {
-			const normalizedPath = file.name.replace(/^[^/]+\//, '');
+	let unzipped;
+	try {
+		unzipped = unzipSync(data, {
+			filter: (file) => {
+				const normalizedPath = file.name.replace(/^[^/]+\//, '');
 
-			if (!normalizedPath || normalizedPath.endsWith('/')) {
-				return false;
+				if (!normalizedPath || normalizedPath.endsWith('/')) {
+					return false;
+				}
+
+				if (file.originalSize > MAX_FILE_SIZE) {
+					skippedPreFilter++;
+					return false;
+				}
+
+				const filterResult = shouldInclude(normalizedPath);
+
+				if (!filterResult.include || filterResult.isBinary) {
+					skippedPreFilter++;
+					return false;
+				}
+
+				filterCache.set(file.name, filterResult);
+				return true;
 			}
-
-			if (file.originalSize > MAX_FILE_SIZE) {
-				skippedPreFilter++;
-				return false;
-			}
-
-			const filterResult = shouldInclude(normalizedPath);
-
-			if (!filterResult.include || filterResult.isBinary) {
-				skippedPreFilter++;
-				return false;
-			}
-
-			filterCache.set(file.name, filterResult);
-			return true;
+		});
+	} catch (e) {
+		if (e instanceof RangeError && e.message.includes('typed array length')) {
+			throw new Error('Package too large when decompressed. This package exceeds memory limits.');
 		}
-	});
+		throw e;
+	}
 
 	const entries = Object.entries(unzipped);
 	console.log(`[extractZip] Pre-filtered to ${entries.length} entries (skipped ${skippedPreFilter} before decompression)`);
