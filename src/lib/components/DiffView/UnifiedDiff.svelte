@@ -1,12 +1,16 @@
 <script lang="ts">
 	import type { DiffHunk } from '$lib/types/index.js';
+	import { getLanguage } from '$lib/highlight/prism';
 	import DiffLine from './DiffLine.svelte';
 
 	interface Props {
 		hunks: DiffHunk[];
+		filePath: string;
 	}
 
-	let { hunks }: Props = $props();
+	let { hunks, filePath }: Props = $props();
+
+	const language = $derived(getLanguage(filePath));
 
 	function formatHunkHeader(hunk: DiffHunk): string {
 		const oldRange =
@@ -32,7 +36,7 @@
 					</td>
 				</tr>
 				{#each hunk.lines as line, lineIndex (`${hunkIndex}-${lineIndex}`)}
-					<DiffLine {line} />
+					<DiffLine {line} {language} />
 				{/each}
 			{/each}
 		</tbody>

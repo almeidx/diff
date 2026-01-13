@@ -75,9 +75,9 @@
 							{/if}
 						</div>
 					{:else if $viewMode === 'unified'}
-						<UnifiedDiff hunks={file.hunks} />
+						<UnifiedDiff hunks={file.hunks} filePath={file.path} />
 					{:else}
-						<SplitDiff hunks={file.hunks} />
+						<SplitDiff hunks={file.hunks} filePath={file.path} />
 					{/if}
 				</div>
 			{/if}

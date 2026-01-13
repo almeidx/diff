@@ -1,12 +1,21 @@
 <script lang="ts">
 	import type { DiffHunk, DiffLine } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
+	import { getLanguage, highlight } from '$lib/highlight/prism';
 
 	interface Props {
 		hunks: DiffHunk[];
+		filePath: string;
 	}
 
-	let { hunks }: Props = $props();
+	let { hunks, filePath }: Props = $props();
+
+	const language = $derived(getLanguage(filePath));
+
+	function highlightContent(content: string, hasWordDiff: boolean): string | null {
+		if (!language || hasWordDiff) return null;
+		return highlight(content, language);
+	}
 
 	interface SplitLine {
 		left: DiffLine | null;
@@ -92,7 +101,7 @@
 							class:line-delete={splitLine.left?.type === 'delete'}
 							class:line-context={splitLine.left?.type === 'context'}
 							class:line-empty={!splitLine.left}
-						>{#if splitLine.left}{#if splitLine.left.wordDiff}{#each splitLine.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else}{splitLine.left.content}{/if}{/if}</td>
+						>{#if splitLine.left}{#if splitLine.left.wordDiff}{#each splitLine.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(splitLine.left.content, !!splitLine.left.wordDiff)}{#if highlighted}{@html highlighted}{:else}{splitLine.left.content}{/if}{/if}{/if}</td>
 						<td
 							class="line-num"
 							class:line-add={splitLine.right?.type === 'add'}
@@ -104,7 +113,7 @@
 							class:line-add={splitLine.right?.type === 'add'}
 							class:line-context={splitLine.right?.type === 'context'}
 							class:line-empty={!splitLine.right}
-						>{#if splitLine.right}{#if splitLine.right.wordDiff}{#each splitLine.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{/if}{/each}{:else}{splitLine.right.content}{/if}{/if}</td>
+						>{#if splitLine.right}{#if splitLine.right.wordDiff}{#each splitLine.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(splitLine.right.content, !!splitLine.right.wordDiff)}{#if highlighted}{@html highlighted}{:else}{splitLine.right.content}{/if}{/if}{/if}</td>
 					</tr>
 				{/each}
 			{/each}

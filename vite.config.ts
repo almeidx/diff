@@ -3,9 +3,6 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [sveltekit()],
-	optimizeDeps: {
-		exclude: ['shiki']
-	},
 	build: {
 		target: 'esnext'
 	}

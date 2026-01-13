@@ -73,23 +73,38 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	const diff = await getCached(
-		`diff:npm:${packageName}:${fromVersion}:${toVersion}`,
-		async () => {
-			const [fromUrl, toUrl] = await Promise.all([
-				npmRegistry.getDownloadUrl(packageName, fromVersion),
-				npmRegistry.getDownloadUrl(packageName, toVersion)
-			]);
+	let diff: DiffResult;
+	try {
+		diff = await getCached(
+			`diff:npm:${packageName}:${fromVersion}:${toVersion}`,
+			async () => {
+				const [fromUrl, toUrl] = await Promise.all([
+					npmRegistry.getDownloadUrl(packageName, fromVersion),
+					npmRegistry.getDownloadUrl(packageName, toVersion)
+				]);
 
-			const [fromTree, toTree] = await Promise.all([
-				fetchAndExtract(fromUrl, 'tgz'),
-				fetchAndExtract(toUrl, 'tgz')
-			]);
+				const [fromTree, toTree] = await Promise.all([
+					fetchAndExtract(fromUrl, 'tgz'),
+					fetchAndExtract(toUrl, 'tgz')
+				]);
 
-			return computeDiff(fromTree, toTree, 'npm', packageName, fromVersion, toVersion);
-		},
-		{ ttlSeconds: DIFF_CACHE_TTL }
-	);
+				return computeDiff(fromTree, toTree, 'npm', packageName, fromVersion, toVersion);
+			},
+			{ ttlSeconds: DIFF_CACHE_TTL }
+		);
+	} catch (e) {
+		const message = e instanceof Error ? e.message : 'Failed to compute diff';
+		return {
+			error: {
+				type: 'fetch_error' as const,
+				message
+			},
+			packageName,
+			fromVersion,
+			toVersion,
+			versions
+		};
+	}
 
 	return {
 		diff,

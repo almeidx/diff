@@ -1,0 +1,121 @@
+:root {
+	--syntax-comment: #6a737d;
+	--syntax-punctuation: #24292e;
+	--syntax-property: #005cc5;
+	--syntax-string: #032f62;
+	--syntax-keyword: #d73a49;
+	--syntax-function: #6f42c1;
+	--syntax-number: #005cc5;
+	--syntax-operator: #d73a49;
+	--syntax-class: #6f42c1;
+	--syntax-tag: #22863a;
+	--syntax-attr-name: #6f42c1;
+	--syntax-attr-value: #032f62;
+	--syntax-regex: #032f62;
+	--syntax-important: #d73a49;
+	--syntax-variable: #e36209;
+	--syntax-selector: #22863a;
+}
+
+[data-theme="dark"] {
+	--syntax-comment: #8b949e;
+	--syntax-punctuation: #c9d1d9;
+	--syntax-property: #79c0ff;
+	--syntax-string: #a5d6ff;
+	--syntax-keyword: #ff7b72;
+	--syntax-function: #d2a8ff;
+	--syntax-number: #79c0ff;
+	--syntax-operator: #ff7b72;
+	--syntax-class: #d2a8ff;
+	--syntax-tag: #7ee787;
+	--syntax-attr-name: #d2a8ff;
+	--syntax-attr-value: #a5d6ff;
+	--syntax-regex: #a5d6ff;
+	--syntax-important: #ff7b72;
+	--syntax-variable: #ffa657;
+	--syntax-selector: #7ee787;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: var(--syntax-comment);
+}
+
+.token.punctuation {
+	color: var(--syntax-punctuation);
+}
+
+.token.namespace {
+	opacity: 0.7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: var(--syntax-property);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+	color: var(--syntax-string);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+	color: var(--syntax-operator);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+	color: var(--syntax-keyword);
+}
+
+.token.function,
+.token.class-name {
+	color: var(--syntax-function);
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+	color: var(--syntax-variable);
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}
+
+.token.tag {
+	color: var(--syntax-tag);
+}
+
+.token.attr-name {
+	color: var(--syntax-attr-name);
+}
+
+.token.attr-value {
+	color: var(--syntax-attr-value);
+}

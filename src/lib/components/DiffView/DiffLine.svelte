@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { DiffLine as DiffLineType } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
+	import { highlight } from '$lib/highlight/prism';
 
 	interface Props {
 		line: DiffLineType;
+		language: string | null;
 	}
 
-	let { line }: Props = $props();
+	let { line, language }: Props = $props();
 
 	function getLineClass(type: string): string {
 		switch (type) {
@@ -29,6 +31,10 @@
 				return ' ';
 		}
 	}
+
+	const highlightedContent = $derived(
+		language && !line.wordDiff ? highlight(line.content, language) : null
+	);
 </script>
 
 <tr class="diff-line {getLineClass(line.type)}" class:wrap={$wordWrap}>
@@ -38,7 +44,7 @@
 	<td class="line-num new-num">
 		{line.newNumber ?? ''}
 	</td>
-	<td class="line-content"><span class="prefix">{getPrefix(line.type)}</span>{#if line.wordDiff && line.wordDiff.length > 0}{#each line.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else}{line.content}{/if}</td>
+	<td class="line-content"><span class="prefix">{getPrefix(line.type)}</span>{#if line.wordDiff && line.wordDiff.length > 0}{#each line.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else if highlightedContent}{@html highlightedContent}{:else}{line.content}{/if}</td>
 </tr>
 
 <style>

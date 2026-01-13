@@ -52,23 +52,38 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	const diff = await getCached(
-		`diff:wp:${slug}:${fromVersion}:${toVersion}`,
-		async () => {
-			const [fromUrl, toUrl] = await Promise.all([
-				wordpressRegistry.getDownloadUrl(slug, fromVersion),
-				wordpressRegistry.getDownloadUrl(slug, toVersion)
-			]);
+	let diff: DiffResult;
+	try {
+		diff = await getCached(
+			`diff:wp:${slug}:${fromVersion}:${toVersion}`,
+			async () => {
+				const [fromUrl, toUrl] = await Promise.all([
+					wordpressRegistry.getDownloadUrl(slug, fromVersion),
+					wordpressRegistry.getDownloadUrl(slug, toVersion)
+				]);
 
-			const [fromTree, toTree] = await Promise.all([
-				fetchAndExtract(fromUrl, 'zip'),
-				fetchAndExtract(toUrl, 'zip')
-			]);
+				const [fromTree, toTree] = await Promise.all([
+					fetchAndExtract(fromUrl, 'zip'),
+					fetchAndExtract(toUrl, 'zip')
+				]);
 
-			return computeDiff(fromTree, toTree, 'wp', slug, fromVersion, toVersion);
-		},
-		{ ttlSeconds: DIFF_CACHE_TTL }
-	);
+				return computeDiff(fromTree, toTree, 'wp', slug, fromVersion, toVersion);
+			},
+			{ ttlSeconds: DIFF_CACHE_TTL }
+		);
+	} catch (e) {
+		const message = e instanceof Error ? e.message : 'Failed to compute diff';
+		return {
+			error: {
+				type: 'fetch_error' as const,
+				message
+			},
+			slug,
+			fromVersion,
+			toVersion,
+			versions
+		};
+	}
 
 	return {
 		diff,

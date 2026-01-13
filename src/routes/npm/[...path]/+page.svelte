@@ -71,17 +71,23 @@
 	{#if data.error}
 		<div class="error-container">
 			<div class="error-message">
-				<h2>Version not found</h2>
-				<p>{data.error.message}</p>
-				<p>Available versions:</p>
-				<div class="version-list">
-					{#each data.error.availableVersions.slice(0, 20) as version}
-						<span class="version-tag">{version}</span>
-					{/each}
-					{#if data.error.availableVersions.length > 20}
-						<span class="more">+{data.error.availableVersions.length - 20} more</span>
-					{/if}
-				</div>
+				{#if data.error.type === 'invalid_version'}
+					<h2>Version not found</h2>
+					<p>{data.error.message}</p>
+					<p>Available versions:</p>
+					<div class="version-list">
+						{#each data.error.availableVersions.slice(0, 20) as version}
+							<span class="version-tag">{version}</span>
+						{/each}
+						{#if data.error.availableVersions.length > 20}
+							<span class="more">+{data.error.availableVersions.length - 20} more</span>
+						{/if}
+					</div>
+				{:else}
+					<h2>Failed to load diff</h2>
+					<p>{data.error.message}</p>
+					<p class="error-hint">This may be due to package size limits or network issues. Try again later or try a different version range.</p>
+				{/if}
 			</div>
 		</div>
 	{:else if data.diff}
@@ -240,6 +246,11 @@
 	.error-message p {
 		margin-bottom: 12px;
 		color: var(--text-secondary);
+	}
+
+	.error-hint {
+		font-size: 14px;
+		color: var(--text-muted);
 	}
 
 	.version-list {
