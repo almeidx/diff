@@ -1,4 +1,4 @@
-# Differ
+# Diff
 
 A web application for comparing different versions of npm packages and WordPress plugins. View the diff between any two versions with syntax highlighting, word-level diff detection, and a file tree navigator.
 
@@ -27,8 +27,8 @@ Running locally removes the size and memory limits imposed by Cloudflare Workers
 
 ```bash
 # Clone the repository
-git clone https://github.com/almeidx/differ.git
-cd differ
+git clone https://github.com/almeidx/diff.git
+cd diff
 
 # Install dependencies
 pnpm install --frozen-lockfile

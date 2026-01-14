@@ -4,7 +4,7 @@ This document provides context for AI agents working on this codebase.
 
 ## Project Overview
 
-Differ is a SvelteKit application that compares versions of npm packages and WordPress plugins. It runs on Cloudflare Workers.
+Diff is a SvelteKit application that compares versions of npm packages and WordPress plugins. It runs on Cloudflare Workers.
 
 ## Architecture
 

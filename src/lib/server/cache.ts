@@ -1,4 +1,4 @@
-const CACHE_NAME = 'differ-cache-v1';
+const CACHE_NAME = 'diff-cache-v1';
 
 interface CacheOptions {
 	ttlSeconds: number;
