@@ -97,6 +97,8 @@
 </svelte:head>
 
 <div class="home">
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+
 	<header class="header">
 		<span class="logo">diff</span>
 		<div class="header-right">
@@ -118,7 +120,7 @@
 		</div>
 	</header>
 
-	<main class="main">
+	<main id="main-content" class="main">
 		<div class="hero">
 			<h1>Compare package versions</h1>
 			<p>View the diff between two versions of npm packages or WordPress plugins</p>
@@ -233,6 +235,24 @@
 </div>
 
 <style>
+	.skip-link {
+		position: absolute;
+		top: -100%;
+		left: 16px;
+		padding: 8px 16px;
+		background: var(--link-color);
+		color: white;
+		border-radius: 4px;
+		text-decoration: none;
+		font-weight: 500;
+		z-index: 1000;
+		transition: top 0.2s ease;
+	}
+
+	.skip-link:focus {
+		top: 16px;
+	}
+
 	.home {
 		min-height: 100vh;
 		display: flex;
