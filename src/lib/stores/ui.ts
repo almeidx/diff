@@ -40,3 +40,13 @@ export function expandAllPaths(paths: string[]): void {
 export function collapseAllPaths(): void {
 	expandedPaths.update(() => new Set());
 }
+
+export function expandPaths(paths: string[]): void {
+	expandedPaths.update((set) => {
+		const newSet = new Set(set);
+		for (const p of paths) {
+			newSet.add(p);
+		}
+		return newSet;
+	});
+}

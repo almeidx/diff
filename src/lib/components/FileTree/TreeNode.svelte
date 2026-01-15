@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { expandedPaths, togglePath } from '$lib/stores/ui';
+	import { expandedPaths, togglePath, expandPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
 	interface Props {
@@ -14,9 +14,29 @@
 
 	let isExpanded = $derived($expandedPaths.has(node.path) || depth === 0);
 
+	function getSingleFolderChildPaths(n: TreeNode): string[] {
+		const paths: string[] = [];
+		if (!n.children || n.children.length !== 1) return paths;
+
+		const child = n.children[0];
+		if (child.isDirectory) {
+			paths.push(child.path);
+			paths.push(...getSingleFolderChildPaths(child));
+		}
+		return paths;
+	}
+
 	function handleClick() {
 		if (node.isDirectory) {
+			const wasExpanded = $expandedPaths.has(node.path);
 			togglePath(node.path);
+
+			if (!wasExpanded && node.children) {
+				const childPaths = getSingleFolderChildPaths(node);
+				if (childPaths.length > 0) {
+					expandPaths(childPaths);
+				}
+			}
 		} else if (node.file && onFileSelect) {
 			onFileSelect(node.file);
 		}
