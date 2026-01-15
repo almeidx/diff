@@ -1,24 +1,25 @@
 <script lang="ts">
 	import '../app.css';
 	import '$lib/highlight/prism-theme.css';
-	import { theme } from '$lib/stores/ui';
+	import { theme, type Theme } from '$lib/stores/ui';
 	import { browser } from '$app/environment';
 
 	let { children } = $props();
 
+	let initialized = false;
+
 	$effect(() => {
-		if (browser) {
-			const saved = localStorage.getItem('theme');
-			if (saved === 'light' || saved === 'dark') {
-				theme.set(saved);
-			} else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-				theme.set('light');
+		if (browser && !initialized) {
+			const current = document.documentElement.dataset.theme as Theme;
+			if (current === 'light' || current === 'dark') {
+				theme.set(current);
 			}
+			initialized = true;
 		}
 	});
 
 	$effect(() => {
-		if (browser) {
+		if (browser && initialized) {
 			document.documentElement.dataset.theme = $theme;
 			localStorage.setItem('theme', $theme);
 		}
