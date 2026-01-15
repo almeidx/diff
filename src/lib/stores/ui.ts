@@ -32,3 +32,11 @@ export function toggleFileCollapse(path: string): void {
 		return newSet;
 	});
 }
+
+export function expandAllPaths(paths: string[]): void {
+	expandedPaths.update(() => new Set(paths));
+}
+
+export function collapseAllPaths(): void {
+	expandedPaths.update(() => new Set());
+}

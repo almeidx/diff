@@ -127,6 +127,24 @@ function flattenTreePaths(nodes: TreeNode[]): string[] {
 	return paths;
 }
 
+export function getAllFolderPaths(nodes: TreeNode[]): string[] {
+	const paths: string[] = [];
+
+	function traverse(nodeList: TreeNode[]) {
+		for (const node of nodeList) {
+			if (node.isDirectory) {
+				paths.push(node.path);
+				if (node.children) {
+					traverse(node.children);
+				}
+			}
+		}
+	}
+
+	traverse(nodes);
+	return paths;
+}
+
 export function getSingleChildFolderPaths(nodes: TreeNode[]): string[] {
 	const paths: string[] = [];
 
