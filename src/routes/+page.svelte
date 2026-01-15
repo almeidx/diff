@@ -433,6 +433,7 @@
 	.version-inputs .form-group,
 	.version-inputs :global(.version-selector) {
 		flex: 1;
+		min-width: 0;
 	}
 
 	.arrow {
