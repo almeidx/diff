@@ -9,6 +9,7 @@
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import type { DiffFile } from '$lib/types/index.js';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -109,6 +110,8 @@
 			</main>
 		</div>
 	{/if}
+
+	<ScrollToTop />
 </div>
 
 <style>
