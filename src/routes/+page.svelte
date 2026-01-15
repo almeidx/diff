@@ -520,6 +520,11 @@
 	@media (max-width: 480px) {
 		.version-inputs {
 			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.version-inputs :global(.version-selector) {
+			width: 100%;
 		}
 
 		.arrow {
