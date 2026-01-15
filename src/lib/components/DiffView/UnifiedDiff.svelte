@@ -48,15 +48,19 @@
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 		font-size: 12px;
 		line-height: 20px;
+		overflow-x: auto;
+		width: 100%;
 	}
 
 	.diff-table {
 		min-width: 100%;
+		width: max-content;
 		border-collapse: collapse;
 	}
 
 	.line-num-col {
 		width: 50px;
+		min-width: 50px;
 	}
 
 	.hunk-header {

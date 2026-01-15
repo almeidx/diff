@@ -210,6 +210,7 @@
 		flex: 1;
 		align-items: flex-start;
 		background: linear-gradient(to right, var(--bg-secondary) 280px, transparent 280px);
+		min-width: 0;
 	}
 
 	.sidebar {
@@ -282,6 +283,7 @@
 	@media (max-width: 768px) {
 		.main-content {
 			flex-direction: column;
+			background: none;
 		}
 
 		.sidebar {
@@ -290,6 +292,12 @@
 			max-height: 200px;
 			border-right: none;
 			border-bottom: 1px solid var(--border-color);
+			position: static;
+		}
+
+		.toolbar {
+			flex-wrap: wrap;
+			gap: 8px;
 		}
 
 		.version-bar {
@@ -297,8 +305,18 @@
 			align-items: stretch;
 		}
 
+		.version-bar :global(.version-selector) {
+			min-width: 0;
+		}
+
 		.version-arrow {
 			display: none;
+		}
+
+		.diff-content {
+			padding: 8px;
+			width: 100%;
+			box-sizing: border-box;
 		}
 	}
 </style>

@@ -123,4 +123,20 @@
 		background: var(--bg-tertiary);
 		color: var(--text-primary);
 	}
+
+	@media (max-width: 768px) {
+		.view-options {
+			gap: 6px;
+		}
+
+		.option-btn {
+			padding: 5px 8px;
+			font-size: 11px;
+		}
+
+		.toggle-btn {
+			padding: 5px 8px;
+			font-size: 11px;
+		}
+	}
 </style>

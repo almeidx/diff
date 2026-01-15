@@ -147,6 +147,7 @@
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 		font-size: 12px;
 		line-height: 20px;
+		width: 100%;
 	}
 
 	.split-side {

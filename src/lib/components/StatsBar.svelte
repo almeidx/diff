@@ -47,4 +47,12 @@
 	.deletions {
 		color: var(--diff-delete-text);
 	}
+
+	@media (max-width: 768px) {
+		.stats-bar {
+			padding: 6px 10px;
+			gap: 8px;
+			font-size: 12px;
+		}
+	}
 </style>

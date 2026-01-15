@@ -112,12 +112,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
+		min-width: 0;
+		max-width: 100%;
 	}
 
 	.file-diff {
 		border: 1px solid var(--border-color);
 		border-radius: 6px;
 		overflow: hidden;
+		min-width: 0;
+		max-width: 100%;
 	}
 
 	.file-header {
@@ -211,7 +215,8 @@
 	}
 
 	.file-content {
-		overflow-x: auto;
+		overflow: hidden;
+		width: 100%;
 	}
 
 	.binary-notice,
@@ -220,5 +225,38 @@
 		text-align: center;
 		color: var(--text-muted);
 		font-style: italic;
+	}
+
+	@media (max-width: 768px) {
+		.diff-view {
+			gap: 12px;
+		}
+
+		.file-header {
+			flex-wrap: wrap;
+			padding: 6px 8px;
+			font-size: 12px;
+		}
+
+		.file-path {
+			flex-basis: calc(100% - 40px);
+			order: 1;
+		}
+
+		.collapse-toggle {
+			order: 0;
+		}
+
+		.file-status {
+			order: 2;
+		}
+
+		.badge {
+			order: 3;
+		}
+
+		.file-stats {
+			order: 4;
+		}
 	}
 </style>
