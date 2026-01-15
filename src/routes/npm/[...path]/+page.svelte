@@ -125,6 +125,9 @@
 		padding: 12px 16px;
 		background: var(--bg-secondary);
 		border-bottom: 1px solid var(--border-color);
+		position: sticky;
+		top: 0;
+		z-index: 100;
 	}
 
 	.header-left {
@@ -214,8 +217,8 @@
 		background: var(--bg-secondary);
 		overflow-y: auto;
 		position: sticky;
-		top: 0;
-		max-height: 100vh;
+		top: 49px;
+		max-height: calc(100vh - 49px);
 	}
 
 	.diff-content {
