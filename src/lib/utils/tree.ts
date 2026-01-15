@@ -126,3 +126,30 @@ function flattenTreePaths(nodes: TreeNode[]): string[] {
 	}
 	return paths;
 }
+
+export function getSingleChildFolderPaths(nodes: TreeNode[]): string[] {
+	const paths: string[] = [];
+
+	function traverse(nodeList: TreeNode[]) {
+		if (nodeList.length === 1 && nodeList[0].isDirectory) {
+			const node = nodeList[0];
+			paths.push(node.path);
+			if (node.children) {
+				traverse(node.children);
+			}
+		} else {
+			for (const node of nodeList) {
+				if (node.isDirectory && node.children) {
+					const folderChildren = node.children.filter((c) => c.isDirectory);
+					if (folderChildren.length === 1 && node.children.length === 1) {
+						paths.push(folderChildren[0].path);
+						traverse(folderChildren[0].children || []);
+					}
+				}
+			}
+		}
+	}
+
+	traverse(nodes);
+	return paths;
+}

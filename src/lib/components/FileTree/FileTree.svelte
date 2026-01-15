@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { buildFileTree, propagateStatus } from '$lib/utils/tree';
+	import { buildFileTree, propagateStatus, getSingleChildFolderPaths } from '$lib/utils/tree';
 	import { expandedPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
@@ -16,13 +16,24 @@
 
 	$effect(() => {
 		if (files.length > 0) {
+			const pathsToExpand: string[] = [];
+
 			const firstFile = files[0];
 			const parts = firstFile.path.split('/');
 			if (parts.length > 1) {
-				const pathsToExpand: string[] = [];
 				for (let i = 0; i < parts.length - 1; i++) {
 					pathsToExpand.push(parts.slice(0, i + 1).join('/'));
 				}
+			}
+
+			const singleChildPaths = getSingleChildFolderPaths(tree);
+			for (const p of singleChildPaths) {
+				if (!pathsToExpand.includes(p)) {
+					pathsToExpand.push(p);
+				}
+			}
+
+			if (pathsToExpand.length > 0) {
 				expandedPaths.update((set) => {
 					const newSet = new Set(set);
 					for (const p of pathsToExpand) {
