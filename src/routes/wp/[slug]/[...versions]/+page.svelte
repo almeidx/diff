@@ -220,8 +220,8 @@
 		background: var(--bg-secondary);
 		overflow-y: auto;
 		position: sticky;
-		top: 49px;
-		max-height: calc(100vh - 49px);
+		top: 61px;
+		max-height: calc(100vh - 61px);
 	}
 
 	.diff-content {

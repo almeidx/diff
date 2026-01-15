@@ -90,9 +90,9 @@
 	.tree-actions {
 		display: flex;
 		gap: 4px;
-		padding: 8px 8px 0 8px;
+		padding: 8px;
 		border-bottom: 1px solid var(--border-color);
-		padding-bottom: 8px;
+		background: var(--bg-secondary);
 	}
 
 	.tree-actions button {
