@@ -6,7 +6,11 @@
 	}
 </script>
 
-<button onclick={toggle} class="theme-toggle" aria-label="Toggle theme">
+<button
+	onclick={toggle}
+	class="flex items-center justify-center w-9 h-9 border border-border rounded-md bg-bg-secondary text-text-secondary transition-all hover:bg-bg-tertiary hover:text-text-primary"
+	aria-label="Toggle theme"
+>
 	{#if $theme === 'dark'}
 		<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
 			<path
@@ -21,23 +25,3 @@
 		</svg>
 	{/if}
 </button>
-
-<style>
-	.theme-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 36px;
-		height: 36px;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		transition: all 0.15s ease;
-	}
-
-	.theme-toggle:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-</style>

@@ -43,12 +43,12 @@
 	}
 </script>
 
-<div class="diff-view">
+<div class="flex flex-col gap-4 min-w-0 max-w-full max-md:gap-3">
 	{#each sortedFiles as file (file.path)}
-		<div class="file-diff" id="file-{file.path.replace(/[^\w]/g, '-')}">
-			<div class="file-header">
+		<div class="border border-border rounded-md overflow-hidden min-w-0 max-w-full" id="file-{file.path.replace(/[^\w]/g, '-')}">
+			<div class="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border text-[13px] max-md:flex-wrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
 				<button
-					class="collapse-toggle"
+					class="flex items-center justify-center w-6 h-6 border-none bg-transparent text-text-muted rounded transition-all hover:bg-bg-tertiary hover:text-text-primary max-md:order-0"
 					onclick={() => toggleFileCollapse(file.path)}
 					aria-expanded={!isCollapsed(file.path)}
 					aria-label={isCollapsed(file.path) ? 'Expand file' : 'Collapse file'}
@@ -58,36 +58,47 @@
 						height="16"
 						viewBox="0 0 16 16"
 						fill="currentColor"
-						class:collapsed={isCollapsed(file.path)}
+						class="transition-transform duration-150"
+						class:rotate-90={!isCollapsed(file.path)}
 					>
 						<path
 							d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"
 						/>
 					</svg>
 				</button>
-				<span class="file-path">{file.path}</span>
-				<span class="file-status status-{file.status}">{file.status}</span>
+				<span class="flex-1 font-mono overflow-hidden text-ellipsis whitespace-nowrap max-md:flex-[1_1_calc(100%-40px)] max-md:order-1">{file.path}</span>
+				<span
+					class="text-xs font-medium px-2 py-0.5 rounded-xl max-md:order-2"
+					class:bg-diff-add-bg={file.status === 'added'}
+					class:text-diff-add-text={file.status === 'added'}
+					class:bg-diff-delete-bg={file.status === 'deleted'}
+					class:text-diff-delete-text={file.status === 'deleted'}
+					class:bg-diff-hunk-bg={file.status === 'modified'}
+					class:text-diff-hunk-text={file.status === 'modified'}
+				>
+					{file.status}
+				</span>
 				{#if file.isBinary}
-					<span class="badge">Binary file</span>
+					<span class="text-[11px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-muted max-md:order-3">Binary file</span>
 				{/if}
 				{#if file.isMinified}
-					<span class="badge">Minified</span>
+					<span class="text-[11px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-muted max-md:order-3">Minified</span>
 				{/if}
 				{#if getFileStats(file).additions > 0 || getFileStats(file).deletions > 0}
 					{@const stats = getFileStats(file)}
-					<span class="file-stats">
-						{#if stats.additions > 0}<span class="additions">+{stats.additions}</span>{/if}
-						{#if stats.deletions > 0}<span class="deletions">-{stats.deletions}</span>{/if}
+					<span class="flex gap-1.5 text-xs font-mono max-md:order-4">
+						{#if stats.additions > 0}<span class="text-diff-add-text">+{stats.additions}</span>{/if}
+						{#if stats.deletions > 0}<span class="text-diff-delete-text">-{stats.deletions}</span>{/if}
 					</span>
 				{/if}
 			</div>
 
 			{#if !isCollapsed(file.path)}
-				<div class="file-content">
+				<div class="overflow-hidden w-full">
 					{#if file.isBinary}
-						<div class="binary-notice">Binary file not shown</div>
+						<div class="p-6 text-center text-text-muted italic">Binary file not shown</div>
 					{:else if file.hunks.length === 0}
-						<div class="empty-notice">
+						<div class="p-6 text-center text-text-muted italic">
 							{#if file.status === 'added'}
 								Empty file added
 							{:else if file.status === 'deleted'}
@@ -106,157 +117,3 @@
 		</div>
 	{/each}
 </div>
-
-<style>
-	.diff-view {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-		min-width: 0;
-		max-width: 100%;
-	}
-
-	.file-diff {
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		overflow: hidden;
-		min-width: 0;
-		max-width: 100%;
-	}
-
-	.file-header {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 12px;
-		background: var(--bg-secondary);
-		border-bottom: 1px solid var(--border-color);
-		font-size: 13px;
-	}
-
-	.collapse-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border: none;
-		background: transparent;
-		color: var(--text-muted);
-		border-radius: 4px;
-		transition: all 0.15s ease;
-	}
-
-	.collapse-toggle:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.collapse-toggle svg {
-		transition: transform 0.15s ease;
-		transform: rotate(90deg);
-	}
-
-	.collapse-toggle svg.collapsed {
-		transform: rotate(0deg);
-	}
-
-	.file-path {
-		flex: 1;
-		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.file-status {
-		font-size: 12px;
-		font-weight: 500;
-		padding: 2px 8px;
-		border-radius: 12px;
-	}
-
-	.status-added {
-		background: var(--diff-add-bg);
-		color: var(--diff-add-text);
-	}
-
-	.status-deleted {
-		background: var(--diff-delete-bg);
-		color: var(--diff-delete-text);
-	}
-
-	.status-modified {
-		background: var(--diff-hunk-bg);
-		color: var(--diff-hunk-text);
-	}
-
-	.badge {
-		font-size: 11px;
-		padding: 2px 6px;
-		border-radius: 4px;
-		background: var(--bg-tertiary);
-		color: var(--text-muted);
-	}
-
-	.file-stats {
-		display: flex;
-		gap: 6px;
-		font-size: 12px;
-		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-	}
-
-	.file-stats .additions {
-		color: var(--diff-add-text);
-	}
-
-	.file-stats .deletions {
-		color: var(--diff-delete-text);
-	}
-
-	.file-content {
-		overflow: hidden;
-		width: 100%;
-	}
-
-	.binary-notice,
-	.empty-notice {
-		padding: 24px;
-		text-align: center;
-		color: var(--text-muted);
-		font-style: italic;
-	}
-
-	@media (max-width: 768px) {
-		.diff-view {
-			gap: 12px;
-		}
-
-		.file-header {
-			flex-wrap: wrap;
-			padding: 6px 8px;
-			font-size: 12px;
-		}
-
-		.file-path {
-			flex-basis: calc(100% - 40px);
-			order: 1;
-		}
-
-		.collapse-toggle {
-			order: 0;
-		}
-
-		.file-status {
-			order: 2;
-		}
-
-		.badge {
-			order: 3;
-		}
-
-		.file-stats {
-			order: 4;
-		}
-	}
-</style>

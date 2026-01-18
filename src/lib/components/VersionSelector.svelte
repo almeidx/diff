@@ -45,42 +45,68 @@
 	}
 </script>
 
-<div class="version-selector" onkeydown={handleKeydown} role="group">
-	<label for={id}>{label}</label>
+<div class="version-selector flex flex-col gap-1.5 min-w-0" onkeydown={handleKeydown} role="group">
+	<label for={id} class="text-xs font-medium text-text-secondary">{label}</label>
 
 	{#if showManualInput}
-		<div class="manual-input">
+		<div class="flex gap-2">
 			<input
 				type="text"
 				bind:value={manualValue}
 				placeholder="Enter version..."
 				onkeydown={(e) => e.key === 'Enter' && handleManualSubmit()}
 				disabled={loading}
+				class="flex-1 px-3 py-2 border border-border rounded-md bg-bg-primary text-text-primary disabled:opacity-70 disabled:cursor-not-allowed"
 			/>
-			<button type="button" onclick={handleManualSubmit} disabled={loading}>OK</button>
-			<button type="button" class="cancel" onclick={() => (showManualInput = false)} disabled={loading}>
+			<button
+				type="button"
+				onclick={handleManualSubmit}
+				disabled={loading}
+				class="px-4 py-2 border border-border rounded-md bg-bg-secondary text-text-primary hover:bg-bg-tertiary disabled:opacity-70 disabled:cursor-not-allowed"
+			>
+				OK
+			</button>
+			<button
+				type="button"
+				onclick={() => (showManualInput = false)}
+				disabled={loading}
+				class="px-4 py-2 border border-border rounded-md bg-transparent text-text-primary hover:bg-bg-tertiary disabled:opacity-70 disabled:cursor-not-allowed"
+			>
 				Cancel
 			</button>
 		</div>
 	{:else}
-		<div class="dropdown-container">
+		<div class="relative">
 			<button
 				type="button"
-				class="dropdown-trigger"
-				class:loading
+				class="flex items-center justify-between w-full px-3 py-2 border border-border rounded-md text-sm text-left transition-colors"
+				class:bg-bg-primary={!loading}
+				class:bg-bg-secondary={loading}
+				class:text-text-primary={!loading}
+				class:hover:border-text-muted={!loading}
+				class:opacity-70={loading}
+				class:cursor-not-allowed={loading}
 				{id}
 				onclick={() => !loading && (isOpen = !isOpen)}
 				aria-expanded={isOpen}
 				disabled={loading}
 			>
 				{#if loading}
-					<span class="loading-content">
-						<span class="spinner"></span>
-						<span class="selected-value">Loading...</span>
+					<span class="flex items-center gap-2">
+						<span class="w-3.5 h-3.5 border-2 border-border border-t-link rounded-full animate-spin"></span>
+						<span class="overflow-hidden text-ellipsis whitespace-nowrap">Loading...</span>
 					</span>
 				{:else}
-					<span class="selected-value">{value || 'Select version'}</span>
-					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+					<span class="overflow-hidden text-ellipsis whitespace-nowrap">{value || 'Select version'}</span>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="transition-transform duration-150"
+						class:rotate-0={isOpen}
+						class:rotate-180={!isOpen}
+					>
 						<path
 							d="M4.427 9.573l3.396-3.396a.25.25 0 01.354 0l3.396 3.396a.25.25 0 01-.177.427H4.604a.25.25 0 01-.177-.427z"
 						/>
@@ -89,45 +115,50 @@
 			</button>
 
 			{#if isOpen && !loading}
-				<div class="dropdown-menu">
-					<div class="search-container">
+				<div class="absolute top-[calc(100%+4px)] left-0 right-0 max-h-[300px] flex flex-col bg-bg-primary border border-border rounded-md shadow-xl z-[100] overflow-hidden">
+					<div class="p-2 border-b border-border">
 						<input
 							type="text"
-							class="search-input"
+							class="w-full px-2.5 py-1.5 border border-border rounded bg-bg-secondary text-text-primary"
 							placeholder="Search versions..."
 							bind:value={search}
 						/>
 					</div>
-					<ul class="version-list">
+					<ul class="list-none overflow-y-auto flex-1">
 						{#each filteredVersions.slice(0, 50) as version (version)}
 							<li>
 								<button
 									type="button"
-									class="version-option"
-									class:selected={version === value}
-									class:disabled={version === disabledVersion}
+									class="flex items-center justify-between w-full px-3 py-2 border-none bg-transparent text-left cursor-pointer"
+									class:text-text-primary={version !== disabledVersion}
+									class:hover:bg-bg-secondary={version !== disabledVersion}
+									class:bg-bg-tertiary={version === value}
+									class:font-medium={version === value}
+									class:text-text-muted={version === disabledVersion}
+									class:cursor-not-allowed={version === disabledVersion}
+									class:opacity-60={version === disabledVersion}
 									onclick={() => selectVersion(version)}
 									disabled={version === disabledVersion}
 								>
 									{version}
 									{#if version === disabledVersion}
-										<span class="disabled-hint">(selected in other)</span>
+										<span class="text-[11px] text-text-muted">(selected in other)</span>
 									{/if}
 								</button>
 							</li>
 						{/each}
 						{#if filteredVersions.length > 50}
-							<li class="more-indicator">
+							<li class="px-3 py-2 text-text-muted text-xs text-center">
 								+{filteredVersions.length - 50} more...
 							</li>
 						{/if}
 						{#if filteredVersions.length === 0}
-							<li class="no-results">No matching versions</li>
+							<li class="px-3 py-2 text-text-muted text-xs text-center">No matching versions</li>
 						{/if}
 					</ul>
 					<button
 						type="button"
-						class="manual-entry-btn"
+						class="px-3 py-2.5 border-none border-t border-border bg-bg-secondary text-link text-left cursor-pointer hover:bg-bg-tertiary"
 						onclick={() => {
 							showManualInput = true;
 							isOpen = false;
@@ -140,217 +171,3 @@
 		</div>
 	{/if}
 </div>
-
-<style>
-	.version-selector {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		min-width: 0;
-	}
-
-	label {
-		font-size: 12px;
-		font-weight: 500;
-		color: var(--text-secondary);
-	}
-
-	.dropdown-container {
-		position: relative;
-	}
-
-	.dropdown-trigger {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		width: 100%;
-		padding: 8px 12px;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		font-size: 14px;
-		text-align: left;
-	}
-
-	.dropdown-trigger:hover:not(:disabled) {
-		border-color: var(--text-muted);
-	}
-
-	.dropdown-trigger:disabled {
-		cursor: not-allowed;
-		opacity: 0.7;
-	}
-
-	.dropdown-trigger.loading {
-		background: var(--bg-secondary);
-	}
-
-	.dropdown-trigger svg {
-		transform: rotate(180deg);
-		transition: transform 0.15s ease;
-	}
-
-	.dropdown-trigger[aria-expanded='true'] svg {
-		transform: rotate(0deg);
-	}
-
-	.selected-value {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.loading-content {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.spinner {
-		width: 14px;
-		height: 14px;
-		border: 2px solid var(--border-color);
-		border-top-color: var(--link-color);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.dropdown-menu {
-		position: absolute;
-		top: calc(100% + 4px);
-		left: 0;
-		right: 0;
-		max-height: 300px;
-		display: flex;
-		flex-direction: column;
-		background: var(--bg-primary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-		z-index: 100;
-		overflow: hidden;
-	}
-
-	.search-container {
-		padding: 8px;
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.search-input {
-		width: 100%;
-		padding: 6px 10px;
-		border: 1px solid var(--border-color);
-		border-radius: 4px;
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-	}
-
-	.version-list {
-		list-style: none;
-		overflow-y: auto;
-		flex: 1;
-	}
-
-	.version-option {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		width: 100%;
-		padding: 8px 12px;
-		border: none;
-		background: transparent;
-		color: var(--text-primary);
-		text-align: left;
-		cursor: pointer;
-	}
-
-	.version-option:hover:not(:disabled) {
-		background: var(--bg-secondary);
-	}
-
-	.version-option.selected {
-		background: var(--bg-tertiary);
-		font-weight: 500;
-	}
-
-	.version-option.disabled,
-	.version-option:disabled {
-		color: var(--text-muted);
-		cursor: not-allowed;
-		opacity: 0.6;
-	}
-
-	.disabled-hint {
-		font-size: 11px;
-		color: var(--text-muted);
-	}
-
-	.more-indicator,
-	.no-results {
-		padding: 8px 12px;
-		color: var(--text-muted);
-		font-size: 12px;
-		text-align: center;
-	}
-
-	.manual-entry-btn {
-		padding: 10px 12px;
-		border: none;
-		border-top: 1px solid var(--border-color);
-		background: var(--bg-secondary);
-		color: var(--link-color);
-		text-align: left;
-		cursor: pointer;
-	}
-
-	.manual-entry-btn:hover {
-		background: var(--bg-tertiary);
-	}
-
-	.manual-input {
-		display: flex;
-		gap: 8px;
-	}
-
-	.manual-input input {
-		flex: 1;
-		padding: 8px 12px;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		background: var(--bg-primary);
-		color: var(--text-primary);
-	}
-
-	.manual-input input:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.manual-input button {
-		padding: 8px 16px;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		background: var(--bg-secondary);
-		color: var(--text-primary);
-	}
-
-	.manual-input button:hover:not(:disabled) {
-		background: var(--bg-tertiary);
-	}
-
-	.manual-input button:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.manual-input button.cancel {
-		background: transparent;
-	}
-</style>

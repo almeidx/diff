@@ -26,14 +26,6 @@
 	});
 </script>
 
-<div class="app">
+<div class="min-h-screen flex flex-col">
 	{@render children()}
 </div>
-
-<style>
-	.app {
-		min-height: 100vh;
-		display: flex;
-		flex-direction: column;
-	}
-</style>

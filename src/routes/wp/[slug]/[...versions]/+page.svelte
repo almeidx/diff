@@ -32,80 +32,84 @@
 	<title>{data.slug} {data.fromVersion}...{data.toVersion} - Diff</title>
 </svelte:head>
 
-<div class="diff-page">
-	<header class="page-header">
-		<div class="header-left">
-			<a href="/" class="logo">diff</a>
-			<span class="breadcrumb">
-				<span class="package-type">WordPress</span>
-				<span class="separator">/</span>
-				<span class="package-name">{data.slug}</span>
+<div class="flex flex-col min-h-screen">
+	<header class="flex items-center justify-between px-4 py-3 bg-bg-secondary border-b border-border sticky top-0 z-[100]">
+		<div class="flex items-center gap-4">
+			<a href="/" class="text-lg font-bold text-text-primary no-underline">diff</a>
+			<span class="flex items-center gap-2 text-sm">
+				<span class="px-2 py-0.5 bg-bg-tertiary rounded text-text-secondary text-xs font-medium">WordPress</span>
+				<span class="text-text-muted">/</span>
+				<span class="font-medium font-mono">{data.slug}</span>
 			</span>
 		</div>
-		<div class="header-right">
+		<div class="flex items-center gap-3">
 			<ThemeToggle />
 		</div>
 	</header>
 
-	<div class="version-bar">
-		<VersionSelector
-			versions={data.versions}
-			value={data.fromVersion}
-			onchange={(v) => navigateToVersions(v, data.toVersion)}
-			label="From"
-			id="from-version"
-			disabledVersion={data.toVersion}
-			loading={isNavigating}
-		/>
-		<span class="version-arrow">→</span>
-		<VersionSelector
-			versions={data.versions}
-			value={data.toVersion}
-			onchange={(v) => navigateToVersions(data.fromVersion, v)}
-			label="To"
-			id="to-version"
-			disabledVersion={data.fromVersion}
-			loading={isNavigating}
-		/>
+	<div class="flex items-end gap-4 p-4 bg-bg-primary border-b border-border max-md:flex-col max-md:items-stretch">
+		<div class="min-w-[200px] flex-1 max-w-xs max-md:min-w-0 max-md:max-w-none">
+			<VersionSelector
+				versions={data.versions}
+				value={data.fromVersion}
+				onchange={(v) => navigateToVersions(v, data.toVersion)}
+				label="From"
+				id="from-version"
+				disabledVersion={data.toVersion}
+				loading={isNavigating}
+			/>
+		</div>
+		<span class="pb-2.5 text-text-muted text-lg max-md:hidden">→</span>
+		<div class="min-w-[200px] flex-1 max-w-xs max-md:min-w-0 max-md:max-w-none">
+			<VersionSelector
+				versions={data.versions}
+				value={data.toVersion}
+				onchange={(v) => navigateToVersions(data.fromVersion, v)}
+				label="To"
+				id="to-version"
+				disabledVersion={data.fromVersion}
+				loading={isNavigating}
+			/>
+		</div>
 	</div>
 
 	{#if data.error}
-		<div class="error-container">
-			<div class="error-message">
+		<div class="flex justify-center px-4 py-12">
+			<div class="max-w-[600px] p-6 bg-bg-secondary border border-border rounded-lg">
 				{#if data.error.type === 'invalid_version'}
-					<h2>Version not found</h2>
-					<p>{data.error.message}</p>
-					<p>Available versions:</p>
-					<div class="version-list">
+					<h2 class="mb-2 text-diff-delete-text">Version not found</h2>
+					<p class="mb-3 text-text-secondary">{data.error.message}</p>
+					<p class="mb-3 text-text-secondary">Available versions:</p>
+					<div class="flex flex-wrap gap-2">
 						{#each data.error.availableVersions.slice(0, 20) as version}
-							<span class="version-tag">{version}</span>
+							<span class="px-2 py-1 bg-bg-tertiary rounded text-xs font-mono">{version}</span>
 						{/each}
 						{#if data.error.availableVersions.length > 20}
-							<span class="more">+{data.error.availableVersions.length - 20} more</span>
+							<span class="px-2 py-1 text-text-muted text-xs">+{data.error.availableVersions.length - 20} more</span>
 						{/if}
 					</div>
 				{:else}
-					<h2>Failed to load diff</h2>
-					<p>{data.error.message}</p>
-					<p class="error-hint">This may be due to package size limits or network issues. Try again later or try a different version range.</p>
+					<h2 class="mb-2 text-diff-delete-text">Failed to load diff</h2>
+					<p class="mb-3 text-text-secondary">{data.error.message}</p>
+					<p class="text-sm text-text-muted">This may be due to package size limits or network issues. Try again later or try a different version range.</p>
 				{/if}
 			</div>
 		</div>
 	{:else if data.diff}
-		<div class="toolbar">
+		<div class="flex items-center justify-between px-4 py-3 bg-bg-primary border-b border-border max-md:flex-wrap max-md:gap-2">
 			<StatsBar stats={data.diff.stats} />
 			<ViewToggle />
 		</div>
 
-		<div class="main-content">
-			<aside class="sidebar">
+		<div class="flex flex-1 items-stretch min-w-0 max-md:flex-col max-md:bg-transparent" style:background="linear-gradient(to right, var(--bg-secondary) 280px, transparent 280px)">
+			<aside class="w-[280px] min-w-[200px] max-w-[400px] border-r border-border bg-bg-secondary overflow-y-auto sticky top-[61px] h-[calc(100vh-61px)] max-md:w-full max-md:max-w-none max-md:h-auto max-md:max-h-[200px] max-md:border-r-0 max-md:border-b max-md:static">
 				<FileTree
 					files={data.diff.files}
 					onFileSelect={handleFileSelect}
 					{selectedPath}
 				/>
 			</aside>
-			<main class="diff-content">
+			<main class="flex-1 p-4 min-w-0 max-md:p-2 max-md:w-full max-md:box-border">
 				<DiffView files={data.diff.files} />
 			</main>
 		</div>
@@ -113,210 +117,3 @@
 
 	<ScrollToTop />
 </div>
-
-<style>
-	.diff-page {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-	}
-
-	.page-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 12px 16px;
-		background: var(--bg-secondary);
-		border-bottom: 1px solid var(--border-color);
-		position: sticky;
-		top: 0;
-		z-index: 100;
-	}
-
-	.header-left {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-	}
-
-	.logo {
-		font-size: 18px;
-		font-weight: 700;
-		color: var(--text-primary);
-		text-decoration: none;
-	}
-
-	.breadcrumb {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 14px;
-	}
-
-	.package-type {
-		padding: 2px 8px;
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 500;
-	}
-
-	.separator {
-		color: var(--text-muted);
-	}
-
-	.package-name {
-		font-weight: 500;
-		font-family: ui-monospace, monospace;
-	}
-
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.version-bar {
-		display: flex;
-		align-items: flex-end;
-		gap: 16px;
-		padding: 16px;
-		background: var(--bg-primary);
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.version-bar :global(.version-selector) {
-		min-width: 200px;
-	}
-
-	.version-arrow {
-		padding-bottom: 10px;
-		color: var(--text-muted);
-		font-size: 18px;
-	}
-
-	.toolbar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 12px 16px;
-		background: var(--bg-primary);
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.main-content {
-		display: flex;
-		flex: 1;
-		align-items: flex-start;
-		background: linear-gradient(to right, var(--bg-secondary) 280px, transparent 280px);
-		min-width: 0;
-	}
-
-	.sidebar {
-		width: 280px;
-		min-width: 200px;
-		max-width: 400px;
-		border-right: 1px solid var(--border-color);
-		background: var(--bg-secondary);
-		overflow-y: auto;
-		position: sticky;
-		top: 61px;
-		max-height: calc(100vh - 61px);
-	}
-
-	.diff-content {
-		flex: 1;
-		padding: 16px;
-		min-width: 0;
-	}
-
-	.error-container {
-		display: flex;
-		justify-content: center;
-		padding: 48px 16px;
-	}
-
-	.error-message {
-		max-width: 600px;
-		padding: 24px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 8px;
-	}
-
-	.error-message h2 {
-		margin-bottom: 8px;
-		color: var(--diff-delete-text);
-	}
-
-	.error-message p {
-		margin-bottom: 12px;
-		color: var(--text-secondary);
-	}
-
-	.error-hint {
-		font-size: 14px;
-		color: var(--text-muted);
-	}
-
-	.version-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-
-	.version-tag {
-		padding: 4px 8px;
-		background: var(--bg-tertiary);
-		border-radius: 4px;
-		font-size: 12px;
-		font-family: ui-monospace, monospace;
-	}
-
-	.more {
-		padding: 4px 8px;
-		color: var(--text-muted);
-		font-size: 12px;
-	}
-
-	@media (max-width: 768px) {
-		.main-content {
-			flex-direction: column;
-			background: none;
-		}
-
-		.sidebar {
-			width: 100%;
-			max-width: none;
-			max-height: 200px;
-			border-right: none;
-			border-bottom: 1px solid var(--border-color);
-			position: static;
-		}
-
-		.toolbar {
-			flex-wrap: wrap;
-			gap: 8px;
-		}
-
-		.version-bar {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.version-bar :global(.version-selector) {
-			min-width: 0;
-		}
-
-		.version-arrow {
-			display: none;
-		}
-
-		.diff-content {
-			padding: 8px;
-			width: 100%;
-			box-sizing: border-box;
-		}
-	}
-</style>

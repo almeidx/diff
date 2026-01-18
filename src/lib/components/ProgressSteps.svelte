@@ -29,11 +29,22 @@
 	}
 </script>
 
-<div class="progress-steps">
+<div class="flex items-center justify-center gap-2 p-6 max-md:flex-col max-md:gap-3">
 	{#each steps as step, index (step.id)}
 		{@const status = getStepStatus(step.id)}
-		<div class="step" class:active={status === 'active'} class:complete={status === 'complete'}>
-			<div class="step-indicator">
+		<div
+			class="flex items-center gap-2"
+			class:text-text-muted={status === 'pending'}
+			class:text-link={status === 'active'}
+			class:text-diff-add-text={status === 'complete'}
+		>
+			<div
+				class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium"
+				class:bg-bg-tertiary={status === 'pending'}
+				class:bg-link={status === 'active'}
+				class:bg-diff-add-text={status === 'complete'}
+				class:text-white={status === 'active' || status === 'complete'}
+			>
 				{#if status === 'complete'}
 					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
 						<path
@@ -41,104 +52,19 @@
 						/>
 					</svg>
 				{:else if status === 'active'}
-					<div class="spinner"></div>
+					<div class="w-3.5 h-3.5 border-2 border-transparent border-t-current rounded-full animate-spin"></div>
 				{:else}
-					<span class="step-number">{index + 1}</span>
+					<span>{index + 1}</span>
 				{/if}
 			</div>
-			<span class="step-label">{step.label}</span>
+			<span class="text-[13px] font-medium">{step.label}</span>
 		</div>
 		{#if index < steps.length - 1}
-			<div class="step-connector" class:complete={status === 'complete'}></div>
+			<div
+				class="w-10 h-0.5 max-md:w-0.5 max-md:h-5"
+				class:bg-border={status !== 'complete'}
+				class:bg-diff-add-text={status === 'complete'}
+			></div>
 		{/if}
 	{/each}
 </div>
-
-<style>
-	.progress-steps {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		padding: 24px;
-	}
-
-	.step {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		color: var(--text-muted);
-	}
-
-	.step.active {
-		color: var(--link-color);
-	}
-
-	.step.complete {
-		color: var(--diff-add-text);
-	}
-
-	.step-indicator {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		border-radius: 50%;
-		background: var(--bg-tertiary);
-		font-size: 12px;
-		font-weight: 500;
-	}
-
-	.step.active .step-indicator {
-		background: var(--link-color);
-		color: white;
-	}
-
-	.step.complete .step-indicator {
-		background: var(--diff-add-text);
-		color: white;
-	}
-
-	.spinner {
-		width: 14px;
-		height: 14px;
-		border: 2px solid transparent;
-		border-top-color: currentColor;
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.step-label {
-		font-size: 13px;
-		font-weight: 500;
-	}
-
-	.step-connector {
-		width: 40px;
-		height: 2px;
-		background: var(--border-color);
-	}
-
-	.step-connector.complete {
-		background: var(--diff-add-text);
-	}
-
-	@media (max-width: 600px) {
-		.progress-steps {
-			flex-direction: column;
-			gap: 12px;
-		}
-
-		.step-connector {
-			width: 2px;
-			height: 20px;
-		}
-	}
-</style>

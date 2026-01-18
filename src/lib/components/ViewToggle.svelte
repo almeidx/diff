@@ -10,11 +10,16 @@
 	}
 </script>
 
-<div class="view-options">
+<div class="flex items-center gap-3 max-md:gap-1.5">
 	<button
 		type="button"
-		class="option-btn"
-		class:active={$wordWrap}
+		class="flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-xs font-medium transition-all max-md:px-2 max-md:py-1 max-md:text-[11px]"
+		class:border-border={!$wordWrap}
+		class:bg-bg-secondary={!$wordWrap}
+		class:text-text-secondary={!$wordWrap}
+		class:border-link={$wordWrap}
+		class:bg-[color-mix(in_srgb,var(--link-color)_10%,transparent)]={$wordWrap}
+		class:text-link={$wordWrap}
 		onclick={toggleWordWrap}
 		aria-pressed={$wordWrap}
 		title="Toggle word wrap"
@@ -24,119 +29,42 @@
 		</svg>
 		Wrap
 	</button>
-	<div class="view-toggle" role="radiogroup" aria-label="Diff view mode">
-	<button
-		type="button"
-		class="toggle-btn"
-		class:active={$viewMode === 'unified'}
-		onclick={() => setMode('unified')}
-		role="radio"
-		aria-checked={$viewMode === 'unified'}
-	>
-		<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-			<path
-				d="M2 3.75C2 2.784 2.784 2 3.75 2h8.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5zm1.75-.25a.25.25 0 00-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25v-8.5a.25.25 0 00-.25-.25h-8.5z"
-			/>
-		</svg>
-		Unified
-	</button>
-	<button
-		type="button"
-		class="toggle-btn"
-		class:active={$viewMode === 'split'}
-		onclick={() => setMode('split')}
-		role="radio"
-		aria-checked={$viewMode === 'split'}
-	>
-		<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-			<path
-				d="M2 3.75C2 2.784 2.784 2 3.75 2h8.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5zM8 3.5v9h4.25a.25.25 0 00.25-.25v-8.5a.25.25 0 00-.25-.25H8zm-1.5 9v-9H3.75a.25.25 0 00-.25.25v8.5c0 .138.112.25.25.25H6.5z"
-			/>
-		</svg>
-		Split
-	</button>
+	<div class="flex border border-border rounded-md overflow-hidden" role="radiogroup" aria-label="Diff view mode">
+		<button
+			type="button"
+			class="flex items-center gap-1.5 px-3 py-1.5 border-none text-xs font-medium transition-all border-r border-border max-md:px-2 max-md:py-1 max-md:text-[11px]"
+			class:bg-bg-secondary={$viewMode !== 'unified'}
+			class:text-text-secondary={$viewMode !== 'unified'}
+			class:bg-bg-tertiary={$viewMode === 'unified'}
+			class:text-text-primary={$viewMode === 'unified'}
+			onclick={() => setMode('unified')}
+			role="radio"
+			aria-checked={$viewMode === 'unified'}
+		>
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path
+					d="M2 3.75C2 2.784 2.784 2 3.75 2h8.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5zm1.75-.25a.25.25 0 00-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25v-8.5a.25.25 0 00-.25-.25h-8.5z"
+				/>
+			</svg>
+			Unified
+		</button>
+		<button
+			type="button"
+			class="flex items-center gap-1.5 px-3 py-1.5 border-none text-xs font-medium transition-all max-md:px-2 max-md:py-1 max-md:text-[11px]"
+			class:bg-bg-secondary={$viewMode !== 'split'}
+			class:text-text-secondary={$viewMode !== 'split'}
+			class:bg-bg-tertiary={$viewMode === 'split'}
+			class:text-text-primary={$viewMode === 'split'}
+			onclick={() => setMode('split')}
+			role="radio"
+			aria-checked={$viewMode === 'split'}
+		>
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+				<path
+					d="M2 3.75C2 2.784 2.784 2 3.75 2h8.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0112.25 14h-8.5A1.75 1.75 0 012 12.25v-8.5zM8 3.5v9h4.25a.25.25 0 00.25-.25v-8.5a.25.25 0 00-.25-.25H8zm-1.5 9v-9H3.75a.25.25 0 00-.25.25v8.5c0 .138.112.25.25.25H6.5z"
+				/>
+			</svg>
+			Split
+		</button>
 	</div>
 </div>
-
-<style>
-	.view-options {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.option-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 12px;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 500;
-		transition: all 0.15s ease;
-	}
-
-	.option-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.option-btn.active {
-		border-color: var(--link-color);
-		background: color-mix(in srgb, var(--link-color) 10%, transparent);
-		color: var(--link-color);
-	}
-
-	.view-toggle {
-		display: flex;
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		overflow: hidden;
-	}
-
-	.toggle-btn {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 12px;
-		border: none;
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		font-size: 12px;
-		font-weight: 500;
-		transition: all 0.15s ease;
-	}
-
-	.toggle-btn:first-child {
-		border-right: 1px solid var(--border-color);
-	}
-
-	.toggle-btn:hover {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	.toggle-btn.active {
-		background: var(--bg-tertiary);
-		color: var(--text-primary);
-	}
-
-	@media (max-width: 768px) {
-		.view-options {
-			gap: 6px;
-		}
-
-		.option-btn {
-			padding: 5px 8px;
-			font-size: 11px;
-		}
-
-		.toggle-btn {
-			padding: 5px 8px;
-			font-size: 11px;
-		}
-	}
-</style>

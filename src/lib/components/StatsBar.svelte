@@ -8,51 +8,14 @@
 	let { stats }: Props = $props();
 </script>
 
-<div class="stats-bar">
-	<span class="stat files">
+<div class="flex items-center gap-3 px-4 py-2 bg-bg-secondary border border-border rounded-md text-[13px] max-md:px-2.5 max-md:py-1.5 max-md:gap-2 max-md:text-xs">
+	<span class="font-medium text-text-primary">
 		{stats.files} file{stats.files !== 1 ? 's' : ''} changed
 	</span>
 	{#if stats.insertions > 0}
-		<span class="stat additions">+{stats.insertions}</span>
+		<span class="font-medium text-diff-add-text">+{stats.insertions}</span>
 	{/if}
 	{#if stats.deletions > 0}
-		<span class="stat deletions">-{stats.deletions}</span>
+		<span class="font-medium text-diff-delete-text">-{stats.deletions}</span>
 	{/if}
 </div>
-
-<style>
-	.stats-bar {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 8px 16px;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		border-radius: 6px;
-		font-size: 13px;
-	}
-
-	.stat {
-		font-weight: 500;
-	}
-
-	.files {
-		color: var(--text-primary);
-	}
-
-	.additions {
-		color: var(--diff-add-text);
-	}
-
-	.deletions {
-		color: var(--diff-delete-text);
-	}
-
-	@media (max-width: 768px) {
-		.stats-bar {
-			padding: 6px 10px;
-			gap: 8px;
-			font-size: 12px;
-		}
-	}
-</style>

@@ -20,42 +20,13 @@
 </script>
 
 {#if visible}
-	<button class="scroll-to-top" onclick={scrollToTop} aria-label="Scroll to top">
+	<button
+		class="fixed bottom-6 right-6 w-11 h-11 rounded-full bg-bg-secondary border border-border text-text-primary flex items-center justify-center cursor-pointer shadow-lg transition-all z-50 hover:bg-bg-tertiary hover:-translate-y-0.5 max-md:bottom-4 max-md:right-4"
+		onclick={scrollToTop}
+		aria-label="Scroll to top"
+	>
 		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 			<path d="M18 15l-6-6-6 6" />
 		</svg>
 	</button>
 {/if}
-
-<style>
-	.scroll-to-top {
-		position: fixed;
-		bottom: 24px;
-		right: 24px;
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-color);
-		color: var(--text-primary);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-		transition: all 0.2s ease;
-		z-index: 50;
-	}
-
-	.scroll-to-top:hover {
-		background: var(--bg-tertiary);
-		transform: translateY(-2px);
-	}
-
-	@media (max-width: 768px) {
-		.scroll-to-top {
-			bottom: 16px;
-			right: 16px;
-		}
-	}
-</style>

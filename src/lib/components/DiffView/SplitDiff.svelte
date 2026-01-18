@@ -80,159 +80,81 @@
 	});
 </script>
 
-<div class="split-diff" class:wrap={$wordWrap}>
-	<div class="split-side left">
-		<div class="line-numbers">
+<div class="flex font-mono text-xs leading-5 w-full" class:wrap={$wordWrap}>
+	<div class="flex flex-1 min-w-0 border-r border-border">
+		<div class="shrink-0 w-[50px] bg-bg-secondary border-r border-border-muted select-none">
 			{#each allLines as line, idx (idx)}
 				{#if line.isHunkHeader}
-					<div class="line-num hunk-header">&nbsp;</div>
+					<div class="h-5 px-2 text-right bg-diff-hunk-bg" class:h-auto={$wordWrap} class:min-h-5={$wordWrap}>&nbsp;</div>
 				{:else}
-					<div class="line-num" class:line-delete={line.left?.type === 'delete'}>
+					<div
+						class="h-5 px-2 text-right text-text-muted"
+						class:h-auto={$wordWrap}
+						class:min-h-5={$wordWrap}
+						class:bg-diff-delete-bg={line.left?.type === 'delete'}
+					>
 						{line.left?.oldNumber ?? ''}
 					</div>
 				{/if}
 			{/each}
 		</div>
-		<div class="code-content">
-			<div class="code-lines">
+		<div class="flex-1 min-w-0 overflow-x-auto">
+			<div class="inline-block min-w-full">
 				{#each allLines as line, idx (idx)}
 					{#if line.isHunkHeader}
-						<div class="line-code hunk-header">{line.hunkHeaderText}</div>
+						<div class="h-5 px-3 whitespace-pre bg-diff-hunk-bg text-diff-hunk-text font-medium">{line.hunkHeaderText}</div>
 					{:else}
 						<div
-							class="line-code"
-							class:line-delete={line.left?.type === 'delete'}
-							class:line-context={line.left?.type === 'context'}
-							class:line-empty={!line.left}
-						>{#if line.left}{#if line.left.wordDiff}{#each line.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="word-delete">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.left.content, !!line.left.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.left.content}{/if}{/if}{/if}</div>
+							class="h-5 px-3 whitespace-pre"
+							class:h-auto={$wordWrap}
+							class:min-h-5={$wordWrap}
+							class:whitespace-pre-wrap={$wordWrap}
+							class:break-all={$wordWrap}
+							class:bg-diff-delete-bg={line.left?.type === 'delete'}
+							class:bg-bg-primary={line.left?.type === 'context'}
+							class:bg-bg-tertiary={!line.left}
+						>{#if line.left}{#if line.left.wordDiff}{#each line.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="bg-diff-delete-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.left.content, !!line.left.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.left.content}{/if}{/if}{/if}</div>
 					{/if}
 				{/each}
 			</div>
 		</div>
 	</div>
-	<div class="split-side right">
-		<div class="line-numbers">
+	<div class="flex flex-1 min-w-0">
+		<div class="shrink-0 w-[50px] bg-bg-secondary border-r border-border-muted select-none">
 			{#each allLines as line, idx (idx)}
 				{#if line.isHunkHeader}
-					<div class="line-num hunk-header">&nbsp;</div>
+					<div class="h-5 px-2 text-right bg-diff-hunk-bg" class:h-auto={$wordWrap} class:min-h-5={$wordWrap}>&nbsp;</div>
 				{:else}
-					<div class="line-num" class:line-add={line.right?.type === 'add'}>
+					<div
+						class="h-5 px-2 text-right text-text-muted"
+						class:h-auto={$wordWrap}
+						class:min-h-5={$wordWrap}
+						class:bg-diff-add-bg={line.right?.type === 'add'}
+					>
 						{line.right?.newNumber ?? ''}
 					</div>
 				{/if}
 			{/each}
 		</div>
-		<div class="code-content">
-			<div class="code-lines">
+		<div class="flex-1 min-w-0 overflow-x-auto">
+			<div class="inline-block min-w-full">
 				{#each allLines as line, idx (idx)}
 					{#if line.isHunkHeader}
-						<div class="line-code hunk-header">&nbsp;</div>
+						<div class="h-5 px-3 whitespace-pre bg-diff-hunk-bg">&nbsp;</div>
 					{:else}
 						<div
-							class="line-code"
-							class:line-add={line.right?.type === 'add'}
-							class:line-context={line.right?.type === 'context'}
-							class:line-empty={!line.right}
-						>{#if line.right}{#if line.right.wordDiff}{#each line.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="word-insert">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.right.content, !!line.right.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.right.content}{/if}{/if}{/if}</div>
+							class="h-5 px-3 whitespace-pre"
+							class:h-auto={$wordWrap}
+							class:min-h-5={$wordWrap}
+							class:whitespace-pre-wrap={$wordWrap}
+							class:break-all={$wordWrap}
+							class:bg-diff-add-bg={line.right?.type === 'add'}
+							class:bg-bg-primary={line.right?.type === 'context'}
+							class:bg-bg-tertiary={!line.right}
+						>{#if line.right}{#if line.right.wordDiff}{#each line.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="bg-diff-add-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.right.content, !!line.right.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.right.content}{/if}{/if}{/if}</div>
 					{/if}
 				{/each}
 			</div>
 		</div>
 	</div>
 </div>
-
-<style>
-	.split-diff {
-		display: flex;
-		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-		font-size: 12px;
-		line-height: 20px;
-		width: 100%;
-	}
-
-	.split-side {
-		flex: 1;
-		display: flex;
-		min-width: 0;
-	}
-
-	.split-side.left {
-		border-right: 1px solid var(--border-color);
-	}
-
-	.line-numbers {
-		flex-shrink: 0;
-		width: 50px;
-		background: var(--bg-secondary);
-		border-right: 1px solid var(--border-muted);
-		user-select: none;
-	}
-
-	.line-num {
-		height: 20px;
-		padding: 0 8px;
-		text-align: right;
-		color: var(--text-muted);
-	}
-
-	.code-content {
-		flex: 1;
-		min-width: 0;
-		overflow-x: auto;
-	}
-
-	.code-lines {
-		display: inline-block;
-		min-width: 100%;
-	}
-
-	.line-code {
-		height: 20px;
-		padding: 0 12px;
-		white-space: pre;
-	}
-
-	.wrap .line-code {
-		height: auto;
-		min-height: 20px;
-		white-space: pre-wrap;
-		word-break: break-all;
-	}
-
-	.wrap .line-num {
-		height: auto;
-		min-height: 20px;
-	}
-
-	.hunk-header {
-		background: var(--diff-hunk-bg);
-		color: var(--diff-hunk-text);
-		font-weight: 500;
-	}
-
-	.line-add {
-		background: var(--diff-add-bg);
-	}
-
-	.line-delete {
-		background: var(--diff-delete-bg);
-	}
-
-	.line-context {
-		background: var(--bg-primary);
-	}
-
-	.line-empty {
-		background: var(--bg-tertiary);
-	}
-
-	.word-insert {
-		background: var(--diff-add-highlight);
-		border-radius: 2px;
-	}
-
-	.word-delete {
-		background: var(--diff-delete-highlight);
-		border-radius: 2px;
-	}
-</style>

@@ -21,17 +21,17 @@
 	}
 </script>
 
-<div class="unified-diff">
-	<table class="diff-table">
+<div class="font-mono text-xs leading-5 overflow-x-auto w-full">
+	<table class="min-w-full w-max border-collapse">
 		<colgroup>
-			<col class="line-num-col" />
-			<col class="line-num-col" />
+			<col class="w-[50px] min-w-[50px]" />
+			<col class="w-[50px] min-w-[50px]" />
 			<col />
 		</colgroup>
 		<tbody>
 			{#each hunks as hunk, hunkIndex (hunkIndex)}
-				<tr class="hunk-header">
-					<td colspan="3" class="hunk-info">
+				<tr class="bg-diff-hunk-bg">
+					<td colspan="3" class="px-3 py-2 text-diff-hunk-text font-medium">
 						{formatHunkHeader(hunk)}
 					</td>
 				</tr>
@@ -42,34 +42,3 @@
 		</tbody>
 	</table>
 </div>
-
-<style>
-	.unified-diff {
-		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
-		font-size: 12px;
-		line-height: 20px;
-		overflow-x: auto;
-		width: 100%;
-	}
-
-	.diff-table {
-		min-width: 100%;
-		width: max-content;
-		border-collapse: collapse;
-	}
-
-	.line-num-col {
-		width: 50px;
-		min-width: 50px;
-	}
-
-	.hunk-header {
-		background: var(--diff-hunk-bg);
-	}
-
-	.hunk-info {
-		padding: 8px 12px;
-		color: var(--diff-hunk-text);
-		font-weight: 500;
-	}
-</style>
