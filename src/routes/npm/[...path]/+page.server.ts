@@ -4,6 +4,7 @@ import { npmRegistry } from '$lib/server/registries/npm';
 import { fetchAndExtract } from '$lib/server/archive/extractor';
 import { computeDiff } from '$lib/server/diff/engine';
 import { getCached } from '$lib/server/cache';
+import { parseVersionRange, formatInvalidVersionError } from '$lib/utils/versions';
 import type { DiffResult } from '$lib/types/index.js';
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
@@ -30,13 +31,12 @@ function parsePath(path: string): ParsedPath | null {
 		versionPart = parts.slice(1).join('/');
 	}
 
-	const versionMatch = versionPart.match(/^(.+?)\.\.\.(.+)$/);
-	if (!versionMatch) return null;
+	const parsed = parseVersionRange(versionPart);
+	if (!parsed) return null;
 
 	return {
 		packageName,
-		fromVersion: versionMatch[1],
-		toVersion: versionMatch[2]
+		...parsed
 	};
 }
 
@@ -63,7 +63,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		return {
 			error: {
 				type: 'invalid_version' as const,
-				message: `Invalid version${!fromValid && !toValid ? 's' : ''}: ${!fromValid ? fromVersion : ''}${!fromValid && !toValid ? ', ' : ''}${!toValid ? toVersion : ''}`,
+				message: formatInvalidVersionError(fromVersion, toVersion, fromValid, toValid),
 				availableVersions: versions
 			},
 			packageName,

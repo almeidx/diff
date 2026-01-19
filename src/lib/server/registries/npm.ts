@@ -1,5 +1,6 @@
 import type { Registry, NpmPackageMetadata } from './types.js';
 import { getCached } from '../cache.js';
+import { compareVersions } from '$lib/utils/versions.js';
 
 const NPM_REGISTRY = 'https://registry.npmjs.org';
 const METADATA_TTL = 300; // 5 minutes
@@ -32,7 +33,7 @@ export class NpmRegistry implements Registry {
 
 	async getVersions(packageName: string): Promise<string[]> {
 		const metadata = await this.getMetadata(packageName);
-		return Object.keys(metadata.versions).sort(this.compareVersions).reverse();
+		return Object.keys(metadata.versions).sort(compareVersions).reverse();
 	}
 
 	async getDownloadUrl(packageName: string, version: string): Promise<string> {
@@ -51,17 +52,6 @@ export class NpmRegistry implements Registry {
 		return version in metadata.versions;
 	}
 
-	private compareVersions(a: string, b: string): number {
-		const partsA = a.split('.').map((p) => parseInt(p, 10) || 0);
-		const partsB = b.split('.').map((p) => parseInt(p, 10) || 0);
-
-		for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-			const numA = partsA[i] || 0;
-			const numB = partsB[i] || 0;
-			if (numA !== numB) return numA - numB;
-		}
-		return 0;
-	}
 }
 
 export const npmRegistry = new NpmRegistry();

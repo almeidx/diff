@@ -84,28 +84,46 @@ export function getStatusIcon(status: DiffStatus | undefined): string {
 }
 
 export function propagateStatus(nodes: TreeNode[]): TreeNode[] {
-	return nodes.map((node) => {
-		if (node.isDirectory && node.children) {
-			const updatedChildren = propagateStatus(node.children);
-			const statuses = new Set<DiffStatus>();
+	return propagateStatusWithFolders(nodes).nodes;
+}
 
-			for (const child of updatedChildren) {
-				if (child.status) {
-					statuses.add(child.status);
+interface PropagateResult {
+	nodes: TreeNode[];
+	folderPaths: string[];
+}
+
+export function propagateStatusWithFolders(nodes: TreeNode[]): PropagateResult {
+	const folderPaths: string[] = [];
+
+	const updatedNodes = nodes.map((node) => {
+		if (node.isDirectory) {
+			folderPaths.push(node.path);
+
+			if (node.children) {
+				const childResult = propagateStatusWithFolders(node.children);
+				folderPaths.push(...childResult.folderPaths);
+
+				const statuses = new Set<DiffStatus>();
+				for (const child of childResult.nodes) {
+					if (child.status) {
+						statuses.add(child.status);
+					}
 				}
-			}
 
-			let status: DiffStatus | undefined;
-			if (statuses.size === 1) {
-				status = Array.from(statuses)[0];
-			} else if (statuses.size > 1) {
-				status = 'modified';
-			}
+				let status: DiffStatus | undefined;
+				if (statuses.size === 1) {
+					status = Array.from(statuses)[0];
+				} else if (statuses.size > 1) {
+					status = 'modified';
+				}
 
-			return { ...node, children: updatedChildren, status };
+				return { ...node, children: childResult.nodes, status };
+			}
 		}
 		return node;
 	});
+
+	return { nodes: updatedNodes, folderPaths };
 }
 
 export function sortFilesLikeTree(files: DiffFile[]): DiffFile[] {

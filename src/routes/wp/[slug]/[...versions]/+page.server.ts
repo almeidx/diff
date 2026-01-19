@@ -4,18 +4,13 @@ import { wordpressRegistry } from '$lib/server/registries/wordpress';
 import { fetchAndExtract } from '$lib/server/archive/extractor';
 import { computeDiff } from '$lib/server/diff/engine';
 import { getCached } from '$lib/server/cache';
+import { parseVersionRange, formatInvalidVersionError } from '$lib/utils/versions';
 import type { DiffResult } from '$lib/types/index.js';
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
 function parseVersions(versionsPath: string): { fromVersion: string; toVersion: string } | null {
-	const match = versionsPath.match(/^(.+?)\.\.\.(.+)$/);
-	if (!match) return null;
-
-	return {
-		fromVersion: match[1],
-		toVersion: match[2]
-	};
+	return parseVersionRange(versionsPath);
 }
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -42,7 +37,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		return {
 			error: {
 				type: 'invalid_version' as const,
-				message: `Invalid version${!fromValid && !toValid ? 's' : ''}: ${!fromValid ? fromVersion : ''}${!fromValid && !toValid ? ', ' : ''}${!toValid ? toVersion : ''}`,
+				message: formatInvalidVersionError(fromVersion, toVersion, fromValid, toValid),
 				availableVersions: versions
 			},
 			slug,

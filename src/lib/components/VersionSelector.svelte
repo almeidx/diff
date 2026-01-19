@@ -38,14 +38,16 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
+		if (event.key === 'Escape' && (isOpen || showManualInput)) {
 			isOpen = false;
 			showManualInput = false;
 		}
 	}
 </script>
 
-<div class="version-selector flex flex-col gap-1.5 min-w-0" onkeydown={handleKeydown} role="group">
+<svelte:window onkeydown={handleKeydown} />
+
+<div class="version-selector flex flex-col gap-1.5 min-w-0">
 	<label for={id} class="text-xs font-medium text-text-secondary">{label}</label>
 
 	{#if showManualInput}

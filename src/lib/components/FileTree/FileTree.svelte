@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { buildFileTree, propagateStatus, getSingleChildFolderPaths, getAllFolderPaths } from '$lib/utils/tree';
+	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths } from '$lib/utils/tree';
 	import { expandedPaths, expandAllPaths, collapseAllPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
@@ -12,8 +12,9 @@
 
 	let { files, onFileSelect, selectedPath }: Props = $props();
 
-	let tree = $derived(propagateStatus(buildFileTree(files)));
-	let allFolderPaths = $derived(getAllFolderPaths(tree));
+	let treeData = $derived(propagateStatusWithFolders(buildFileTree(files)));
+	let tree = $derived(treeData.nodes);
+	let allFolderPaths = $derived(treeData.folderPaths);
 	let hasAnyFolders = $derived(allFolderPaths.length > 0);
 
 	function handleExpandAll() {

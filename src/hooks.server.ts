@@ -2,10 +2,12 @@ import type { Handle } from '@sveltejs/kit';
 
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60000;
+const CLEANUP_INTERVAL_MS = 60000;
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
 const ipCounts = new Map<string, { count: number; resetAt: number }>();
+let lastCleanup = Date.now();
 
 function generateToken(): string {
 	const array = new Uint8Array(32);
@@ -36,9 +38,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		ipCounts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
 	}
 
-	if (ipCounts.size > 10000) {
-		const entries = Array.from(ipCounts.entries());
-		for (const [key, value] of entries) {
+	if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
+		lastCleanup = now;
+		for (const [key, value] of ipCounts) {
 			if (value.resetAt < now) {
 				ipCounts.delete(key);
 			}

@@ -148,7 +148,6 @@ function extractZip(data: Uint8Array): FileTree {
 	}
 
 	const entries = Object.entries(unzipped);
-	console.log(`[extractZip] Pre-filtered to ${entries.length} entries (skipped ${skippedPreFilter} before decompression)`);
 
 	for (const [path, content] of entries) {
 		if (!dev && files.size >= MAX_FILES) break;
@@ -171,8 +170,6 @@ function extractZip(data: Uint8Array): FileTree {
 			size: content.length
 		});
 	}
-
-	console.log(`[extractZip] Extracted ${files.size} files (skipped ${skippedBinaryContent} binary content)`);
 
 	return { files };
 }

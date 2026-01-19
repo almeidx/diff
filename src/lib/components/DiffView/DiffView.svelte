@@ -13,6 +13,22 @@
 
 	const sortedFiles = $derived(sortFilesLikeTree(files));
 
+	const fileStats = $derived(
+		new Map(
+			files.map((file) => {
+				let additions = 0;
+				let deletions = 0;
+				for (const hunk of file.hunks) {
+					for (const line of hunk.lines) {
+						if (line.type === 'add') additions++;
+						else if (line.type === 'delete') deletions++;
+					}
+				}
+				return [file.path, { additions, deletions }];
+			})
+		)
+	);
+
 	$effect(() => {
 		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
 		if (minifiedPaths.length > 0) {
@@ -29,26 +45,15 @@
 	function isCollapsed(path: string): boolean {
 		return $collapsedFiles.has(path);
 	}
-
-	function getFileStats(file: DiffFile): { additions: number; deletions: number } {
-		let additions = 0;
-		let deletions = 0;
-		for (const hunk of file.hunks) {
-			for (const line of hunk.lines) {
-				if (line.type === 'add') additions++;
-				else if (line.type === 'delete') deletions++;
-			}
-		}
-		return { additions, deletions };
-	}
 </script>
 
 <div class="flex flex-col gap-4 min-w-0 max-w-full max-md:gap-3">
 	{#each sortedFiles as file (file.path)}
+		{@const stats = fileStats.get(file.path)}
 		<div class="border border-border rounded-md overflow-hidden min-w-0 max-w-full" id="file-{file.path.replace(/[^\w]/g, '-')}">
 			<div class="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border text-[13px] max-md:flex-wrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
 				<button
-					class="flex items-center justify-center w-6 h-6 border-none bg-transparent text-text-muted rounded transition-all hover:bg-bg-tertiary hover:text-text-primary max-md:order-0"
+					class="flex items-center justify-center w-6 h-6 border-none bg-transparent text-text-muted rounded transition-all hover:bg-bg-tertiary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-link focus:ring-offset-1 focus:ring-offset-bg-secondary max-md:order-0"
 					onclick={() => toggleFileCollapse(file.path)}
 					aria-expanded={!isCollapsed(file.path)}
 					aria-label={isCollapsed(file.path) ? 'Expand file' : 'Collapse file'}
@@ -84,8 +89,7 @@
 				{#if file.isMinified}
 					<span class="text-[11px] px-1.5 py-0.5 rounded bg-bg-tertiary text-text-muted max-md:order-3">Minified</span>
 				{/if}
-				{#if getFileStats(file).additions > 0 || getFileStats(file).deletions > 0}
-					{@const stats = getFileStats(file)}
+				{#if stats && (stats.additions > 0 || stats.deletions > 0)}
 					<span class="flex gap-1.5 text-xs font-mono max-md:order-4">
 						{#if stats.additions > 0}<span class="text-diff-add-text">+{stats.additions}</span>{/if}
 						{#if stats.deletions > 0}<span class="text-diff-delete-text">-{stats.deletions}</span>{/if}

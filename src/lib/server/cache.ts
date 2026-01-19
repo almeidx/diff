@@ -26,8 +26,8 @@ export async function getCached<T>(
 	if (cached) {
 		try {
 			return (await cached.json()) as T;
-		} catch {
-			// Invalid cache entry, proceed to fetch
+		} catch (e) {
+			console.warn(`[cache] Failed to parse cached entry for key "${key}":`, e);
 		}
 	}
 

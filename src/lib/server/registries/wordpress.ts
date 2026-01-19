@@ -1,5 +1,6 @@
 import type { Registry, WordPressPluginInfo } from './types.js';
 import { getCached } from '../cache.js';
+import { compareVersions } from '$lib/utils/versions.js';
 
 const WP_API = 'https://api.wordpress.org/plugins/info/1.2/';
 const WP_DOWNLOADS = 'https://downloads.wordpress.org/plugin';
@@ -43,7 +44,7 @@ export class WordPressRegistry implements Registry {
 
 		return Object.keys(metadata.versions)
 			.filter((v) => v !== 'trunk')
-			.sort(this.compareVersions)
+			.sort(compareVersions)
 			.reverse();
 	}
 
@@ -71,17 +72,6 @@ export class WordPressRegistry implements Registry {
 		return version === metadata.version;
 	}
 
-	private compareVersions(a: string, b: string): number {
-		const partsA = a.split('.').map((p) => parseInt(p, 10) || 0);
-		const partsB = b.split('.').map((p) => parseInt(p, 10) || 0);
-
-		for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-			const numA = partsA[i] || 0;
-			const numB = partsB[i] || 0;
-			if (numA !== numB) return numA - numB;
-		}
-		return 0;
-	}
 }
 
 export const wordpressRegistry = new WordPressRegistry();
