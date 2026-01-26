@@ -12,7 +12,7 @@
 
 	let { node, onFileSelect, selectedPath, depth = 0 }: Props = $props();
 
-	let isExpanded = $derived($expandedPaths.has(node.path) || depth === 0);
+	let isExpanded = $derived($expandedPaths.has(node.path));
 
 	function getSingleFolderChildPaths(n: TreeNode): string[] {
 		const paths: string[] = [];

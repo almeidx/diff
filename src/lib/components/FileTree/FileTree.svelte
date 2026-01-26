@@ -29,6 +29,12 @@
 		if (files.length > 0) {
 			const pathsToExpand: string[] = [];
 
+			for (const node of tree) {
+				if (node.isDirectory) {
+					pathsToExpand.push(node.path);
+				}
+			}
+
 			const firstFile = files[0];
 			const parts = firstFile.path.split('/');
 			if (parts.length > 1) {
