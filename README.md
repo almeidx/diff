@@ -75,4 +75,4 @@ For larger packages, run locally where these limits don't apply.
 
 ## License
 
-[MIT](./LICENSE.md)
+[GNU GPLv3](LICENSE)
