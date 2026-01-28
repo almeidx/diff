@@ -22,12 +22,12 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/diff-match-patch": "^1.0.36",
     "@types/prismjs": "^1.26.5",
-    "svelte": "^5.48.2",
+    "svelte": "^5.48.3",
     "svelte-check": "^4.3.5",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "wrangler": "^4.60.0"
   },
-  "packageManager": "pnpm@10.28.1"
+  "packageManager": "pnpm@10.28.2"
 }
