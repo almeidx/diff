@@ -8,6 +8,7 @@ export interface NpmPackageMetadata {
 	name: string;
 	versions: Record<string, NpmVersionMetadata>;
 	'dist-tags': Record<string, string>;
+	repository?: { url: string; type?: string } | string;
 }
 
 export interface NpmVersionMetadata {

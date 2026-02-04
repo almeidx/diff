@@ -52,6 +52,22 @@ export class NpmRegistry implements Registry {
 		return version in metadata.versions;
 	}
 
+	async getRepositoryUrl(packageName: string): Promise<string | null> {
+		const metadata = await this.getMetadata(packageName);
+
+		const repo = metadata.repository;
+		if (!repo) return null;
+
+		const raw = typeof repo === 'string' ? repo : repo.url;
+
+		const match = raw.match(
+			/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
+		);
+		if (!match) return null;
+
+		return `https://github.com/${match[1]}/${match[2]}`;
+	}
+
 }
 
 export const npmRegistry = new NpmRegistry();
