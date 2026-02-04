@@ -40,6 +40,34 @@ function parsePath(path: string): ParsedPath | null {
 	};
 }
 
+async function resolveCompareUrl(
+	packageName: string,
+	fromVersion: string,
+	toVersion: string
+): Promise<string | null> {
+	try {
+		const repoUrl = await npmRegistry.getRepositoryUrl(packageName);
+		if (!repoUrl) return null;
+
+		const [, owner, repo] = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/)!;
+		const valid = await getCached(
+			`github:compare:${packageName}:${fromVersion}:${toVersion}`,
+			async () => {
+				const res = await fetch(
+					`https://api.github.com/repos/${owner}/${repo}/compare/${fromVersion}...${toVersion}`,
+					{ headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'diff-app' } }
+				);
+				return res.ok;
+			},
+			{ ttlSeconds: DIFF_CACHE_TTL }
+		);
+
+		return valid ? `${repoUrl}/compare/${fromVersion}...${toVersion}` : null;
+	} catch {
+		return null;
+	}
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	const parsed = parsePath(params.path);
 
@@ -106,15 +134,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 
-	let compareUrl: string | null = null;
-	try {
-		const repoUrl = await npmRegistry.getRepositoryUrl(packageName);
-		if (repoUrl) {
-			compareUrl = `${repoUrl}/compare/${fromVersion}...${toVersion}`;
-		}
-	} catch {
-		// Non-critical, skip
-	}
+	const compareUrl = resolveCompareUrl(packageName, fromVersion, toVersion);
 
 	return {
 		diff,
