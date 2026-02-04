@@ -110,7 +110,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	try {
 		const repoUrl = await npmRegistry.getRepositoryUrl(packageName);
 		if (repoUrl) {
-			compareUrl = `${repoUrl}/compare/v${fromVersion}...v${toVersion}`;
+			compareUrl = `${repoUrl}/compare/${fromVersion}...${toVersion}`;
 		}
 	} catch {
 		// Non-critical, skip
