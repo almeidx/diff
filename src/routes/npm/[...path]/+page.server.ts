@@ -50,19 +50,28 @@ async function resolveCompareUrl(
 		if (!repoUrl) return null;
 
 		const [, owner, repo] = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/)!;
-		const valid = await getCached(
+		const apiBase = `https://api.github.com/repos/${owner}/${repo}/compare`;
+		const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'diff-app' };
+
+		return getCached(
 			`github:compare:${packageName}:${fromVersion}:${toVersion}`,
 			async () => {
-				const res = await fetch(
-					`https://api.github.com/repos/${owner}/${repo}/compare/${fromVersion}...${toVersion}`,
-					{ headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'diff-app' } }
+				const candidates = [
+					`${fromVersion}...${toVersion}`,
+					`v${fromVersion}...v${toVersion}`,
+				];
+
+				const results = await Promise.all(
+					candidates.map(async (range) => {
+						const res = await fetch(`${apiBase}/${range}`, { headers });
+						return res.ok ? `${repoUrl}/compare/${range}` : null;
+					})
 				);
-				return res.ok;
+
+				return results.find((url) => url !== null) ?? null;
 			},
 			{ ttlSeconds: DIFF_CACHE_TTL }
 		);
-
-		return valid ? `${repoUrl}/compare/${fromVersion}...${toVersion}` : null;
 	} catch {
 		return null;
 	}
