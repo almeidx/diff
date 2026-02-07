@@ -16,6 +16,19 @@ function generateToken(): string {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	if (event.url.pathname === '/package-diff') {
+		const name = event.url.searchParams.get('name');
+		const from = event.url.searchParams.get('from');
+		const to = event.url.searchParams.get('to');
+
+		if (name && from && to) {
+			return new Response(null, {
+				status: 302,
+				headers: { Location: `/npm/${name}/${from}...${to}` }
+			});
+		}
+	}
+
 	const ip =
 		event.request.headers.get('cf-connecting-ip') ||
 		event.request.headers.get('x-forwarded-for')?.split(',')[0] ||
