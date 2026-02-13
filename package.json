@@ -21,13 +21,13 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.1.18",
     "@types/diff-match-patch": "^1.0.36",
-    "@types/prismjs": "^1.26.5",
-    "svelte": "^5.50.1",
+    "@types/prismjs": "^1.26.6",
+    "svelte": "^5.50.2",
     "svelte-check": "^4.3.6",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "wrangler": "^4.64.0"
   },
-  "packageManager": "pnpm@10.29.2"
+  "packageManager": "pnpm@10.29.3"
 }
