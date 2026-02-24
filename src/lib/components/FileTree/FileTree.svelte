@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
 	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths } from '$lib/utils/tree';
-	import { expandedPaths, expandAllPaths, collapseAllPaths } from '$lib/stores/ui';
+	import { setExpandedPaths, expandAllPaths, collapseAllPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
 	interface Props {
@@ -26,40 +26,33 @@
 	}
 
 	$effect(() => {
-		if (files.length > 0) {
-			const pathsToExpand: string[] = [];
+		if (files.length === 0) {
+			setExpandedPaths([]);
+			return;
+		}
 
-			for (const node of tree) {
-				if (node.isDirectory) {
-					pathsToExpand.push(node.path);
-				}
-			}
+		const pathsToExpand: string[] = [];
 
-			const firstFile = files[0];
-			const parts = firstFile.path.split('/');
-			if (parts.length > 1) {
-				for (let i = 0; i < parts.length - 1; i++) {
-					pathsToExpand.push(parts.slice(0, i + 1).join('/'));
-				}
-			}
-
-			const singleChildPaths = getSingleChildFolderPaths(tree);
-			for (const p of singleChildPaths) {
-				if (!pathsToExpand.includes(p)) {
-					pathsToExpand.push(p);
-				}
-			}
-
-			if (pathsToExpand.length > 0) {
-				expandedPaths.update((set) => {
-					const newSet = new Set(set);
-					for (const p of pathsToExpand) {
-						newSet.add(p);
-					}
-					return newSet;
-				});
+		for (const node of tree) {
+			if (node.isDirectory) {
+				pathsToExpand.push(node.path);
 			}
 		}
+
+		const firstFile = files[0];
+		const parts = firstFile.path.split('/');
+		if (parts.length > 1) {
+			for (let i = 0; i < parts.length - 1; i++) {
+				pathsToExpand.push(parts.slice(0, i + 1).join('/'));
+			}
+		}
+
+		const singleChildPaths = getSingleChildFolderPaths(tree);
+		for (const p of singleChildPaths) {
+			pathsToExpand.push(p);
+		}
+
+		setExpandedPaths(pathsToExpand);
 	});
 </script>
 

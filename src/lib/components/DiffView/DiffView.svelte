@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { DiffFile } from '$lib/types/index.js';
-	import { viewMode, collapsedFiles, toggleFileCollapse } from '$lib/stores/ui';
+	import { viewMode, collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
 	import { sortFilesLikeTree } from '$lib/utils/tree';
 	import UnifiedDiff from './UnifiedDiff.svelte';
 	import SplitDiff from './SplitDiff.svelte';
@@ -31,15 +31,7 @@
 
 	$effect(() => {
 		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
-		if (minifiedPaths.length > 0) {
-			collapsedFiles.update((set) => {
-				const newSet = new Set(set);
-				for (const path of minifiedPaths) {
-					newSet.add(path);
-				}
-				return newSet;
-			});
-		}
+		setCollapsedFiles(minifiedPaths);
 	});
 
 	function isCollapsed(path: string): boolean {

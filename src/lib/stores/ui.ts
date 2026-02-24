@@ -50,3 +50,16 @@ export function expandPaths(paths: string[]): void {
 		return newSet;
 	});
 }
+
+export function setExpandedPaths(paths: Iterable<string>): void {
+	expandedPaths.set(new Set(paths));
+}
+
+export function setCollapsedFiles(paths: Iterable<string>): void {
+	collapsedFiles.set(new Set(paths));
+}
+
+export function resetDiffUiState(): void {
+	expandedPaths.set(new Set());
+	collapsedFiles.set(new Set());
+}
