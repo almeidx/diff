@@ -8,11 +8,14 @@
 		onFileSelect?: (file: DiffFile) => void;
 		selectedPath?: string;
 		depth?: number;
+		forcedExpandedPaths?: Set<string> | null;
 	}
 
-	let { node, onFileSelect, selectedPath, depth = 0 }: Props = $props();
+	let { node, onFileSelect, selectedPath, depth = 0, forcedExpandedPaths = null }: Props = $props();
 
-	let isExpanded = $derived($expandedPaths.has(node.path));
+	let isExpanded = $derived(
+		forcedExpandedPaths ? forcedExpandedPaths.has(node.path) : $expandedPaths.has(node.path)
+	);
 
 	function getSingleFolderChildPaths(n: TreeNode): string[] {
 		const paths: string[] = [];
@@ -28,6 +31,8 @@
 
 	function handleClick() {
 		if (node.isDirectory) {
+			if (forcedExpandedPaths) return;
+
 			const wasExpanded = $expandedPaths.has(node.path);
 			togglePath(node.path);
 
@@ -44,13 +49,16 @@
 </script>
 
 <li class="list-none">
-	<button
-		type="button"
-		class="flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer select-none hover:bg-bg-tertiary w-full text-left border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-link focus:ring-inset"
-		class:bg-bg-tertiary={selectedPath === node.path}
-		style:padding-left="{depth * 16 + 8}px"
-		onclick={handleClick}
-	>
+		<button
+			type="button"
+			class="flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer select-none hover:bg-bg-tertiary w-full text-left border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-link focus:ring-inset"
+			class:bg-bg-tertiary={selectedPath === node.path}
+			style:padding-left="{depth * 16 + 8}px"
+			onclick={handleClick}
+			data-tree-path={node.path}
+			data-tree-file-path={!node.isDirectory ? node.path : undefined}
+			aria-current={selectedPath === node.path ? 'true' : undefined}
+		>
 		{#if node.isDirectory}
 			<span
 				class="shrink-0 flex items-center justify-center w-4 h-4 text-text-muted transition-transform duration-150"
@@ -98,7 +106,13 @@
 	{#if node.isDirectory && node.children && isExpanded}
 		<ul class="list-none">
 			{#each node.children as child (child.path)}
-				<TreeNodeComponent node={child} {onFileSelect} {selectedPath} depth={depth + 1} />
+				<TreeNodeComponent
+					node={child}
+					{onFileSelect}
+					{selectedPath}
+					depth={depth + 1}
+					{forcedExpandedPaths}
+				/>
 			{/each}
 		</ul>
 	{/if}
