@@ -58,7 +58,9 @@ describe('loadDiffPageData integration', () => {
 		if ('error' in result) {
 			expect(result.error.type).toBe('invalid_version');
 			expect(result.error.message).toBe('Invalid version: 9.9.9');
-			expect(result.error.availableVersions).toEqual(['2.0.0', '1.0.0']);
+			if (result.error.type === 'invalid_version') {
+				expect(result.error.availableVersions).toEqual(['2.0.0', '1.0.0']);
+			}
 		}
 		expect(getDownloadUrl).not.toHaveBeenCalled();
 	});
