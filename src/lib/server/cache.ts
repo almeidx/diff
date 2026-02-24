@@ -1,3 +1,5 @@
+import { logDebug, logWarn } from '$lib/server/log.js';
+
 const CACHE_NAME = 'diff-cache-v1';
 
 interface CacheOptions {
@@ -16,6 +18,7 @@ export async function getCached<T>(
 	options: CacheOptions = { ttlSeconds: DEFAULT_TTL }
 ): Promise<T> {
 	if (!isCacheAvailable()) {
+		logDebug('cache_unavailable', { key });
 		return fetcher();
 	}
 
@@ -25,12 +28,14 @@ export async function getCached<T>(
 	const cached = await cache.match(cacheKey);
 	if (cached) {
 		try {
+			logDebug('cache_hit', { key });
 			return (await cached.json()) as T;
 		} catch (e) {
-			console.warn(`[cache] Failed to parse cached entry for key "${key}":`, e);
+			logWarn('cache_parse_failed', { key, error: e });
 		}
 	}
 
+	logDebug('cache_miss', { key });
 	const data = await fetcher();
 
 	const response = new Response(JSON.stringify(data), {
@@ -41,6 +46,7 @@ export async function getCached<T>(
 	});
 
 	await cache.put(cacheKey, response);
+	logDebug('cache_store', { key, ttlSeconds: options.ttlSeconds });
 
 	return data;
 }

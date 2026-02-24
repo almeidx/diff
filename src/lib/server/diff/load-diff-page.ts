@@ -5,6 +5,7 @@ import { getCached } from '$lib/server/cache';
 import { formatInvalidVersionError } from '$lib/utils/versions';
 import { computeDiff } from './engine.js';
 import { getErrorMessage } from '$lib/server/errors.js';
+import { logInfo, logWarn } from '$lib/server/log.js';
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
@@ -33,6 +34,7 @@ export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
 	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey } =
 		options;
+	const startedAt = Date.now();
 
 	const versions = await registry.getVersions(packageName);
 
@@ -42,6 +44,14 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 	]);
 
 	if (!fromValid || !toValid) {
+		logWarn('diff_invalid_version', {
+			packageType,
+			packageName,
+			fromVersion,
+			toVersion,
+			fromValid,
+			toValid
+		});
 		return {
 			error: {
 				type: 'invalid_version',
@@ -71,8 +81,27 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 			{ ttlSeconds: DIFF_CACHE_TTL }
 		);
 
+		logInfo('diff_loaded', {
+			packageType,
+			packageName,
+			fromVersion,
+			toVersion,
+			files: diff.stats.files,
+			insertions: diff.stats.insertions,
+			deletions: diff.stats.deletions,
+			durationMs: Date.now() - startedAt
+		});
+
 		return { diff, versions };
 	} catch (e) {
+		logWarn('diff_load_failed', {
+			packageType,
+			packageName,
+			fromVersion,
+			toVersion,
+			durationMs: Date.now() - startedAt,
+			error: e
+		});
 		return {
 			error: {
 				type: 'fetch_error',

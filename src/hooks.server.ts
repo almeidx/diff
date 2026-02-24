@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 
 import { checkRateLimit } from '$lib/server/rate-limit';
+import { logWarn } from '$lib/server/log.js';
 
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
@@ -9,6 +10,14 @@ function generateToken(): string {
 	const array = new Uint8Array(32);
 	crypto.getRandomValues(array);
 	return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getClientIp(event: Parameters<Handle>[0]['event']): string {
+	return (
+		event.request.headers.get('cf-connecting-ip') ||
+		event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+		'unknown'
+	);
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -27,6 +36,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const rateLimitResult = await checkRateLimit(event);
 	if (!rateLimitResult.allowed) {
+		logWarn('request_rate_limited', {
+			path: event.url.pathname,
+			method: event.request.method,
+			ip: getClientIp(event),
+			retryAfterSeconds: rateLimitResult.retryAfterSeconds ?? 60
+		});
 		return new Response('Too many requests. Please try again later.', {
 			status: 429,
 			headers: {
@@ -40,6 +55,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const headerToken = event.request.headers.get(CSRF_HEADER_NAME);
 
 		if (!csrfToken || !headerToken || csrfToken !== headerToken) {
+			logWarn('csrf_validation_failed', {
+				path: event.url.pathname,
+				method: event.request.method,
+				ip: getClientIp(event),
+				hasCookieToken: Boolean(csrfToken),
+				hasHeaderToken: Boolean(headerToken)
+			});
 			return new Response('Forbidden', { status: 403 });
 		}
 	}
