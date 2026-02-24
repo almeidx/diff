@@ -12,6 +12,7 @@ import { computeWordDiff } from './word-diff.js';
 
 const dmp = new DiffMatchPatch();
 const CONTEXT_LINES = 3;
+const MAX_LINE_TOKENS = 0x10ffff;
 
 export function computeDiff(
 	oldTree: FileTree,
@@ -261,32 +262,30 @@ interface LineDiff {
 }
 
 function computeLineDiff(oldLines: string[], newLines: string[]): LineDiff[] {
-	const oldText = oldLines.join('\n');
-	const newText = newLines.join('\n');
-
 	const lineArray: string[] = [];
-	const lineHash = new Map<string, string>();
+	const lineHash = new Map<string, number>();
 
-	function linesToChars(text: string): string {
+	function linesToChars(lines: string[]): string {
 		const chars: string[] = [];
-		const lines = text.split('\n');
 
 		for (const line of lines) {
-			if (lineHash.has(line)) {
-				chars.push(lineHash.get(line)!);
-			} else {
-				const char = String.fromCharCode(lineArray.length);
+			let token = lineHash.get(line);
+			if (token === undefined) {
+				token = lineArray.length;
+				if (token > MAX_LINE_TOKENS) {
+					throw new Error('File has too many unique lines to diff safely.');
+				}
 				lineArray.push(line);
-				lineHash.set(line, char);
-				chars.push(char);
+				lineHash.set(line, token);
 			}
+			chars.push(String.fromCodePoint(token));
 		}
 
 		return chars.join('');
 	}
 
-	const chars1 = linesToChars(oldText);
-	const chars2 = linesToChars(newText);
+	const chars1 = linesToChars(oldLines);
+	const chars2 = linesToChars(newLines);
 
 	const diffs = dmp.diff_main(chars1, chars2, false);
 
@@ -295,8 +294,8 @@ function computeLineDiff(oldLines: string[], newLines: string[]): LineDiff[] {
 	for (const [op, chars] of diffs) {
 		const type = op === 0 ? 'equal' : op === 1 ? 'add' : 'delete';
 
-		for (const char of chars) {
-			const lineIndex = char.charCodeAt(0);
+		for (const token of chars) {
+			const lineIndex = token.codePointAt(0) ?? 0;
 			const line = lineArray[lineIndex] ?? '';
 			result.push({ type, line });
 		}
