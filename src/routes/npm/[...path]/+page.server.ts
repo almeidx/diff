@@ -1,13 +1,12 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { npmRegistry } from '$lib/server/registries/npm';
-import { fetchAndExtract } from '$lib/server/archive/extractor';
-import { computeDiff } from '$lib/server/diff/engine';
 import { getCached } from '$lib/server/cache';
-import { parseVersionRange, formatInvalidVersionError } from '$lib/utils/versions';
-import type { DiffResult } from '$lib/types/index.js';
+import { parseVersionRange } from '$lib/utils/versions';
+import { loadDiffPageData } from '$lib/server/diff/load-diff-page';
+import { isNotFoundError } from '$lib/server/errors';
 
-const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
+const COMPARE_CACHE_TTL = 86400; // 24 hours
 
 interface ParsedPath {
 	packageName: string;
@@ -70,7 +69,7 @@ async function resolveCompareUrl(
 
 				return results.find((url) => url !== null) ?? null;
 			},
-			{ ttlSeconds: DIFF_CACHE_TTL }
+			{ ttlSeconds: COMPARE_CACHE_TTL }
 		);
 	} catch {
 		return null;
@@ -86,71 +85,31 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const { packageName, fromVersion, toVersion } = parsed;
 
-	let versions: string[];
+	let result;
 	try {
-		versions = await npmRegistry.getVersions(packageName);
-	} catch (e) {
-		error(404, `Package "${packageName}" not found on npm`);
-	}
-
-	const fromValid = await npmRegistry.validateVersion(packageName, fromVersion);
-	const toValid = await npmRegistry.validateVersion(packageName, toVersion);
-
-	if (!fromValid || !toValid) {
-		return {
-			error: {
-				type: 'invalid_version' as const,
-				message: formatInvalidVersionError(fromVersion, toVersion, fromValid, toValid),
-				availableVersions: versions
-			},
+		result = await loadDiffPageData({
+			registry: npmRegistry,
+			packageType: 'npm',
 			packageName,
 			fromVersion,
 			toVersion,
-			versions
-		};
-	}
-
-	let diff: DiffResult;
-	try {
-		diff = await getCached(
-			`diff:npm:${packageName}:${fromVersion}:${toVersion}`,
-			async () => {
-				const [fromUrl, toUrl] = await Promise.all([
-					npmRegistry.getDownloadUrl(packageName, fromVersion),
-					npmRegistry.getDownloadUrl(packageName, toVersion)
-				]);
-
-				const [fromTree, toTree] = await Promise.all([
-					fetchAndExtract(fromUrl, 'tgz'),
-					fetchAndExtract(toUrl, 'tgz')
-				]);
-
-				return computeDiff(fromTree, toTree, 'npm', packageName, fromVersion, toVersion);
-			},
-			{ ttlSeconds: DIFF_CACHE_TTL }
-		);
+			archiveFormat: 'tgz',
+			diffCacheKey: `diff:npm:${packageName}:${fromVersion}:${toVersion}`
+		});
 	} catch (e) {
-		const message = e instanceof Error ? e.message : 'Failed to compute diff';
-		return {
-			error: {
-				type: 'fetch_error' as const,
-				message
-			},
-			packageName,
-			fromVersion,
-			toVersion,
-			versions
-		};
+		if (isNotFoundError(e)) {
+			error(404, `Package "${packageName}" not found on npm`);
+		}
+		error(502, 'Failed to fetch package metadata from npm');
 	}
 
-	const compareUrl = resolveCompareUrl(packageName, fromVersion, toVersion);
+	const compareUrl = 'diff' in result ? resolveCompareUrl(packageName, fromVersion, toVersion) : null;
 
 	return {
-		diff,
 		packageName,
 		fromVersion,
 		toVersion,
-		versions,
+		...result,
 		compareUrl
 	};
 };
