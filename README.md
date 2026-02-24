@@ -114,6 +114,7 @@ Add this binding in your Cloudflare config if you want shared limits across inst
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and standards.
+Operational deployment and incident guidance is in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 ## License
 

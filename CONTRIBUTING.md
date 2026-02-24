@@ -79,3 +79,5 @@ PR descriptions should include:
 - Why it changed
 - Any impact on limits, memory, or response time
 - How it was validated (`check`, `test`, `build`, manual smoke flow)
+
+For production deploy and incident workflows, see `docs/OPERATIONS.md`.
