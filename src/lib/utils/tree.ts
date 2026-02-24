@@ -57,36 +57,6 @@ function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
 		});
 }
 
-export function getStatusClass(status: DiffStatus | undefined): string {
-	switch (status) {
-		case 'added':
-			return 'text-green-500';
-		case 'deleted':
-			return 'text-red-500';
-		case 'modified':
-			return 'text-yellow-500';
-		default:
-			return '';
-	}
-}
-
-export function getStatusIcon(status: DiffStatus | undefined): string {
-	switch (status) {
-		case 'added':
-			return '+';
-		case 'deleted':
-			return '-';
-		case 'modified':
-			return '~';
-		default:
-			return '';
-	}
-}
-
-export function propagateStatus(nodes: TreeNode[]): TreeNode[] {
-	return propagateStatusWithFolders(nodes).nodes;
-}
-
 interface PropagateResult {
 	nodes: TreeNode[];
 	folderPaths: string[];
@@ -142,24 +112,6 @@ function flattenTreePaths(nodes: TreeNode[]): string[] {
 			paths.push(node.path);
 		}
 	}
-	return paths;
-}
-
-export function getAllFolderPaths(nodes: TreeNode[]): string[] {
-	const paths: string[] = [];
-
-	function traverse(nodeList: TreeNode[]) {
-		for (const node of nodeList) {
-			if (node.isDirectory) {
-				paths.push(node.path);
-				if (node.children) {
-					traverse(node.children);
-				}
-			}
-		}
-	}
-
-	traverse(nodes);
 	return paths;
 }
 

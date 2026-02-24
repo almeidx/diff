@@ -12,7 +12,3 @@ export function computeWordDiff(oldText: string, newText: string): WordChange[] 
 		text
 	}));
 }
-
-export function hasSignificantChanges(wordDiff: WordChange[]): boolean {
-	return wordDiff.some((change) => change.type !== 'equal');
-}

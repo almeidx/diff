@@ -47,8 +47,6 @@ export interface DiffFile {
 	isBinary: boolean;
 	isMinified: boolean;
 	hunks: DiffHunk[];
-	oldContent?: string;
-	newContent?: string;
 }
 
 export interface DiffStats {

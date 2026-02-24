@@ -114,8 +114,7 @@ function createAddedFile(
 				newCount: lines.length,
 				lines: diffLines
 			}
-		],
-		newContent: file.content
+		]
 	};
 }
 
@@ -154,8 +153,7 @@ function createDeletedFile(
 				newCount: 0,
 				lines: diffLines
 			}
-		],
-		oldContent: file.content
+		]
 	};
 }
 
@@ -177,9 +175,7 @@ function createModifiedFile(
 		status: 'modified',
 		isBinary: false,
 		isMinified: oldFile.isMinified || newFile.isMinified,
-		hunks,
-		oldContent,
-		newContent
+		hunks
 	};
 }
 
