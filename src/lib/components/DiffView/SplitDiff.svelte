@@ -12,16 +12,27 @@
 
 	const language = $derived(getLanguage(filePath));
 
-	function highlightContent(content: string, hasWordDiff: boolean): string | null {
-		if (!language || hasWordDiff) return null;
-		return highlight(content, language);
-	}
-
 	interface SplitLine {
 		left: DiffLine | null;
 		right: DiffLine | null;
 		isHunkHeader?: boolean;
 		hunkHeaderText?: string;
+		leftHighlighted?: string | null;
+		rightHighlighted?: string | null;
+	}
+
+	function getHighlightedContent(line: DiffLine | null): string | null {
+		if (!line || !language || line.wordDiff) return null;
+		return highlight(line.content, language);
+	}
+
+	function createSplitLine(left: DiffLine | null, right: DiffLine | null): SplitLine {
+		return {
+			left,
+			right,
+			leftHighlighted: getHighlightedContent(left),
+			rightHighlighted: getHighlightedContent(right)
+		};
 	}
 
 	let allLines = $derived.by(() => {
@@ -40,15 +51,15 @@
 			});
 
 			let i = 0;
-			while (i < hunk.lines.length) {
-				const line = hunk.lines[i];
+				while (i < hunk.lines.length) {
+					const line = hunk.lines[i];
 
-				if (line.type === 'context') {
-					result.push({ left: line, right: line });
-					i++;
-				} else if (line.type === 'delete') {
-					const deleteLines: DiffLine[] = [];
-					const addLines: DiffLine[] = [];
+					if (line.type === 'context') {
+						result.push(createSplitLine(line, line));
+						i++;
+					} else if (line.type === 'delete') {
+						const deleteLines: DiffLine[] = [];
+						const addLines: DiffLine[] = [];
 
 					while (i < hunk.lines.length && hunk.lines[i].type === 'delete') {
 						deleteLines.push(hunk.lines[i]);
@@ -60,19 +71,16 @@
 						i++;
 					}
 
-					const maxLen = Math.max(deleteLines.length, addLines.length);
-					for (let j = 0; j < maxLen; j++) {
-						result.push({
-							left: deleteLines[j] ?? null,
-							right: addLines[j] ?? null
-						});
+						const maxLen = Math.max(deleteLines.length, addLines.length);
+						for (let j = 0; j < maxLen; j++) {
+							result.push(createSplitLine(deleteLines[j] ?? null, addLines[j] ?? null));
+						}
+					} else if (line.type === 'add') {
+						result.push(createSplitLine(null, line));
+						i++;
+					} else {
+						i++;
 					}
-				} else if (line.type === 'add') {
-					result.push({ left: null, right: line });
-					i++;
-				} else {
-					i++;
-				}
 			}
 		}
 
@@ -113,10 +121,10 @@
 							class:bg-diff-delete-bg={line.left?.type === 'delete'}
 							class:bg-bg-primary={line.left?.type === 'context'}
 							class:bg-bg-tertiary={!line.left}
-						>{#if line.left}{#if line.left.wordDiff}{#each line.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="bg-diff-delete-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.left.content, !!line.left.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.left.content}{/if}{/if}{/if}</div>
-					{/if}
-				{/each}
-			</div>
+							>{#if line.left}{#if line.left.wordDiff}{#each line.left.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'delete'}<span class="bg-diff-delete-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else if line.leftHighlighted}{@html line.leftHighlighted}{:else}{line.left.content}{/if}{/if}</div>
+						{/if}
+					{/each}
+				</div>
 		</div>
 	</div>
 	<div class="flex flex-1 min-w-0">
@@ -151,10 +159,10 @@
 							class:bg-diff-add-bg={line.right?.type === 'add'}
 							class:bg-bg-primary={line.right?.type === 'context'}
 							class:bg-bg-tertiary={!line.right}
-						>{#if line.right}{#if line.right.wordDiff}{#each line.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="bg-diff-add-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else}{@const highlighted = highlightContent(line.right.content, !!line.right.wordDiff)}{#if highlighted}{@html highlighted}{:else}{line.right.content}{/if}{/if}{/if}</div>
-					{/if}
-				{/each}
-			</div>
+							>{#if line.right}{#if line.right.wordDiff}{#each line.right.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="bg-diff-add-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else if line.rightHighlighted}{@html line.rightHighlighted}{:else}{line.right.content}{/if}{/if}</div>
+						{/if}
+					{/each}
+				</div>
 		</div>
 	</div>
 </div>

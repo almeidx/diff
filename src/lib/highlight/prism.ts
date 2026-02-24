@@ -15,6 +15,10 @@ import 'prismjs/components/prism-ini';
 import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-handlebars';
 
+const HIGHLIGHT_CACHE_LIMIT = 2000;
+const MAX_CACHED_CODE_LENGTH = 1200;
+const highlightCache = new Map<string, string>();
+
 const extToLang: Record<string, string> = {
 	ts: 'typescript',
 	mts: 'typescript',
@@ -60,7 +64,29 @@ export function highlight(code: string, language: string): string {
 	const grammar = Prism.languages[language];
 	if (!grammar) return escapeHtml(code);
 
-	return Prism.highlight(code, grammar, language);
+	if (code.length > MAX_CACHED_CODE_LENGTH) {
+		return Prism.highlight(code, grammar, language);
+	}
+
+	const cacheKey = `${language}\0${code}`;
+	const cached = highlightCache.get(cacheKey);
+	if (cached !== undefined) {
+		highlightCache.delete(cacheKey);
+		highlightCache.set(cacheKey, cached);
+		return cached;
+	}
+
+	const highlighted = Prism.highlight(code, grammar, language);
+	highlightCache.set(cacheKey, highlighted);
+
+	if (highlightCache.size > HIGHLIGHT_CACHE_LIMIT) {
+		const oldestKey = highlightCache.keys().next().value;
+		if (oldestKey !== undefined) {
+			highlightCache.delete(oldestKey);
+		}
+	}
+
+	return highlighted;
 }
 
 function escapeHtml(text: string): string {
