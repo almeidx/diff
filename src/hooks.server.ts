@@ -1,13 +1,9 @@
 import type { Handle } from '@sveltejs/kit';
 
-const RATE_LIMIT = 30;
-const WINDOW_MS = 60000;
-const CLEANUP_INTERVAL_MS = 60000;
+import { checkRateLimit } from '$lib/server/rate-limit';
+
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
-
-const ipCounts = new Map<string, { count: number; resetAt: number }>();
-let lastCleanup = Date.now();
 
 function generateToken(): string {
 	const array = new Uint8Array(32);
@@ -29,35 +25,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const ip =
-		event.request.headers.get('cf-connecting-ip') ||
-		event.request.headers.get('x-forwarded-for')?.split(',')[0] ||
-		'unknown';
-
-	const now = Date.now();
-
-	const record = ipCounts.get(ip);
-	if (record && record.resetAt > now) {
-		if (record.count >= RATE_LIMIT) {
-			return new Response('Too many requests. Please try again later.', {
-				status: 429,
-				headers: {
-					'Retry-After': String(Math.ceil((record.resetAt - now) / 1000))
-				}
-			});
-		}
-		record.count++;
-	} else {
-		ipCounts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-	}
-
-	if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
-		lastCleanup = now;
-		for (const [key, value] of ipCounts) {
-			if (value.resetAt < now) {
-				ipCounts.delete(key);
+	const rateLimitResult = await checkRateLimit(event);
+	if (!rateLimitResult.allowed) {
+		return new Response('Too many requests. Please try again later.', {
+			status: 429,
+			headers: {
+				'Retry-After': String(rateLimitResult.retryAfterSeconds ?? 60)
 			}
-		}
+		});
 	}
 
 	if (event.url.pathname.startsWith('/api/')) {

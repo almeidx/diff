@@ -1,46 +1,110 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
+	import { tick } from 'svelte';
 	import type { DiffFile } from '$lib/types/index.js';
 	import { viewMode, collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
 	import { sortFilesLikeTree } from '$lib/utils/tree';
 	import UnifiedDiff from './UnifiedDiff.svelte';
 	import SplitDiff from './SplitDiff.svelte';
 
+	const INITIAL_RENDER_COUNT = 40;
+	const RENDER_BATCH_SIZE = 30;
+
 	interface Props {
 		files: DiffFile[];
+		selectedPath?: string;
 	}
 
-	let { files }: Props = $props();
+	let { files, selectedPath }: Props = $props();
+	let renderedCount = $state(INITIAL_RENDER_COUNT);
+	let loadMoreSentinel = $state<HTMLDivElement | null>(null);
+	let lastScrolledPath = $state<string | null>(null);
 
 	const sortedFiles = $derived(sortFilesLikeTree(files));
+	const visibleFiles = $derived(sortedFiles.slice(0, renderedCount));
+	const hasMoreFiles = $derived(renderedCount < sortedFiles.length);
 
-	const fileStats = $derived(
-		new Map(
-			files.map((file) => {
-				let additions = 0;
-				let deletions = 0;
-				for (const hunk of file.hunks) {
-					for (const line of hunk.lines) {
-						if (line.type === 'add') additions++;
-						else if (line.type === 'delete') deletions++;
-					}
+	const fileStats = $derived.by(() => {
+		const stats = new Map<string, { additions: number; deletions: number }>();
+
+		for (const file of visibleFiles) {
+			let additions = 0;
+			let deletions = 0;
+			for (const hunk of file.hunks) {
+				for (const line of hunk.lines) {
+					if (line.type === 'add') additions++;
+					else if (line.type === 'delete') deletions++;
 				}
-				return [file.path, { additions, deletions }];
-			})
-		)
-	);
+			}
+			stats.set(file.path, { additions, deletions });
+		}
+
+		return stats;
+	});
 
 	$effect(() => {
 		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
 		setCollapsedFiles(minifiedPaths);
 	});
 
+	$effect(() => {
+		renderedCount = Math.min(sortedFiles.length, INITIAL_RENDER_COUNT);
+		lastScrolledPath = null;
+	});
+
+	$effect(() => {
+		if (!browser || !hasMoreFiles || !loadMoreSentinel) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					renderMore();
+				}
+			},
+			{ rootMargin: '600px 0px' }
+		);
+
+		observer.observe(loadMoreSentinel);
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		if (!selectedPath) return;
+
+		const selectedIndex = sortedFiles.findIndex((file) => file.path === selectedPath);
+		if (selectedIndex === -1) return;
+
+		if (selectedIndex >= renderedCount) {
+			renderedCount = Math.min(
+				sortedFiles.length,
+				Math.max(selectedIndex + 1, renderedCount + RENDER_BATCH_SIZE)
+			);
+		}
+
+		if (!browser || lastScrolledPath === selectedPath) return;
+
+		void (async () => {
+			await tick();
+			const element = document.getElementById(`file-${selectedPath.replace(/[^\w]/g, '-')}`);
+			if (element) {
+				element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				lastScrolledPath = selectedPath;
+			}
+		})();
+	});
+
 	function isCollapsed(path: string): boolean {
 		return $collapsedFiles.has(path);
+	}
+
+	function renderMore() {
+		if (!hasMoreFiles) return;
+		renderedCount = Math.min(sortedFiles.length, renderedCount + RENDER_BATCH_SIZE);
 	}
 </script>
 
 <div class="flex flex-col gap-4 min-w-0 max-w-full max-md:gap-3">
-	{#each sortedFiles as file (file.path)}
+	{#each visibleFiles as file (file.path)}
 		{@const stats = fileStats.get(file.path)}
 		<div class="border border-border rounded-md overflow-hidden min-w-0 max-w-full" id="file-{file.path.replace(/[^\w]/g, '-')}">
 			<div class="flex items-center gap-2 px-3 py-2 bg-bg-secondary border-b border-border text-[13px] max-md:flex-wrap max-md:px-2 max-md:py-1.5 max-md:text-xs">
@@ -110,6 +174,21 @@
 					{/if}
 				</div>
 			{/if}
+			</div>
+		{/each}
+
+	{#if hasMoreFiles}
+		<div class="flex items-center justify-center gap-3 py-1" bind:this={loadMoreSentinel}>
+			<span class="text-xs text-text-muted">
+				Showing {visibleFiles.length} of {sortedFiles.length} files
+			</span>
+			<button
+				type="button"
+				onclick={renderMore}
+				class="px-2.5 py-1 text-xs border border-border rounded bg-bg-secondary text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+			>
+				Load more
+			</button>
 		</div>
-	{/each}
+	{/if}
 </div>
