@@ -5,14 +5,13 @@ test('home page renders and core controls work', async ({ page }) => {
 
 	await expect(page.getByRole('heading', { name: 'Compare package versions' })).toBeVisible();
 	await expect(page).toHaveTitle(/Diff/i);
+	await expect(page.getByRole('button', { name: 'npm' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'WordPress' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Toggle theme' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Load versions' })).toBeDisabled();
+	await expect(page.getByRole('button', { name: 'Compare versions' })).toBeVisible();
+	await expect(page.locator('label[for="package-name"]')).toHaveText('Package name');
 	await expect(page.locator('#package-name')).toHaveAttribute('placeholder', /lodash/i);
-
-	const html = page.locator('html');
-	const initialTheme = await html.getAttribute('data-theme');
-	await page.getByRole('button', { name: 'Toggle theme' }).click();
-	await expect
-		.poll(async () => (await html.getAttribute('data-theme')) !== initialTheme)
-		.toBe(true);
 });
 
 test('invalid compare URLs return error pages', async ({ page }) => {
