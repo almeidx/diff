@@ -2,6 +2,7 @@ import { unzipSync, gunzipSync } from 'fflate';
 import { dev } from '$app/environment';
 import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
+import { normalizeArchivePath } from './path.js';
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
@@ -186,18 +187,6 @@ function extractZip(data: Uint8Array): FileTree {
 	}
 
 	return { files };
-}
-
-function normalizeArchivePath(path: string, format: 'tgz' | 'zip'): string {
-	const normalized = path.replace(/^\.\/+/, '').replace(/^\/+/, '');
-	if (!normalized) return '';
-
-	if (format === 'tgz') {
-		return normalized.startsWith('package/') ? normalized.slice('package/'.length) : normalized;
-	}
-
-	const firstSlash = normalized.indexOf('/');
-	return firstSlash === -1 ? normalized : normalized.slice(firstSlash + 1);
 }
 
 function decodeNullTerminated(bytes: Uint8Array): string {
