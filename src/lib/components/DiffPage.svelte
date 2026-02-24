@@ -38,8 +38,6 @@
 
 	function handleFileSelect(file: DiffFile) {
 		selectedPath = file.path;
-		const element = document.getElementById(`file-${file.path.replace(/[^\w]/g, '-')}`);
-		element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 </script>
 
@@ -145,7 +143,7 @@
 				/>
 			</aside>
 			<main class="flex-1 p-4 min-w-0 max-md:p-2 max-md:w-full max-md:box-border">
-				<DiffView files={diff.files} />
+				<DiffView files={diff.files} {selectedPath} />
 			</main>
 		</div>
 	{/if}
