@@ -4,8 +4,11 @@ import { shouldInclude, isBinaryContent } from '../diff/filters.js';
 import type { FileEntry, FileTree } from '$lib/types/index.js';
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
 const MAX_FILES = 5000;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB per file
+const TAR_BLOCK_SIZE = 512;
+const textDecoder = new TextDecoder();
 
 export async function fetchAndExtract(
 	url: string,
@@ -42,57 +45,66 @@ function extractTgz(data: Uint8Array): FileTree {
 		}
 		throw e;
 	}
+
+	if (!dev && decompressed.byteLength > MAX_DECOMPRESSED_SIZE) {
+		throw new Error(
+			`Package too large when decompressed (${Math.round(decompressed.byteLength / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+		);
+	}
+
 	return extractTar(decompressed);
 }
 
 function extractTar(data: Uint8Array): FileTree {
 	const files = new Map<string, FileEntry>();
 	let offset = 0;
+	let totalIncludedSize = 0;
 
-	while (offset < data.length - 512) {
+	while (offset < data.length - TAR_BLOCK_SIZE) {
 		if (!dev && files.size >= MAX_FILES) break;
 
-		const header = data.slice(offset, offset + 512);
+		const header = data.subarray(offset, offset + TAR_BLOCK_SIZE);
 
-		if (header.every((b) => b === 0)) {
+		if (isZeroBlock(header)) {
 			break;
 		}
 
-		const nameBytes = header.slice(0, 100);
-		const nullIndex = nameBytes.indexOf(0);
-		let name = new TextDecoder().decode(
-			nullIndex >= 0 ? nameBytes.slice(0, nullIndex) : nameBytes
-		);
-
-		const prefixBytes = header.slice(345, 500);
-		const prefixNullIndex = prefixBytes.indexOf(0);
-		const prefix = new TextDecoder().decode(
-			prefixNullIndex >= 0 ? prefixBytes.slice(0, prefixNullIndex) : prefixBytes
-		);
+		let name = decodeNullTerminated(header.subarray(0, 100));
+		const prefix = decodeNullTerminated(header.subarray(345, 500));
 
 		if (prefix) {
 			name = `${prefix}/${name}`;
 		}
 
-		name = name.replace(/^package\//, '').replace(/^[^/]+\//, '');
-
-		const sizeStr = new TextDecoder().decode(header.slice(124, 136)).trim();
-		const size = parseInt(sizeStr, 8) || 0;
-
+		const normalizedPath = normalizeArchivePath(name, 'tgz');
+		const size = parseTarSize(header.subarray(124, 136));
 		const typeFlag = header[156];
 
-		offset += 512;
+		offset += TAR_BLOCK_SIZE;
 
 		if (typeFlag === 0 || typeFlag === 48) {
-			const filterResult = shouldInclude(name);
+			const filterResult = shouldInclude(normalizedPath);
 
-			if (filterResult.include && !filterResult.isBinary && name && !name.endsWith('/') && (dev || size <= MAX_FILE_SIZE)) {
-				const content = data.slice(offset, offset + size);
+			if (
+				filterResult.include &&
+				!filterResult.isBinary &&
+				normalizedPath &&
+				!normalizedPath.endsWith('/') &&
+				(dev || size <= MAX_FILE_SIZE)
+			) {
+				totalIncludedSize += size;
+				if (!dev && totalIncludedSize > MAX_DECOMPRESSED_SIZE) {
+					throw new Error(
+						`Package has too much text content (${Math.round(totalIncludedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+					);
+				}
+
+				const content = data.subarray(offset, offset + size);
 
 				if (!isBinaryContent(content)) {
-					files.set(name, {
-						path: name,
-						content: new TextDecoder().decode(content),
+					files.set(normalizedPath, {
+						path: normalizedPath,
+						content: textDecoder.decode(content),
 						isBinary: false,
 						isMinified: filterResult.isMinified,
 						size
@@ -101,7 +113,7 @@ function extractTar(data: Uint8Array): FileTree {
 			}
 		}
 
-		offset += Math.ceil(size / 512) * 512;
+		offset += Math.ceil(size / TAR_BLOCK_SIZE) * TAR_BLOCK_SIZE;
 	}
 
 	return { files };
@@ -110,30 +122,33 @@ function extractTar(data: Uint8Array): FileTree {
 function extractZip(data: Uint8Array): FileTree {
 	const files = new Map<string, FileEntry>();
 	const filterCache = new Map<string, { include: boolean; isBinary: boolean; isMinified: boolean }>();
-
-	let skippedPreFilter = 0;
-	let skippedBinaryContent = 0;
+	let includedOriginalSize = 0;
 
 	let unzipped;
 	try {
 		unzipped = unzipSync(data, {
 			filter: (file) => {
-				const normalizedPath = file.name.replace(/^[^/]+\//, '');
+				const normalizedPath = normalizeArchivePath(file.name, 'zip');
 
 				if (!normalizedPath || normalizedPath.endsWith('/')) {
 					return false;
 				}
 
 				if (!dev && file.originalSize > MAX_FILE_SIZE) {
-					skippedPreFilter++;
 					return false;
 				}
 
 				const filterResult = shouldInclude(normalizedPath);
 
 				if (!filterResult.include || filterResult.isBinary) {
-					skippedPreFilter++;
 					return false;
+				}
+
+				includedOriginalSize += file.originalSize;
+				if (!dev && includedOriginalSize > MAX_DECOMPRESSED_SIZE) {
+					throw new Error(
+						`Package has too much text content (${Math.round(includedOriginalSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+					);
 				}
 
 				filterCache.set(file.name, filterResult);
@@ -152,19 +167,18 @@ function extractZip(data: Uint8Array): FileTree {
 	for (const [path, content] of entries) {
 		if (!dev && files.size >= MAX_FILES) break;
 
-		const normalizedPath = path.replace(/^[^/]+\//, '');
+		const normalizedPath = normalizeArchivePath(path, 'zip');
 		const filterResult = filterCache.get(path);
 
 		if (!filterResult) continue;
 
 		if (isBinaryContent(content)) {
-			skippedBinaryContent++;
 			continue;
 		}
 
 		files.set(normalizedPath, {
 			path: normalizedPath,
-			content: new TextDecoder().decode(content),
+			content: textDecoder.decode(content),
 			isBinary: false,
 			isMinified: filterResult.isMinified,
 			size: content.length
@@ -172,4 +186,35 @@ function extractZip(data: Uint8Array): FileTree {
 	}
 
 	return { files };
+}
+
+function normalizeArchivePath(path: string, format: 'tgz' | 'zip'): string {
+	const normalized = path.replace(/^\.\/+/, '').replace(/^\/+/, '');
+	if (!normalized) return '';
+
+	if (format === 'tgz') {
+		return normalized.startsWith('package/') ? normalized.slice('package/'.length) : normalized;
+	}
+
+	const firstSlash = normalized.indexOf('/');
+	return firstSlash === -1 ? normalized : normalized.slice(firstSlash + 1);
+}
+
+function decodeNullTerminated(bytes: Uint8Array): string {
+	const nullIndex = bytes.indexOf(0);
+	return textDecoder.decode(nullIndex >= 0 ? bytes.subarray(0, nullIndex) : bytes);
+}
+
+function parseTarSize(sizeBytes: Uint8Array): number {
+	const sizeStr = decodeNullTerminated(sizeBytes).trim();
+	return parseInt(sizeStr, 8) || 0;
+}
+
+function isZeroBlock(block: Uint8Array): boolean {
+	for (let i = 0; i < block.length; i++) {
+		if (block[i] !== 0) {
+			return false;
+		}
+	}
+	return true;
 }
