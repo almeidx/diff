@@ -10,7 +10,7 @@ A web application for comparing different versions of npm packages and WordPress
 - Unified and split diff views
 - Syntax highlighting for common languages
 - Word-level diff highlighting within changed lines
-- File tree navigation with status indicators
+- File tree filtering and keyboard navigation
 - Dark/light theme support
 - Mobile responsive
 
@@ -47,6 +47,7 @@ The app will be available at `http://localhost:5173`.
 | `pnpm build` | Build for production |
 | `pnpm preview` | Preview with Wrangler (Cloudflare Workers runtime) |
 | `pnpm check` | Run TypeScript and Svelte checks |
+| `pnpm test` | Run unit tests (Vitest) |
 | `pnpm run deploy` | Deploy to Cloudflare Workers |
 
 ### Development vs Preview
@@ -72,6 +73,47 @@ The hosted version has the following limits due to Cloudflare Workers constraint
 - Maximum file size: 1MB per file
 
 For larger packages, run locally where these limits don't apply.
+
+## Performance Notes
+
+- The diff view renders files incrementally to keep initial page load responsive on large diffs.
+- npm `.tgz` archives are extracted in a streaming path to lower peak memory pressure.
+- Zip extraction still requires full archive download due format constraints.
+
+## Rate Limiting
+
+Rate limiting supports two modes:
+
+- KV-backed distributed rate limiting when `RATE_LIMIT_KV` is bound in Cloudflare.
+- In-memory fallback when running locally without KV.
+
+Add this binding in your Cloudflare config if you want shared limits across instances:
+
+```jsonc
+{
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "your-kv-namespace-id"
+    }
+  ]
+}
+```
+
+## Troubleshooting
+
+- `Package too large` errors:
+  Run locally (`pnpm dev`) to bypass Cloudflare Worker runtime limits.
+- `Corrupted or truncated tar archive`:
+  The upstream package tarball is malformed or incomplete; retry and confirm the package version exists.
+- No versions returned for package/plugin:
+  Check package name/slug spelling and that your network can reach npm/WordPress APIs.
+- UI slows down on huge diffs:
+  Use file-tree filtering to narrow the diff and load relevant files first.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and standards.
 
 ## License
 
