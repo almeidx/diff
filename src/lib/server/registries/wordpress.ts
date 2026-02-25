@@ -1,10 +1,12 @@
 import type { Registry, WordPressPluginInfo } from "./types.js";
 import { getCached } from "../cache.js";
 import { compareVersions } from "$lib/utils/versions.js";
+import { fetchWithTimeout, assertSafeUpstreamUrl } from "$lib/server/http.js";
 
 const WP_API = "https://api.wordpress.org/plugins/info/1.2/";
 const WP_DOWNLOADS = "https://downloads.wordpress.org/plugin";
 const METADATA_TTL = 300; // 5 minutes
+const WORDPRESS_ALLOWED_HOSTS = ["api.wordpress.org", "downloads.wordpress.org"];
 
 export class WordPressRegistry implements Registry {
 	private async getMetadata(slug: string): Promise<WordPressPluginInfo> {
@@ -15,8 +17,9 @@ export class WordPressRegistry implements Registry {
 				url.searchParams.set("action", "plugin_information");
 				url.searchParams.set("request[slug]", slug);
 
-				const response = await fetch(url.toString(), {
+				const response = await fetchWithTimeout(url.toString(), {
 					headers: { Accept: "application/json" },
+					allowedHosts: WORDPRESS_ALLOWED_HOSTS,
 				});
 
 				if (!response.ok) {
@@ -52,11 +55,15 @@ export class WordPressRegistry implements Registry {
 		const metadata = await this.getMetadata(slug);
 
 		if (metadata.versions && metadata.versions[version]) {
-			return metadata.versions[version];
+			return assertSafeUpstreamUrl(metadata.versions[version], {
+				allowedHosts: WORDPRESS_ALLOWED_HOSTS,
+			}).toString();
 		}
 
 		if (version === metadata.version) {
-			return `${WP_DOWNLOADS}/${slug}.${version}.zip`;
+			return assertSafeUpstreamUrl(`${WP_DOWNLOADS}/${slug}.${version}.zip`, {
+				allowedHosts: WORDPRESS_ALLOWED_HOSTS,
+			}).toString();
 		}
 
 		throw new Error(`Version "${version}" not found for plugin "${slug}"`);

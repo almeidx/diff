@@ -36,11 +36,9 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 	const startedAt = Date.now();
 
 	const versions = await registry.getVersions(packageName);
-
-	const [fromValid, toValid] = await Promise.all([
-		registry.validateVersion(packageName, fromVersion),
-		registry.validateVersion(packageName, toVersion),
-	]);
+	const availableVersions = new Set(versions);
+	const fromValid = availableVersions.has(fromVersion);
+	const toValid = availableVersions.has(toVersion);
 
 	if (!fromValid || !toValid) {
 		logWarn("diff_invalid_version", {

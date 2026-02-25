@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
+	import * as radioGroup from "@zag-js/radio-group";
+	import { normalizeProps, useMachine } from "@zag-js/svelte";
 	import ThemeToggle from "$lib/components/ThemeToggle.svelte";
 	import VersionSelector from "$lib/components/VersionSelector.svelte";
 
@@ -12,10 +14,35 @@
 	let versions = $state<string[]>([]);
 	let error = $state<string | null>(null);
 
-	function getCsrfToken(): string {
-		const match = document.cookie.match(/csrf_token=([^;]+)/);
-		return match ? match[1] : "";
-	}
+	const packageTypeMachineId = $props.id();
+	const packageTypeOptions: Array<{ value: "npm" | "wp"; label: string; iconPath: string }> = [
+		{
+			value: "npm",
+			label: "npm",
+			iconPath:
+				"M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0v1.336H8.001V8.667h5.334v5.332h-2.669v-.001zm12.001 0h-1.33v-4h-1.336v4h-1.335v-4h-1.33v4h-2.671V8.667h8.002v5.331z",
+		},
+		{
+			value: "wp",
+			label: "WordPress",
+			iconPath:
+				"M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zM3.443 12c0-1.156.238-2.256.659-3.262l3.63 9.939A8.564 8.564 0 013.443 12zm8.557 8.557c-.883 0-1.736-.122-2.546-.348l2.703-7.858 2.768 7.585c.018.044.039.085.063.123a8.508 8.508 0 01-2.988.498zm1.172-12.584c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.884 0-2.37-.114-2.37-.114-.485-.028-.542.713-.057.742 0 0 .459.057.943.085l1.401 3.838-1.968 5.901-3.274-9.739c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.169 0-.367-.004-.58-.01A8.538 8.538 0 0112 3.443c2.258 0 4.318.874 5.855 2.3-.037-.002-.072-.008-.11-.008-.884 0-1.512.77-1.512 1.598 0 .742.428 1.37.884 2.113.343.599.742 1.37.742 2.483 0 .77-.296 1.663-.685 2.908l-.898 2.998-3.104-9.239zm4.534 10.946l2.748-7.946c.514-1.284.685-2.31.685-3.224 0-.332-.021-.64-.061-.927a8.558 8.558 0 01-3.372 12.097z",
+		},
+	];
+
+	const packageTypeService = useMachine(radioGroup.machine, () => ({
+		id: `package-type-${packageTypeMachineId}`,
+		name: "package-type",
+		value: packageType,
+		orientation: "horizontal" as const,
+		onValueChange: ({ value }) => {
+			if (value === "npm" || value === "wp") {
+				packageType = value;
+			}
+		},
+	}));
+
+	const packageTypeApi = $derived(radioGroup.connect(packageTypeService, normalizeProps));
 
 	$effect(() => {
 		packageType;
@@ -23,6 +50,29 @@
 		fromVersion = "";
 		toVersion = "";
 	});
+
+	$effect(() => {
+		if (packageTypeApi.value !== packageType) {
+			packageTypeApi.setValue(packageType);
+		}
+	});
+
+	async function getResponseErrorMessage(response: Response): Promise<string> {
+		const contentType = response.headers.get("content-type") || "";
+		if (contentType.includes("application/json")) {
+			try {
+				const data = await response.json();
+				if (typeof data?.message === "string" && data.message.trim()) {
+					return data.message;
+				}
+			} catch {
+				// Fall through to text parsing.
+			}
+		}
+
+		const text = await response.text();
+		return text.trim() || "Failed to fetch versions";
+	}
 
 	async function loadVersions() {
 		if (!packageName.trim()) {
@@ -35,15 +85,10 @@
 		versions = [];
 
 		try {
-			const response = await fetch(`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`, {
-				headers: {
-					"x-csrf-token": getCsrfToken(),
-				},
-			});
+			const response = await fetch(`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`);
 
 			if (!response.ok) {
-				const data = await response.json();
-				throw new Error(data.message || "Failed to fetch versions");
+				throw new Error(await getResponseErrorMessage(response));
 			}
 
 			const data = await response.json();
@@ -125,49 +170,45 @@
 			<h1 class="text-3xl font-bold mb-2">Compare package versions</h1>
 			<p class="text-text-secondary text-base">View the diff between two versions of npm packages or WordPress plugins</p>
 		</div>
+		<div class="sr-only" aria-live="polite">
+			{#if isLoadingVersions}
+				Loading versions
+			{:else if versions.length > 0}
+				Loaded {versions.length} versions
+			{:else if isLoading}
+				Opening diff page
+			{/if}
+		</div>
 
 		<form class="w-full flex flex-col gap-5" onsubmit={handleSubmit}>
-			<div class="flex gap-2 max-[480px]:flex-col">
-				<button
-					type="button"
-					class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border rounded-lg text-sm font-medium transition-all"
-					class:border-border={packageType !== "npm"}
-					class:bg-bg-secondary={packageType !== "npm"}
-					class:text-text-secondary={packageType !== "npm"}
-					class:hover:border-text-muted={packageType !== "npm"}
-					class:hover:text-text-primary={packageType !== "npm"}
-					class:border-link={packageType === "npm"}
-					class:bg-[color-mix(in_srgb,var(--link-color)_10%,transparent)]={packageType === "npm"}
-					class:text-link={packageType === "npm"}
-					onclick={() => (packageType = "npm")}
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-						<path
-							d="M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0v1.336H8.001V8.667h5.334v5.332h-2.669v-.001zm12.001 0h-1.33v-4h-1.336v4h-1.335v-4h-1.33v4h-2.671V8.667h8.002v5.331z"
-						/>
-					</svg>
-					npm
-				</button>
-				<button
-					type="button"
-					class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border rounded-lg text-sm font-medium transition-all"
-					class:border-border={packageType !== "wp"}
-					class:bg-bg-secondary={packageType !== "wp"}
-					class:text-text-secondary={packageType !== "wp"}
-					class:hover:border-text-muted={packageType !== "wp"}
-					class:hover:text-text-primary={packageType !== "wp"}
-					class:border-link={packageType === "wp"}
-					class:bg-[color-mix(in_srgb,var(--link-color)_10%,transparent)]={packageType === "wp"}
-					class:text-link={packageType === "wp"}
-					onclick={() => (packageType = "wp")}
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-						<path
-							d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zM3.443 12c0-1.156.238-2.256.659-3.262l3.63 9.939A8.564 8.564 0 013.443 12zm8.557 8.557c-.883 0-1.736-.122-2.546-.348l2.703-7.858 2.768 7.585c.018.044.039.085.063.123a8.508 8.508 0 01-2.988.498zm1.172-12.584c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.884 0-2.37-.114-2.37-.114-.485-.028-.542.713-.057.742 0 0 .459.057.943.085l1.401 3.838-1.968 5.901-3.274-9.739c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.169 0-.367-.004-.58-.01A8.538 8.538 0 0112 3.443c2.258 0 4.318.874 5.855 2.3-.037-.002-.072-.008-.11-.008-.884 0-1.512.77-1.512 1.598 0 .742.428 1.37.884 2.113.343.599.742 1.37.742 2.483 0 .77-.296 1.663-.685 2.908l-.898 2.998-3.104-9.239zm4.534 10.946l2.748-7.946c.514-1.284.685-2.31.685-3.224 0-.332-.021-.64-.061-.927a8.558 8.558 0 01-3.372 12.097z"
-						/>
-					</svg>
-					WordPress
-				</button>
+			<div class="flex gap-2 max-[480px]:flex-col" {...packageTypeApi.getRootProps()}>
+				<span class="sr-only" {...packageTypeApi.getLabelProps()}>Package type</span>
+				{#each packageTypeOptions as option}
+					{@const optionState = packageTypeApi.getItemState({ value: option.value })}
+					<label
+						class="flex-1"
+						{...packageTypeApi.getItemProps({ value: option.value })}
+					>
+						<input {...packageTypeApi.getItemHiddenInputProps({ value: option.value })} />
+						<span
+							class="flex items-center justify-center gap-2 px-4 py-3 border rounded-lg text-sm font-medium transition-all w-full"
+							class:border-border={!optionState.checked}
+							class:bg-bg-secondary={!optionState.checked}
+							class:text-text-secondary={!optionState.checked}
+							class:hover:border-text-muted={!optionState.checked}
+							class:hover:text-text-primary={!optionState.checked}
+							class:border-link={optionState.checked}
+							class:bg-[color-mix(in_srgb,var(--link-color)_10%,transparent)]={optionState.checked}
+							class:text-link={optionState.checked}
+							{...packageTypeApi.getItemControlProps({ value: option.value })}
+						>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+								<path d={option.iconPath} />
+							</svg>
+							<span {...packageTypeApi.getItemTextProps({ value: option.value })}>{option.label}</span>
+						</span>
+					</label>
+				{/each}
 			</div>
 
 			<div class="flex gap-3 items-end max-[480px]:flex-col max-[480px]:items-stretch">
@@ -250,7 +291,7 @@
 			</div>
 
 			{#if error}
-				<div class="px-4 py-3 bg-diff-delete-bg border border-diff-delete-text rounded-lg text-diff-delete-text text-sm">{error}</div>
+				<div class="px-4 py-3 bg-diff-delete-bg border border-diff-delete-text rounded-lg text-diff-delete-text text-sm" role="alert" aria-live="assertive">{error}</div>
 			{/if}
 
 			<button

@@ -1,9 +1,11 @@
 import type { Registry, NpmPackageMetadata } from "./types.js";
 import { getCached } from "../cache.js";
 import { compareVersions } from "$lib/utils/versions.js";
+import { fetchWithTimeout, assertSafeUpstreamUrl } from "$lib/server/http.js";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const METADATA_TTL = 300; // 5 minutes
+const NPM_ALLOWED_HOSTS = ["registry.npmjs.org", "registry.npmjs.com"];
 
 export class NpmRegistry implements Registry {
 	private async getMetadata(packageName: string): Promise<NpmPackageMetadata> {
@@ -14,8 +16,9 @@ export class NpmRegistry implements Registry {
 					? `@${encodeURIComponent(packageName.slice(1))}`
 					: encodeURIComponent(packageName);
 
-				const response = await fetch(`${NPM_REGISTRY}/${encodedName}`, {
+				const response = await fetchWithTimeout(`${NPM_REGISTRY}/${encodedName}`, {
 					headers: { Accept: "application/json" },
+					allowedHosts: NPM_ALLOWED_HOSTS,
 				});
 
 				if (!response.ok) {
@@ -44,7 +47,18 @@ export class NpmRegistry implements Registry {
 			throw new Error(`Version "${version}" not found for package "${packageName}"`);
 		}
 
-		return versionData.dist.tarball;
+		const tarballCandidate = new URL(versionData.dist.tarball);
+		if (
+			tarballCandidate.protocol === "http:" &&
+			(tarballCandidate.hostname === "registry.npmjs.org" || tarballCandidate.hostname === "registry.npmjs.com")
+		) {
+			tarballCandidate.protocol = "https:";
+		}
+
+		const tarballUrl = assertSafeUpstreamUrl(tarballCandidate, {
+			allowedHosts: NPM_ALLOWED_HOSTS,
+		});
+		return tarballUrl.toString();
 	}
 
 	async validateVersion(packageName: string, version: string): Promise<boolean> {

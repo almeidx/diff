@@ -102,7 +102,9 @@ describe("loadDiffPageData integration", () => {
 		vi.spyOn(extractor, "fetchAndExtract").mockRejectedValue(new Error("upstream unavailable"));
 
 		const result = await loadDiffPageData({
-			registry: createRegistry(),
+			registry: createRegistry({
+				getVersions: async () => ["5.1.0", "5.0.0"],
+			}),
 			packageType: "wp",
 			packageName: "akismet",
 			fromVersion: "5.0.0",

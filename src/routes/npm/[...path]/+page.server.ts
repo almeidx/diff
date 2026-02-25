@@ -5,8 +5,10 @@ import { getCached } from "$lib/server/cache";
 import { parseVersionRange } from "$lib/utils/versions";
 import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
 import { isNotFoundError } from "$lib/server/errors";
+import { fetchWithTimeout } from "$lib/server/http";
 
 const COMPARE_CACHE_TTL = 86400; // 24 hours
+const GITHUB_ALLOWED_HOSTS = ["api.github.com"];
 
 interface ParsedPath {
 	packageName: string;
@@ -44,7 +46,10 @@ async function resolveCompareUrl(packageName: string, fromVersion: string, toVer
 		const repoUrl = await npmRegistry.getRepositoryUrl(packageName);
 		if (!repoUrl) return null;
 
-		const [, owner, repo] = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/)!;
+		const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+		if (!repoMatch) return null;
+
+		const [, owner, repo] = repoMatch;
 		const apiBase = `https://api.github.com/repos/${owner}/${repo}/compare`;
 		const headers = { Accept: "application/vnd.github+json", "User-Agent": "diff-app" };
 
@@ -53,12 +58,15 @@ async function resolveCompareUrl(packageName: string, fromVersion: string, toVer
 			async () => {
 				const candidates = [`${fromVersion}...${toVersion}`, `v${fromVersion}...v${toVersion}`];
 
-				const results = await Promise.all(
-					candidates.map(async (range) => {
-						const res = await fetch(`${apiBase}/${range}`, { headers });
-						return res.ok ? `${repoUrl}/compare/${range}` : null;
-					}),
-				);
+					const results = await Promise.all(
+						candidates.map(async (range) => {
+							const res = await fetchWithTimeout(`${apiBase}/${range}`, {
+								headers,
+								allowedHosts: GITHUB_ALLOWED_HOSTS,
+							});
+							return res.ok ? `${repoUrl}/compare/${range}` : null;
+						}),
+					);
 
 				return results.find((url) => url !== null) ?? null;
 			},

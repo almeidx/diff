@@ -6,7 +6,7 @@ import { getErrorMessage, isNotFoundError } from "$lib/server/errors";
 
 export const GET: RequestHandler = async ({ url }) => {
 	const type = url.searchParams.get("type");
-	const name = url.searchParams.get("name");
+	const name = url.searchParams.get("name")?.trim();
 
 	if (!type || !name) {
 		throw error(400, "Missing type or name parameter");

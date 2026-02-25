@@ -2,7 +2,8 @@ import { Gunzip, unzipSync, gunzipSync } from "fflate";
 import { dev } from "$app/environment";
 import { shouldInclude, isBinaryContent } from "../diff/filters.js";
 import type { FileEntry, FileTree } from "$lib/types/index.js";
-import { normalizeArchivePath } from "./path.js";
+import { getCommonZipRoot, normalizeArchivePath, stripZipRoot } from "./path.js";
+import { fetchWithTimeout } from "$lib/server/http.js";
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
@@ -10,11 +11,13 @@ const MAX_FILES = 5000;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB per file
 const TAR_BLOCK_SIZE = 512;
 const textDecoder = new TextDecoder();
+const ARCHIVE_ALLOWED_HOSTS = ["registry.npmjs.org", "registry.npmjs.com", "downloads.wordpress.org"];
 
 interface FileFilterResult {
 	include: boolean;
 	isBinary: boolean;
 	isMinified: boolean;
+	normalizedPath?: string;
 }
 
 interface TarEntryState {
@@ -29,7 +32,7 @@ interface TarEntryState {
 }
 
 export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promise<FileTree> {
-	const response = await fetch(url);
+	const response = await fetchWithTimeout(url, { allowedHosts: ARCHIVE_ALLOWED_HOSTS });
 
 	if (!response.ok) {
 		throw new Error(`Failed to fetch archive: ${response.statusText}`);
@@ -201,7 +204,7 @@ function extractZip(data: Uint8Array): FileTree {
 					);
 				}
 
-				filterCache.set(file.name, filterResult);
+				filterCache.set(file.name, { ...filterResult, normalizedPath });
 				return true;
 			},
 		});
@@ -213,15 +216,20 @@ function extractZip(data: Uint8Array): FileTree {
 	}
 
 	const entries = Object.entries(unzipped);
+	const includedPaths = entries
+		.map(([path]) => filterCache.get(path)?.normalizedPath)
+		.filter((path): path is string => Boolean(path));
+	const zipRoot = getCommonZipRoot(includedPaths);
 
 	for (const [path, content] of entries) {
 		if (!dev && files.size >= MAX_FILES) break;
 
-		const normalizedPath = normalizeArchivePath(path, "zip");
 		const filterResult = filterCache.get(path);
 
 		if (!filterResult) continue;
 		if (isBinaryContent(content)) continue;
+		const normalizedPath = stripZipRoot(filterResult.normalizedPath ?? "", zipRoot);
+		if (!normalizedPath || normalizedPath.endsWith("/")) continue;
 
 		files.set(normalizedPath, {
 			path: normalizedPath,

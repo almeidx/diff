@@ -88,7 +88,7 @@
 
 	{#if error}
 		<div class="flex justify-center px-4 py-12">
-			<div class="max-w-[600px] p-6 bg-bg-secondary border border-border rounded-lg">
+			<div class="max-w-[600px] p-6 bg-bg-secondary border border-border rounded-lg" role="alert" aria-live="assertive">
 				{#if error.type === 'invalid_version'}
 					<h2 class="mb-2 text-diff-delete-text">Version not found</h2>
 					<p class="mb-3 text-text-secondary">{error.message}</p>
@@ -109,7 +109,7 @@
 			</div>
 		</div>
 	{:else if diff}
-		<div class="flex items-center justify-between px-4 py-3 bg-bg-primary border-b border-border max-md:flex-wrap max-md:gap-2">
+		<div class="flex items-center justify-between px-4 py-3 bg-bg-primary border-b border-border max-md:flex-wrap max-md:gap-2" aria-live="polite">
 			<StatsBar stats={diff.stats} />
 			<div class="flex items-center gap-3">
 				{#if compareUrl}

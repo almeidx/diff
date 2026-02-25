@@ -1,75 +1,45 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { expandedPaths, togglePath, expandPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
 	interface Props {
 		node: TreeNode;
+		indexPath: number[];
+		api: any;
 		onFileSelect?: (file: DiffFile) => void;
 		selectedPath?: string;
-		depth?: number;
-		forcedExpandedPaths?: Set<string> | null;
 	}
 
-	let { node, onFileSelect, selectedPath, depth = 0, forcedExpandedPaths = null }: Props = $props();
+	let { node, indexPath, api, onFileSelect, selectedPath }: Props = $props();
 
-	let isExpanded = $derived(
-		forcedExpandedPaths ? forcedExpandedPaths.has(node.path) : $expandedPaths.has(node.path)
-	);
+	const nodeProps = $derived({ node, indexPath });
+	const nodeState = $derived(api.getNodeState(nodeProps));
 
-	function getSingleFolderChildPaths(n: TreeNode): string[] {
-		const paths: string[] = [];
-		if (!n.children || n.children.length !== 1) return paths;
-
-		const child = n.children[0];
-		if (child.isDirectory) {
-			paths.push(child.path);
-			paths.push(...getSingleFolderChildPaths(child));
-		}
-		return paths;
-	}
-
-	function handleClick() {
-		if (node.isDirectory) {
-			if (forcedExpandedPaths) return;
-
-			const wasExpanded = $expandedPaths.has(node.path);
-			togglePath(node.path);
-
-			if (!wasExpanded && node.children) {
-				const childPaths = getSingleFolderChildPaths(node);
-				if (childPaths.length > 0) {
-					expandPaths(childPaths);
-				}
-			}
-		} else if (node.file && onFileSelect) {
+	function handleFileSelect() {
+		if (node.file && onFileSelect) {
 			onFileSelect(node.file);
 		}
 	}
 </script>
 
-<li class="list-none">
-		<button
-			type="button"
-			class="flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer select-none hover:bg-bg-tertiary w-full text-left border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-link focus:ring-inset"
-			class:bg-bg-tertiary={selectedPath === node.path}
-			style:padding-left="{depth * 16 + 8}px"
-			onclick={handleClick}
-			data-tree-path={node.path}
-			data-tree-file-path={!node.isDirectory ? node.path : undefined}
-			aria-current={selectedPath === node.path ? 'true' : undefined}
+{#if node.isDirectory}
+	<li class="list-none" {...api.getBranchProps(nodeProps)}>
+		<div
+			class="flex items-center gap-1 py-1 px-2 rounded-md select-none w-full border-none bg-transparent"
+			style:padding-left="{nodeState.depth * 16 + 8}px"
+			{...api.getBranchControlProps(nodeProps)}
 		>
-		{#if node.isDirectory}
-			<span
+			<button
+				type="button"
 				class="shrink-0 flex items-center justify-center w-4 h-4 text-text-muted transition-transform duration-150"
-				class:rotate-90={isExpanded}
+				{...api.getBranchTriggerProps(nodeProps)}
 			>
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
 					<path
 						d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"
 					/>
 				</svg>
-			</span>
+			</button>
 			<span class="shrink-0 flex items-center justify-center w-4 h-4 text-link">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
 					<path
@@ -77,7 +47,43 @@
 					/>
 				</svg>
 			</span>
-		{:else}
+			<span
+				class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+				class:text-diff-add-text={node.status === 'added'}
+				class:text-diff-delete-text={node.status === 'deleted'}
+				class:text-text-primary={node.status === 'modified'}
+				{...api.getBranchTextProps(nodeProps)}
+			>
+				{node.name}
+			</span>
+		</div>
+
+		<ul class="list-none" {...api.getBranchContentProps(nodeProps)}>
+			{#if node.children}
+				{#each node.children as child, childIndex (child.path)}
+					<TreeNodeComponent
+						node={child}
+						indexPath={[...indexPath, childIndex]}
+						{api}
+						{onFileSelect}
+						{selectedPath}
+					/>
+				{/each}
+			{/if}
+		</ul>
+	</li>
+{:else}
+	<li
+		class="list-none"
+		data-tree-file-path={node.path}
+		{...api.getItemProps(nodeProps)}
+		onclick={handleFileSelect}
+	>
+		<div
+			class="flex items-center gap-1 py-1 px-2 rounded-md select-none w-full text-left border-none bg-transparent hover:bg-bg-tertiary focus:outline-none focus:ring-2 focus:ring-link focus:ring-inset"
+			class:bg-bg-tertiary={node.path === selectedPath || nodeState.selected}
+			style:padding-left="{nodeState.depth * 16 + 8}px"
+		>
 			<span class="w-4"></span>
 			<span class="shrink-0 flex items-center justify-center w-4 h-4 text-text-muted">
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -86,34 +92,21 @@
 					/>
 				</svg>
 			</span>
-		{/if}
-		<span
-			class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-			class:text-diff-add-text={node.status === 'added'}
-			class:text-diff-delete-text={node.status === 'deleted'}
-			class:text-text-primary={node.status === 'modified'}
-		>
-			{node.name}
-		</span>
-		{#if node.file?.isBinary}
-			<span class="text-[10px] px-1.5 py-px rounded-xl bg-bg-tertiary text-text-muted">binary</span>
-		{/if}
-		{#if node.file?.isMinified}
-			<span class="text-[10px] px-1.5 py-px rounded-xl bg-bg-tertiary text-text-muted">minified</span>
-		{/if}
-	</button>
-
-	{#if node.isDirectory && node.children && isExpanded}
-		<ul class="list-none">
-			{#each node.children as child (child.path)}
-				<TreeNodeComponent
-					node={child}
-					{onFileSelect}
-					{selectedPath}
-					depth={depth + 1}
-					{forcedExpandedPaths}
-				/>
-			{/each}
-		</ul>
-	{/if}
-</li>
+			<span
+				class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+				class:text-diff-add-text={node.status === 'added'}
+				class:text-diff-delete-text={node.status === 'deleted'}
+				class:text-text-primary={node.status === 'modified'}
+				{...api.getItemTextProps(nodeProps)}
+			>
+				{node.name}
+			</span>
+			{#if node.file?.isBinary}
+				<span class="text-[10px] px-1.5 py-px rounded-xl bg-bg-tertiary text-text-muted">binary</span>
+			{/if}
+			{#if node.file?.isMinified}
+				<span class="text-[10px] px-1.5 py-px rounded-xl bg-bg-tertiary text-text-muted">minified</span>
+			{/if}
+		</div>
+	</li>
+{/if}

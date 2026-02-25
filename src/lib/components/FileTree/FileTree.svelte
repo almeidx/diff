@@ -1,7 +1,8 @@
 <script lang="ts">
+	import * as treeView from '@zag-js/tree-view';
+	import { normalizeProps, useMachine } from '@zag-js/svelte';
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
 	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths } from '$lib/utils/tree';
-	import { setExpandedPaths, expandAllPaths, collapseAllPaths } from '$lib/stores/ui';
 	import TreeNodeComponent from './TreeNode.svelte';
 
 	interface Props {
@@ -17,9 +18,11 @@
 		matchCount: number;
 	}
 
+	const machineId = $props.id();
+
 	let { files, onFileSelect, selectedPath }: Props = $props();
 	let search = $state('');
-	let navElement = $state<HTMLElement | null>(null);
+	let expandedValue = $state<string[]>([]);
 
 	let treeData = $derived(propagateStatusWithFolders(buildFileTree(files)));
 	let tree = $derived(treeData.nodes);
@@ -34,7 +37,7 @@
 				nodes: tree,
 				forcedExpandedPaths: new Set<string>(),
 				filePaths: flattenFilePaths(tree),
-				matchCount: files.length
+				matchCount: files.length,
 			};
 		}
 
@@ -44,16 +47,50 @@
 	let displayTree = $derived(filteredTree.nodes);
 	let visibleFilePaths = $derived(filteredTree.filePaths);
 	let searchMatchCount = $derived(filteredTree.matchCount);
-	let forcedExpandedPaths = $derived(
-		normalizedSearch ? filteredTree.forcedExpandedPaths : null
+	let forcedExpandedPaths = $derived(filteredTree.forcedExpandedPaths);
+
+	const treeCollection = $derived(
+		treeView.collection({
+			rootNode: {
+				name: 'root',
+				path: 'root',
+				isDirectory: true,
+				children: displayTree,
+			},
+			nodeToValue: (node) => node.path,
+			nodeToString: (node) => node.name,
+			nodeToChildren: (node) => node.children ?? [],
+			nodeToChildrenCount: (node) => node.children?.length,
+		}),
 	);
 
+	const service = useMachine(treeView.machine, () => ({
+		id: `file-tree-${machineId}`,
+		collection: treeCollection,
+		selectionMode: 'single' as const,
+		expandedValue: normalizedSearch ? Array.from(forcedExpandedPaths) : expandedValue,
+		selectedValue: selectedPath ? [selectedPath] : [],
+		onExpandedChange: ({ expandedValue: nextExpanded }) => {
+			if (!normalizedSearch) {
+				expandedValue = nextExpanded;
+			}
+		},
+		onSelectionChange: ({ selectedNodes }) => {
+			const selectedNode = selectedNodes[0] as TreeNode | undefined;
+			if (selectedNode?.file && onFileSelect) {
+				onFileSelect(selectedNode.file);
+			}
+		},
+	}));
+
+	const api = $derived(treeView.connect(service, normalizeProps));
+
 	function handleExpandAll() {
-		expandAllPaths(allFolderPaths);
+		api.expand();
 	}
 
 	function handleCollapseAll() {
-		collapseAllPaths();
+		api.collapse();
 	}
 
 	function clearSearch() {
@@ -66,16 +103,8 @@
 
 		onFileSelect(file);
 		if (focus) {
-			queueMicrotask(() => focusFileNode(path));
+			api.focus(path);
 		}
-	}
-
-	function focusFileNode(path: string) {
-		if (!navElement || typeof CSS === 'undefined') return;
-
-		const selector = `button[data-tree-file-path="${CSS.escape(path)}"]`;
-		const button = navElement.querySelector<HTMLButtonElement>(selector);
-		button?.focus();
 	}
 
 	function handleSearchKeydown(event: KeyboardEvent) {
@@ -87,54 +116,17 @@
 		}
 	}
 
-	function handleTreeKeydown(event: KeyboardEvent) {
-		if (
-			!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter'].includes(event.key) ||
-			event.target instanceof HTMLInputElement
-		) {
-			return;
-		}
-
-		if (visibleFilePaths.length === 0) return;
-		event.preventDefault();
-
-		const selectedIndex = selectedPath ? visibleFilePaths.indexOf(selectedPath) : -1;
-		let nextIndex = selectedIndex >= 0 ? selectedIndex : 0;
-
-		switch (event.key) {
-			case 'ArrowDown':
-				nextIndex = Math.min(visibleFilePaths.length - 1, nextIndex + 1);
-				break;
-			case 'ArrowUp':
-				nextIndex = Math.max(0, nextIndex - 1);
-				break;
-			case 'Home':
-				nextIndex = 0;
-				break;
-			case 'End':
-				nextIndex = visibleFilePaths.length - 1;
-				break;
-			case 'Enter':
-				if (selectedPath && visibleFilePaths.includes(selectedPath)) {
-					selectFileByPath(selectedPath, true);
-				}
-				return;
-		}
-
-		selectFileByPath(visibleFilePaths[nextIndex], true);
-	}
-
 	$effect(() => {
 		if (files.length === 0) {
-			setExpandedPaths([]);
+			expandedValue = [];
 			return;
 		}
 
-		const pathsToExpand: string[] = [];
+		const pathsToExpand = new Set<string>();
 
 		for (const node of tree) {
 			if (node.isDirectory) {
-				pathsToExpand.push(node.path);
+				pathsToExpand.add(node.path);
 			}
 		}
 
@@ -142,16 +134,16 @@
 		const parts = firstFile.path.split('/');
 		if (parts.length > 1) {
 			for (let i = 0; i < parts.length - 1; i++) {
-				pathsToExpand.push(parts.slice(0, i + 1).join('/'));
+				pathsToExpand.add(parts.slice(0, i + 1).join('/'));
 			}
 		}
 
 		const singleChildPaths = getSingleChildFolderPaths(tree);
-		for (const p of singleChildPaths) {
-			pathsToExpand.push(p);
+		for (const path of singleChildPaths) {
+			pathsToExpand.add(path);
 		}
 
-		setExpandedPaths(pathsToExpand);
+		expandedValue = Array.from(pathsToExpand);
 	});
 
 	function flattenFilePaths(nodes: TreeNode[]): string[] {
@@ -171,7 +163,7 @@
 	}
 
 	function filterTreeNodes(nodes: TreeNode[], query: string): FilteredTreeResult {
-		const forcedExpandedPaths = new Set<string>();
+		const nextForcedExpandedPaths = new Set<string>();
 		const filePaths: string[] = [];
 		let matchCount = 0;
 
@@ -185,7 +177,7 @@
 					const filteredChildren = node.children ? filterNodeList(node.children) : [];
 
 					if (pathMatch || filteredChildren.length > 0) {
-						forcedExpandedPaths.add(node.path);
+						nextForcedExpandedPaths.add(node.path);
 						result.push({ ...node, children: filteredChildren });
 					}
 
@@ -204,14 +196,14 @@
 
 		return {
 			nodes: filterNodeList(nodes),
-			forcedExpandedPaths,
+			forcedExpandedPaths: nextForcedExpandedPaths,
 			filePaths,
-			matchCount
+			matchCount,
 		};
 	}
 </script>
 
-<nav class="overflow-y-auto overflow-x-hidden text-[13px]" aria-label="Changed files">
+<nav class="overflow-y-auto overflow-x-hidden text-[13px]" aria-label="Changed files" {...api.getRootProps()}>
 	<div class="p-2 border-b border-border bg-bg-secondary space-y-2">
 		{#if hasAnyFolders && !normalizedSearch}
 			<div class="flex gap-1">
@@ -264,23 +256,18 @@
 			</p>
 		{/if}
 	</div>
-	<ul
-		class="list-none p-2"
-		role="tree"
-		aria-label="Changed files tree"
-		tabindex="0"
-		onkeydown={handleTreeKeydown}
-		bind:this={navElement}
-	>
+	<span class="sr-only" {...api.getLabelProps()}>Changed files tree</span>
+	<ul class="list-none p-2" {...api.getTreeProps()}>
 		{#if displayTree.length === 0}
 			<li class="px-2 py-2 text-xs text-text-muted">No files match your search.</li>
 		{:else}
-			{#each displayTree as node (node.path)}
+			{#each displayTree as node, rootIndex (node.path)}
 				<TreeNodeComponent
 					{node}
+					indexPath={[rootIndex]}
+					{api}
 					{onFileSelect}
 					{selectedPath}
-					{forcedExpandedPaths}
 				/>
 			{/each}
 		{/if}

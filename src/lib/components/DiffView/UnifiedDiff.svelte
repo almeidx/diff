@@ -87,11 +87,19 @@
 
 <div class="font-mono text-xs leading-5 overflow-x-auto w-full">
 	<table class="min-w-full w-max border-collapse">
+		<caption class="sr-only">Unified diff for {filePath}</caption>
 		<colgroup>
 			<col class="w-[50px] min-w-[50px]" />
 			<col class="w-[50px] min-w-[50px]" />
 			<col />
 		</colgroup>
+		<thead class="sr-only">
+			<tr>
+				<th scope="col">Old line</th>
+				<th scope="col">New line</th>
+				<th scope="col">Content</th>
+			</tr>
+		</thead>
 		<tbody>
 			{#each visibleRows as row (row.key)}
 				{#if row.kind === 'header'}
