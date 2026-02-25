@@ -1,15 +1,15 @@
-import { dev } from '$app/environment';
+import { dev } from "$app/environment";
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+type LogLevel = "debug" | "info" | "warn" | "error";
 type LogContext = Record<string, unknown>;
-const isTestEnvironment = import.meta.env?.MODE === 'test';
+const isTestEnvironment = import.meta.env?.MODE === "test";
 
 function serializeValue(value: unknown): unknown {
 	if (value instanceof Error) {
 		return {
 			name: value.name,
 			message: value.message,
-			stack: value.stack
+			stack: value.stack,
 		};
 	}
 
@@ -17,7 +17,7 @@ function serializeValue(value: unknown): unknown {
 		return value.map((entry) => serializeValue(entry));
 	}
 
-	if (value && typeof value === 'object') {
+	if (value && typeof value === "object") {
 		const serialized: Record<string, unknown> = {};
 		for (const [key, nested] of Object.entries(value)) {
 			serialized[key] = serializeValue(nested);
@@ -33,14 +33,14 @@ function writeLog(level: LogLevel, message: string, context: LogContext = {}): v
 		return;
 	}
 
-	if (!dev && level === 'debug') {
+	if (!dev && level === "debug") {
 		return;
 	}
 
 	const payload: Record<string, unknown> = {
 		timestamp: new Date().toISOString(),
 		level,
-		message
+		message,
 	};
 
 	for (const [key, value] of Object.entries(context)) {
@@ -48,12 +48,12 @@ function writeLog(level: LogLevel, message: string, context: LogContext = {}): v
 	}
 
 	const line = JSON.stringify(payload);
-	if (level === 'error') {
+	if (level === "error") {
 		console.error(line);
 		return;
 	}
 
-	if (level === 'warn') {
+	if (level === "warn") {
 		console.warn(line);
 		return;
 	}
@@ -62,17 +62,17 @@ function writeLog(level: LogLevel, message: string, context: LogContext = {}): v
 }
 
 export function logDebug(message: string, context?: LogContext): void {
-	writeLog('debug', message, context);
+	writeLog("debug", message, context);
 }
 
 export function logInfo(message: string, context?: LogContext): void {
-	writeLog('info', message, context);
+	writeLog("info", message, context);
 }
 
 export function logWarn(message: string, context?: LogContext): void {
-	writeLog('warn', message, context);
+	writeLog("warn", message, context);
 }
 
 export function logError(message: string, context?: LogContext): void {
-	writeLog('error', message, context);
+	writeLog("error", message, context);
 }

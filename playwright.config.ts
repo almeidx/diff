@@ -1,22 +1,22 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-	testDir: './tests/e2e',
-	testMatch: '*.smoke.spec.ts',
+	testDir: "./tests/e2e",
+	testMatch: "*.smoke.spec.ts",
 	timeout: 60_000,
 	expect: {
-		timeout: 10_000
+		timeout: 10_000,
 	},
 	retries: process.env.CI ? 1 : 0,
 	workers: process.env.CI ? 1 : undefined,
 	use: {
-		baseURL: 'http://127.0.0.1:4173',
-		trace: 'retain-on-failure'
+		baseURL: "http://127.0.0.1:4173",
+		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: 'pnpm dev --host 127.0.0.1 --port 4173',
-		url: 'http://127.0.0.1:4173',
+		command: "pnpm dev --host 127.0.0.1 --port 4173",
+		url: "http://127.0.0.1:4173",
 		reuseExistingServer: !process.env.CI,
-		timeout: 120_000
-	}
+		timeout: 120_000,
+	},
 });

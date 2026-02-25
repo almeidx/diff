@@ -1,6 +1,6 @@
 const fallbackVersionCollator = new Intl.Collator(undefined, {
 	numeric: true,
-	sensitivity: 'base'
+	sensitivity: "base",
 });
 
 interface ParsedVersion {
@@ -64,7 +64,7 @@ export function parseVersionRange(versionPart: string): { fromVersion: string; t
 
 	return {
 		fromVersion: match[1],
-		toVersion: match[2]
+		toVersion: match[2],
 	};
 }
 
@@ -72,24 +72,24 @@ export function formatInvalidVersionError(
 	fromVersion: string,
 	toVersion: string,
 	fromValid: boolean,
-	toValid: boolean
+	toValid: boolean,
 ): string {
 	const invalidVersions = [];
 	if (!fromValid) invalidVersions.push(fromVersion);
 	if (!toValid) invalidVersions.push(toVersion);
 
-	return `Invalid version${invalidVersions.length > 1 ? 's' : ''}: ${invalidVersions.join(', ')}`;
+	return `Invalid version${invalidVersions.length > 1 ? "s" : ""}: ${invalidVersions.join(", ")}`;
 }
 
 function parseComparableVersion(version: string): ParsedVersion | null {
-	const normalized = version.trim().replace(/^v(?=\d)/i, '');
+	const normalized = version.trim().replace(/^v(?=\d)/i, "");
 	const match = normalized.match(/^(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$/);
 	if (!match) return null;
 
-	const core = match[1].split('.').map((part) => Number.parseInt(part, 10));
+	const core = match[1].split(".").map((part) => Number.parseInt(part, 10));
 	if (core.some(Number.isNaN)) return null;
 
-	const preRelease = match[2] ? match[2].split('.') : null;
+	const preRelease = match[2] ? match[2].split(".") : null;
 	return { core, preRelease };
 }
 

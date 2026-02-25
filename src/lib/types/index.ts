@@ -1,4 +1,4 @@
-export type PackageType = 'npm' | 'wp';
+export type PackageType = "npm" | "wp";
 
 export interface PackageInfo {
 	type: PackageType;
@@ -18,15 +18,15 @@ export interface FileTree {
 	files: Map<string, FileEntry>;
 }
 
-export type DiffStatus = 'added' | 'deleted' | 'modified';
+export type DiffStatus = "added" | "deleted" | "modified";
 
 export interface WordChange {
-	type: 'equal' | 'insert' | 'delete';
+	type: "equal" | "insert" | "delete";
 	text: string;
 }
 
 export interface DiffLine {
-	type: 'context' | 'add' | 'delete';
+	type: "context" | "add" | "delete";
 	oldNumber: number | null;
 	newNumber: number | null;
 	content: string;
@@ -74,14 +74,14 @@ export interface TreeNode {
 }
 
 export interface VersionError {
-	type: 'invalid_version';
+	type: "invalid_version";
 	availableVersions: string[];
 	message: string;
 }
 
 export interface PackageError {
-	type: 'package_not_found';
+	type: "package_not_found";
 	message: string;
 }
 
-export type DiffError = VersionError | PackageError | { type: 'fetch_error'; message: string };
+export type DiffError = VersionError | PackageError | { type: "fetch_error"; message: string };

@@ -1,9 +1,9 @@
-import type { Registry, WordPressPluginInfo } from './types.js';
-import { getCached } from '../cache.js';
-import { compareVersions } from '$lib/utils/versions.js';
+import type { Registry, WordPressPluginInfo } from "./types.js";
+import { getCached } from "../cache.js";
+import { compareVersions } from "$lib/utils/versions.js";
 
-const WP_API = 'https://api.wordpress.org/plugins/info/1.2/';
-const WP_DOWNLOADS = 'https://downloads.wordpress.org/plugin';
+const WP_API = "https://api.wordpress.org/plugins/info/1.2/";
+const WP_DOWNLOADS = "https://downloads.wordpress.org/plugin";
 const METADATA_TTL = 300; // 5 minutes
 
 export class WordPressRegistry implements Registry {
@@ -12,11 +12,11 @@ export class WordPressRegistry implements Registry {
 			`wp:metadata:${slug}`,
 			async () => {
 				const url = new URL(WP_API);
-				url.searchParams.set('action', 'plugin_information');
-				url.searchParams.set('request[slug]', slug);
+				url.searchParams.set("action", "plugin_information");
+				url.searchParams.set("request[slug]", slug);
 
 				const response = await fetch(url.toString(), {
-					headers: { Accept: 'application/json' }
+					headers: { Accept: "application/json" },
 				});
 
 				if (!response.ok) {
@@ -31,7 +31,7 @@ export class WordPressRegistry implements Registry {
 
 				return data as WordPressPluginInfo;
 			},
-			{ ttlSeconds: METADATA_TTL }
+			{ ttlSeconds: METADATA_TTL },
 		);
 	}
 
@@ -43,7 +43,7 @@ export class WordPressRegistry implements Registry {
 		}
 
 		return Object.keys(metadata.versions)
-			.filter((v) => v !== 'trunk')
+			.filter((v) => v !== "trunk")
 			.sort(compareVersions)
 			.reverse();
 	}
@@ -71,7 +71,6 @@ export class WordPressRegistry implements Registry {
 
 		return version === metadata.version;
 	}
-
 }
 
 export const wordpressRegistry = new WordPressRegistry();

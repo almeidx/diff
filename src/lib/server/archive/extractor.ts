@@ -1,8 +1,8 @@
-import { Gunzip, unzipSync, gunzipSync } from 'fflate';
-import { dev } from '$app/environment';
-import { shouldInclude, isBinaryContent } from '../diff/filters.js';
-import type { FileEntry, FileTree } from '$lib/types/index.js';
-import { normalizeArchivePath } from './path.js';
+import { Gunzip, unzipSync, gunzipSync } from "fflate";
+import { dev } from "$app/environment";
+import { shouldInclude, isBinaryContent } from "../diff/filters.js";
+import type { FileEntry, FileTree } from "$lib/types/index.js";
+import { normalizeArchivePath } from "./path.js";
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
@@ -28,14 +28,14 @@ interface TarEntryState {
 	remainingPadding: number;
 }
 
-export async function fetchAndExtract(url: string, format: 'tgz' | 'zip'): Promise<FileTree> {
+export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promise<FileTree> {
 	const response = await fetch(url);
 
 	if (!response.ok) {
 		throw new Error(`Failed to fetch archive: ${response.statusText}`);
 	}
 
-	if (format === 'tgz') {
+	if (format === "tgz") {
 		return extractTgzFromResponse(response);
 	}
 
@@ -66,7 +66,7 @@ async function extractTgzFromResponse(response: Response): Promise<FileTree> {
 			compressedSize += value.byteLength;
 			if (!dev && compressedSize > MAX_ARCHIVE_SIZE) {
 				throw new Error(
-					`Package too large (${Math.round(compressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`
+					`Package too large (${Math.round(compressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`,
 				);
 			}
 
@@ -76,8 +76,8 @@ async function extractTgzFromResponse(response: Response): Promise<FileTree> {
 		gunzip.push(new Uint8Array(0), true);
 		return extractor.finish();
 	} catch (e) {
-		if (e instanceof RangeError && e.message.includes('typed array length')) {
-			throw new Error('Package too large when decompressed. This package exceeds memory limits.');
+		if (e instanceof RangeError && e.message.includes("typed array length")) {
+			throw new Error("Package too large when decompressed. This package exceeds memory limits.");
 		}
 		throw e;
 	} finally {
@@ -90,15 +90,15 @@ function extractTgzFromBuffer(data: Uint8Array): FileTree {
 	try {
 		decompressed = gunzipSync(data);
 	} catch (e) {
-		if (e instanceof RangeError && e.message.includes('typed array length')) {
-			throw new Error('Package too large when decompressed. This package exceeds memory limits.');
+		if (e instanceof RangeError && e.message.includes("typed array length")) {
+			throw new Error("Package too large when decompressed. This package exceeds memory limits.");
 		}
 		throw e;
 	}
 
 	if (!dev && decompressed.byteLength > MAX_DECOMPRESSED_SIZE) {
 		throw new Error(
-			`Package too large when decompressed (${Math.round(decompressed.byteLength / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+			`Package too large when decompressed (${Math.round(decompressed.byteLength / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
 		);
 	}
 
@@ -126,7 +126,7 @@ function extractTar(data: Uint8Array): FileTree {
 			name = `${prefix}/${name}`;
 		}
 
-		const normalizedPath = normalizeArchivePath(name, 'tgz');
+		const normalizedPath = normalizeArchivePath(name, "tgz");
 		const size = parseTarSize(header.subarray(124, 136));
 		const typeFlag = header[156];
 
@@ -139,13 +139,13 @@ function extractTar(data: Uint8Array): FileTree {
 				filterResult.include &&
 				!filterResult.isBinary &&
 				normalizedPath &&
-				!normalizedPath.endsWith('/') &&
+				!normalizedPath.endsWith("/") &&
 				(dev || size <= MAX_FILE_SIZE)
 			) {
 				totalIncludedSize += size;
 				if (!dev && totalIncludedSize > MAX_DECOMPRESSED_SIZE) {
 					throw new Error(
-						`Package has too much text content (${Math.round(totalIncludedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+						`Package has too much text content (${Math.round(totalIncludedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
 					);
 				}
 
@@ -157,7 +157,7 @@ function extractTar(data: Uint8Array): FileTree {
 						content: textDecoder.decode(content),
 						isBinary: false,
 						isMinified: filterResult.isMinified,
-						size
+						size,
 					});
 				}
 			}
@@ -178,9 +178,9 @@ function extractZip(data: Uint8Array): FileTree {
 	try {
 		unzipped = unzipSync(data, {
 			filter: (file) => {
-				const normalizedPath = normalizeArchivePath(file.name, 'zip');
+				const normalizedPath = normalizeArchivePath(file.name, "zip");
 
-				if (!normalizedPath || normalizedPath.endsWith('/')) {
+				if (!normalizedPath || normalizedPath.endsWith("/")) {
 					return false;
 				}
 
@@ -197,17 +197,17 @@ function extractZip(data: Uint8Array): FileTree {
 				includedOriginalSize += file.originalSize;
 				if (!dev && includedOriginalSize > MAX_DECOMPRESSED_SIZE) {
 					throw new Error(
-						`Package has too much text content (${Math.round(includedOriginalSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+						`Package has too much text content (${Math.round(includedOriginalSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
 					);
 				}
 
 				filterCache.set(file.name, filterResult);
 				return true;
-			}
+			},
 		});
 	} catch (e) {
-		if (e instanceof RangeError && e.message.includes('typed array length')) {
-			throw new Error('Package too large when decompressed. This package exceeds memory limits.');
+		if (e instanceof RangeError && e.message.includes("typed array length")) {
+			throw new Error("Package too large when decompressed. This package exceeds memory limits.");
 		}
 		throw e;
 	}
@@ -217,7 +217,7 @@ function extractZip(data: Uint8Array): FileTree {
 	for (const [path, content] of entries) {
 		if (!dev && files.size >= MAX_FILES) break;
 
-		const normalizedPath = normalizeArchivePath(path, 'zip');
+		const normalizedPath = normalizeArchivePath(path, "zip");
 		const filterResult = filterCache.get(path);
 
 		if (!filterResult) continue;
@@ -228,7 +228,7 @@ function extractZip(data: Uint8Array): FileTree {
 			content: textDecoder.decode(content),
 			isBinary: false,
 			isMinified: filterResult.isMinified,
-			size: content.length
+			size: content.length,
 		});
 	}
 
@@ -250,7 +250,7 @@ class TarStreamExtractor {
 		this.decompressedSize += chunk.byteLength;
 		if (!dev && this.decompressedSize > MAX_DECOMPRESSED_SIZE) {
 			throw new Error(
-				`Package too large when decompressed (${Math.round(this.decompressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+				`Package too large when decompressed (${Math.round(this.decompressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
 			);
 		}
 
@@ -280,10 +280,7 @@ class TarStreamExtractor {
 				const take = Math.min(this.currentEntry.remainingContent, chunk.length - offset);
 
 				if (this.currentEntry.capture && this.currentEntry.captureBuffer) {
-					this.currentEntry.captureBuffer.set(
-						chunk.subarray(offset, offset + take),
-						this.currentEntry.captureOffset
-					);
+					this.currentEntry.captureBuffer.set(chunk.subarray(offset, offset + take), this.currentEntry.captureOffset);
 					this.currentEntry.captureOffset += take;
 				}
 
@@ -304,16 +301,12 @@ class TarStreamExtractor {
 	}
 
 	finish(): FileTree {
-		if (
-			this.currentEntry &&
-			this.currentEntry.remainingContent === 0 &&
-			this.currentEntry.remainingPadding === 0
-		) {
+		if (this.currentEntry && this.currentEntry.remainingContent === 0 && this.currentEntry.remainingPadding === 0) {
 			this.finalizeCurrentEntry();
 		}
 
 		if (this.currentEntry || this.headerOffset > 0) {
-			throw new Error('Corrupted or truncated tar archive.');
+			throw new Error("Corrupted or truncated tar archive.");
 		}
 
 		return { files: this.files };
@@ -326,7 +319,7 @@ class TarStreamExtractor {
 			name = `${prefix}/${name}`;
 		}
 
-		const normalizedPath = normalizeArchivePath(name, 'tgz');
+		const normalizedPath = normalizeArchivePath(name, "tgz");
 		const size = parseTarSize(header.subarray(124, 136));
 		const typeFlag = header[156];
 		const paddedSize = Math.ceil(size / TAR_BLOCK_SIZE) * TAR_BLOCK_SIZE;
@@ -341,7 +334,7 @@ class TarStreamExtractor {
 			filterResult.include &&
 			!filterResult.isBinary &&
 			normalizedPath.length > 0 &&
-			!normalizedPath.endsWith('/') &&
+			!normalizedPath.endsWith("/") &&
 			(dev || size <= MAX_FILE_SIZE) &&
 			(dev || this.files.size < MAX_FILES);
 
@@ -349,7 +342,7 @@ class TarStreamExtractor {
 			this.includedSize += size;
 			if (!dev && this.includedSize > MAX_DECOMPRESSED_SIZE) {
 				throw new Error(
-					`Package has too much text content (${Math.round(this.includedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`
+					`Package has too much text content (${Math.round(this.includedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
 				);
 			}
 		}
@@ -362,7 +355,7 @@ class TarStreamExtractor {
 			captureBuffer: shouldCapture ? new Uint8Array(size) : null,
 			captureOffset: 0,
 			remainingContent: size,
-			remainingPadding: paddedSize - size
+			remainingPadding: paddedSize - size,
 		};
 	}
 
@@ -376,7 +369,7 @@ class TarStreamExtractor {
 				content: textDecoder.decode(entry.captureBuffer),
 				isBinary: false,
 				isMinified: entry.isMinified,
-				size: entry.size
+				size: entry.size,
 			});
 		}
 
@@ -389,7 +382,7 @@ async function readResponseBytes(response: Response, maxBytes: number): Promise<
 		const buffer = await response.arrayBuffer();
 		if (!dev && buffer.byteLength > maxBytes) {
 			throw new Error(
-				`Package too large (${Math.round(buffer.byteLength / 1024 / 1024)}MB). Maximum supported size is ${maxBytes / 1024 / 1024}MB.`
+				`Package too large (${Math.round(buffer.byteLength / 1024 / 1024)}MB). Maximum supported size is ${maxBytes / 1024 / 1024}MB.`,
 			);
 		}
 		return new Uint8Array(buffer);
@@ -407,7 +400,7 @@ async function readResponseBytes(response: Response, maxBytes: number): Promise<
 			totalBytes += value.byteLength;
 			if (!dev && totalBytes > maxBytes) {
 				throw new Error(
-					`Package too large (${Math.round(totalBytes / 1024 / 1024)}MB). Maximum supported size is ${maxBytes / 1024 / 1024}MB.`
+					`Package too large (${Math.round(totalBytes / 1024 / 1024)}MB). Maximum supported size is ${maxBytes / 1024 / 1024}MB.`,
 				);
 			}
 

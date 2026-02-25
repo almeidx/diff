@@ -1,6 +1,6 @@
-import { logDebug, logWarn } from '$lib/server/log.js';
+import { logDebug, logWarn } from "$lib/server/log.js";
 
-const CACHE_NAME = 'diff-cache-v1';
+const CACHE_NAME = "diff-cache-v1";
 
 interface CacheOptions {
 	ttlSeconds: number;
@@ -9,16 +9,16 @@ interface CacheOptions {
 const DEFAULT_TTL = 300; // 5 minutes
 
 function isCacheAvailable(): boolean {
-	return typeof caches !== 'undefined';
+	return typeof caches !== "undefined";
 }
 
 export async function getCached<T>(
 	key: string,
 	fetcher: () => Promise<T>,
-	options: CacheOptions = { ttlSeconds: DEFAULT_TTL }
+	options: CacheOptions = { ttlSeconds: DEFAULT_TTL },
 ): Promise<T> {
 	if (!isCacheAvailable()) {
-		logDebug('cache_unavailable', { key });
+		logDebug("cache_unavailable", { key });
 		return fetcher();
 	}
 
@@ -28,25 +28,25 @@ export async function getCached<T>(
 	const cached = await cache.match(cacheKey);
 	if (cached) {
 		try {
-			logDebug('cache_hit', { key });
+			logDebug("cache_hit", { key });
 			return (await cached.json()) as T;
 		} catch (e) {
-			logWarn('cache_parse_failed', { key, error: e });
+			logWarn("cache_parse_failed", { key, error: e });
 		}
 	}
 
-	logDebug('cache_miss', { key });
+	logDebug("cache_miss", { key });
 	const data = await fetcher();
 
 	const response = new Response(JSON.stringify(data), {
 		headers: {
-			'Content-Type': 'application/json',
-			'Cache-Control': `public, max-age=${options.ttlSeconds}`
-		}
+			"Content-Type": "application/json",
+			"Cache-Control": `public, max-age=${options.ttlSeconds}`,
+		},
 	});
 
 	await cache.put(cacheKey, response);
-	logDebug('cache_store', { key, ttlSeconds: options.ttlSeconds });
+	logDebug("cache_store", { key, ttlSeconds: options.ttlSeconds });
 
 	return data;
 }

@@ -1,21 +1,21 @@
-import type { DiffFile, TreeNode, DiffStatus } from '$lib/types/index.js';
+import type { DiffFile, TreeNode, DiffStatus } from "$lib/types/index.js";
 
 export function buildFileTree(files: DiffFile[]): TreeNode[] {
 	const root: TreeNode = {
-		name: '',
-		path: '',
+		name: "",
+		path: "",
 		isDirectory: true,
-		children: []
+		children: [],
 	};
 
 	for (const file of files) {
-		const parts = file.path.split('/');
+		const parts = file.path.split("/");
 		let current = root;
 
 		for (let i = 0; i < parts.length; i++) {
 			const part = parts[i];
 			const isLast = i === parts.length - 1;
-			const currentPath = parts.slice(0, i + 1).join('/');
+			const currentPath = parts.slice(0, i + 1).join("/");
 
 			if (!current.children) {
 				current.children = [];
@@ -30,7 +30,7 @@ export function buildFileTree(files: DiffFile[]): TreeNode[] {
 					isDirectory: !isLast,
 					children: isLast ? undefined : [],
 					file: isLast ? file : undefined,
-					status: isLast ? file.status : undefined
+					status: isLast ? file.status : undefined,
 				};
 				current.children.push(child);
 			}
@@ -48,7 +48,7 @@ function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
 	return nodes
 		.map((node) => ({
 			...node,
-			children: node.children ? sortTreeNodes(node.children) : undefined
+			children: node.children ? sortTreeNodes(node.children) : undefined,
 		}))
 		.sort((a, b) => {
 			if (a.isDirectory && !b.isDirectory) return -1;
@@ -84,7 +84,7 @@ export function propagateStatusWithFolders(nodes: TreeNode[]): PropagateResult {
 				if (statuses.size === 1) {
 					status = Array.from(statuses)[0];
 				} else if (statuses.size > 1) {
-					status = 'modified';
+					status = "modified";
 				}
 
 				return { ...node, children: childResult.nodes, status };

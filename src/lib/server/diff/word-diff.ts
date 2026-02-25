@@ -1,5 +1,5 @@
-import DiffMatchPatch from 'diff-match-patch';
-import type { WordChange } from '$lib/types/index.js';
+import DiffMatchPatch from "diff-match-patch";
+import type { WordChange } from "$lib/types/index.js";
 
 const dmp = new DiffMatchPatch();
 
@@ -8,7 +8,7 @@ export function computeWordDiff(oldText: string, newText: string): WordChange[] 
 	dmp.diff_cleanupSemantic(diffs);
 
 	return diffs.map(([op, text]) => ({
-		type: op === 0 ? 'equal' : op === 1 ? 'insert' : 'delete',
-		text
+		type: op === 0 ? "equal" : op === 1 ? "insert" : "delete",
+		text,
 	}));
 }

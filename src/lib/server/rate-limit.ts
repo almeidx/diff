@@ -1,4 +1,4 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from "@sveltejs/kit";
 
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60000;
@@ -31,32 +31,28 @@ export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResu
 
 function getClientIp(event: RequestEvent): string {
 	return (
-		event.request.headers.get('cf-connecting-ip') ||
-		event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-		'unknown'
+		event.request.headers.get("cf-connecting-ip") ||
+		event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+		"unknown"
 	);
 }
 
-async function checkKvRateLimit(
-	kv: RateLimitKvNamespace,
-	ip: string,
-	now: number
-): Promise<RateLimitResult> {
+async function checkKvRateLimit(kv: RateLimitKvNamespace, ip: string, now: number): Promise<RateLimitResult> {
 	const windowId = Math.floor(now / WINDOW_MS);
 	const key = `rate:${windowId}:${ip}`;
 	const rawCount = await kv.get(key);
-	const count = Number.parseInt(rawCount ?? '0', 10) || 0;
+	const count = Number.parseInt(rawCount ?? "0", 10) || 0;
 
 	if (count >= RATE_LIMIT) {
 		const windowResetAt = (windowId + 1) * WINDOW_MS;
 		return {
 			allowed: false,
-			retryAfterSeconds: Math.max(1, Math.ceil((windowResetAt - now) / 1000))
+			retryAfterSeconds: Math.max(1, Math.ceil((windowResetAt - now) / 1000)),
 		};
 	}
 
 	await kv.put(key, String(count + 1), {
-		expirationTtl: Math.ceil(WINDOW_MS / 1000) + 10
+		expirationTtl: Math.ceil(WINDOW_MS / 1000) + 10,
 	});
 
 	return { allowed: true };
@@ -69,7 +65,7 @@ function checkMemoryRateLimit(ip: string, now: number): RateLimitResult {
 		if (record.count >= RATE_LIMIT) {
 			return {
 				allowed: false,
-				retryAfterSeconds: Math.max(1, Math.ceil((record.resetAt - now) / 1000))
+				retryAfterSeconds: Math.max(1, Math.ceil((record.resetAt - now) / 1000)),
 			};
 		}
 

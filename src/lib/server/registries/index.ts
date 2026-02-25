@@ -1,13 +1,13 @@
-import type { Registry } from './types.js';
-import { npmRegistry } from './npm.js';
-import { wordpressRegistry } from './wordpress.js';
-import type { PackageType } from '$lib/types/index.js';
+import type { Registry } from "./types.js";
+import { npmRegistry } from "./npm.js";
+import { wordpressRegistry } from "./wordpress.js";
+import type { PackageType } from "$lib/types/index.js";
 
 export function getRegistry(type: PackageType): Registry {
 	switch (type) {
-		case 'npm':
+		case "npm":
 			return npmRegistry;
-		case 'wp':
+		case "wp":
 			return wordpressRegistry;
 		default:
 			throw new Error(`Unknown package type: ${type}`);
@@ -15,4 +15,4 @@ export function getRegistry(type: PackageType): Registry {
 }
 
 export { npmRegistry, wordpressRegistry };
-export type { Registry } from './types.js';
+export type { Registry } from "./types.js";

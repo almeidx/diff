@@ -1,11 +1,11 @@
-import type { PackageType, DiffResult, DiffError } from '$lib/types/index.js';
-import type { Registry } from '$lib/server/registries/types.js';
-import { fetchAndExtract } from '$lib/server/archive/extractor';
-import { getCached } from '$lib/server/cache';
-import { formatInvalidVersionError } from '$lib/utils/versions';
-import { computeDiff } from './engine.js';
-import { getErrorMessage } from '$lib/server/errors.js';
-import { logInfo, logWarn } from '$lib/server/log.js';
+import type { PackageType, DiffResult, DiffError } from "$lib/types/index.js";
+import type { Registry } from "$lib/server/registries/types.js";
+import { fetchAndExtract } from "$lib/server/archive/extractor";
+import { getCached } from "$lib/server/cache";
+import { formatInvalidVersionError } from "$lib/utils/versions";
+import { computeDiff } from "./engine.js";
+import { getErrorMessage } from "$lib/server/errors.js";
+import { logInfo, logWarn } from "$lib/server/log.js";
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
@@ -15,7 +15,7 @@ interface LoadDiffPageOptions {
 	packageName: string;
 	fromVersion: string;
 	toVersion: string;
-	archiveFormat: 'tgz' | 'zip';
+	archiveFormat: "tgz" | "zip";
 	diffCacheKey: string;
 }
 
@@ -32,33 +32,32 @@ interface LoadDiffPageError {
 export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
-	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey } =
-		options;
+	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey } = options;
 	const startedAt = Date.now();
 
 	const versions = await registry.getVersions(packageName);
 
 	const [fromValid, toValid] = await Promise.all([
 		registry.validateVersion(packageName, fromVersion),
-		registry.validateVersion(packageName, toVersion)
+		registry.validateVersion(packageName, toVersion),
 	]);
 
 	if (!fromValid || !toValid) {
-		logWarn('diff_invalid_version', {
+		logWarn("diff_invalid_version", {
 			packageType,
 			packageName,
 			fromVersion,
 			toVersion,
 			fromValid,
-			toValid
+			toValid,
 		});
 		return {
 			error: {
-				type: 'invalid_version',
+				type: "invalid_version",
 				message: formatInvalidVersionError(fromVersion, toVersion, fromValid, toValid),
-				availableVersions: versions
+				availableVersions: versions,
 			},
-			versions
+			versions,
 		};
 	}
 
@@ -68,20 +67,20 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 			async () => {
 				const [fromUrl, toUrl] = await Promise.all([
 					registry.getDownloadUrl(packageName, fromVersion),
-					registry.getDownloadUrl(packageName, toVersion)
+					registry.getDownloadUrl(packageName, toVersion),
 				]);
 
 				const [fromTree, toTree] = await Promise.all([
 					fetchAndExtract(fromUrl, archiveFormat),
-					fetchAndExtract(toUrl, archiveFormat)
+					fetchAndExtract(toUrl, archiveFormat),
 				]);
 
 				return computeDiff(fromTree, toTree, packageType, packageName, fromVersion, toVersion);
 			},
-			{ ttlSeconds: DIFF_CACHE_TTL }
+			{ ttlSeconds: DIFF_CACHE_TTL },
 		);
 
-		logInfo('diff_loaded', {
+		logInfo("diff_loaded", {
 			packageType,
 			packageName,
 			fromVersion,
@@ -89,25 +88,25 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 			files: diff.stats.files,
 			insertions: diff.stats.insertions,
 			deletions: diff.stats.deletions,
-			durationMs: Date.now() - startedAt
+			durationMs: Date.now() - startedAt,
 		});
 
 		return { diff, versions };
 	} catch (e) {
-		logWarn('diff_load_failed', {
+		logWarn("diff_load_failed", {
 			packageType,
 			packageName,
 			fromVersion,
 			toVersion,
 			durationMs: Date.now() - startedAt,
-			error: e
+			error: e,
 		});
 		return {
 			error: {
-				type: 'fetch_error',
-				message: getErrorMessage(e, 'Failed to compute diff')
+				type: "fetch_error",
+				message: getErrorMessage(e, "Failed to compute diff"),
 			},
-			versions
+			versions,
 		};
 	}
 }

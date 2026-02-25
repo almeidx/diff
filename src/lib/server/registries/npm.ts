@@ -1,8 +1,8 @@
-import type { Registry, NpmPackageMetadata } from './types.js';
-import { getCached } from '../cache.js';
-import { compareVersions } from '$lib/utils/versions.js';
+import type { Registry, NpmPackageMetadata } from "./types.js";
+import { getCached } from "../cache.js";
+import { compareVersions } from "$lib/utils/versions.js";
 
-const NPM_REGISTRY = 'https://registry.npmjs.org';
+const NPM_REGISTRY = "https://registry.npmjs.org";
 const METADATA_TTL = 300; // 5 minutes
 
 export class NpmRegistry implements Registry {
@@ -10,12 +10,12 @@ export class NpmRegistry implements Registry {
 		return getCached(
 			`npm:metadata:${packageName}`,
 			async () => {
-				const encodedName = packageName.startsWith('@')
+				const encodedName = packageName.startsWith("@")
 					? `@${encodeURIComponent(packageName.slice(1))}`
 					: encodeURIComponent(packageName);
 
 				const response = await fetch(`${NPM_REGISTRY}/${encodedName}`, {
-					headers: { Accept: 'application/json' }
+					headers: { Accept: "application/json" },
 				});
 
 				if (!response.ok) {
@@ -27,7 +27,7 @@ export class NpmRegistry implements Registry {
 
 				return (await response.json()) as NpmPackageMetadata;
 			},
-			{ ttlSeconds: METADATA_TTL }
+			{ ttlSeconds: METADATA_TTL },
 		);
 	}
 
@@ -58,16 +58,13 @@ export class NpmRegistry implements Registry {
 		const repo = metadata.repository;
 		if (!repo) return null;
 
-		const raw = typeof repo === 'string' ? repo : repo.url;
+		const raw = typeof repo === "string" ? repo : repo.url;
 
-		const match = raw.match(
-			/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/
-		);
+		const match = raw.match(/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
 		if (!match) return null;
 
 		return `https://github.com/${match[1]}/${match[2]}`;
 	}
-
 }
 
 export const npmRegistry = new NpmRegistry();
