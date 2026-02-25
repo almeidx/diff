@@ -12,6 +12,8 @@ pnpm dev
 Useful commands:
 
 ```bash
+pnpm lint
+pnpm format:check
 pnpm check
 pnpm test
 pnpm build
@@ -22,7 +24,7 @@ pnpm preview
 
 1. Create focused changes that are easy to review.
 2. Keep commits small and scoped to one concern.
-3. Run `pnpm check`, `pnpm test`, and `pnpm build` before opening a PR.
+3. Run `pnpm lint`, `pnpm check`, `pnpm test`, and `pnpm build` before opening a PR.
 4. Update documentation when behavior, limits, or architecture changes.
 
 ## Code Standards

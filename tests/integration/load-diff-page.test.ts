@@ -55,13 +55,13 @@ describe('loadDiffPageData integration', () => {
 		});
 
 		expect('error' in result).toBe(true);
-		if ('error' in result) {
-			expect(result.error.type).toBe('invalid_version');
-			expect(result.error.message).toBe('Invalid version: 9.9.9');
-			if (result.error.type === 'invalid_version') {
-				expect(result.error.availableVersions).toEqual(['2.0.0', '1.0.0']);
-			}
+		if (!('error' in result)) {
+			throw new Error('Expected error result');
 		}
+		expect(result.error.type).toBe('invalid_version');
+		expect(result.error.message).toBe('Invalid version: 9.9.9');
+		const invalidVersionError = result.error as { type: 'invalid_version'; availableVersions: string[] };
+		expect(invalidVersionError.availableVersions).toEqual(['2.0.0', '1.0.0']);
 		expect(getDownloadUrl).not.toHaveBeenCalled();
 	});
 
@@ -84,13 +84,14 @@ describe('loadDiffPageData integration', () => {
 		});
 
 		expect('diff' in result).toBe(true);
-		if ('diff' in result) {
-			expect(result.diff.packageName).toBe('pkg');
-			expect(result.diff.stats.files).toBe(1);
-			expect(result.diff.stats.insertions).toBe(1);
-			expect(result.diff.stats.deletions).toBe(1);
-			expect(result.diff.files[0]?.path).toBe('index.js');
+		if (!('diff' in result)) {
+			throw new Error('Expected diff result');
 		}
+		expect(result.diff.packageName).toBe('pkg');
+		expect(result.diff.stats.files).toBe(1);
+		expect(result.diff.stats.insertions).toBe(1);
+		expect(result.diff.stats.deletions).toBe(1);
+		expect(result.diff.files[0]?.path).toBe('index.js');
 
 		expect(fetchAndExtractSpy).toHaveBeenCalledTimes(2);
 		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
@@ -119,9 +120,10 @@ describe('loadDiffPageData integration', () => {
 		});
 
 		expect('error' in result).toBe(true);
-		if ('error' in result) {
-			expect(result.error.type).toBe('fetch_error');
-			expect(result.error.message).toBe('upstream unavailable');
+		if (!('error' in result)) {
+			throw new Error('Expected error result');
 		}
+		expect(result.error.type).toBe('fetch_error');
+		expect(result.error.message).toBe('upstream unavailable');
 	});
 });

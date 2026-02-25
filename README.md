@@ -46,6 +46,10 @@ The app will be available at `http://localhost:5173`.
 | `pnpm dev` | Start development server (fast, no caching) |
 | `pnpm build` | Build for production |
 | `pnpm preview` | Preview with Wrangler (Cloudflare Workers runtime) |
+| `pnpm lint` | Run Oxlint checks |
+| `pnpm lint:fix` | Run Oxlint with auto-fixes where available |
+| `pnpm format` | Format TS/JS config and test files with Oxfmt |
+| `pnpm format:check` | Check Oxfmt formatting without writing |
 | `pnpm check` | Run TypeScript and Svelte checks |
 | `pnpm test` | Run unit tests (Vitest) |
 | `pnpm run deploy` | Deploy to Cloudflare Workers |

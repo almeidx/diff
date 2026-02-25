@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "useTabs": true,
+  "trailingComma": "es5",
+  "ignorePatterns": [
+    ".svelte-kit",
+    ".wrangler",
+    "node_modules",
+    "test-results",
+    "playwright-report"
+  ]
+}
