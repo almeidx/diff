@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import type { DiffHunk, DiffLine } from '$lib/types/index.js';
+	import { wordWrap } from '$lib/stores/ui';
 	import { getLanguage } from '$lib/highlight/prism';
 	import DiffLineComponent from './DiffLine.svelte';
 
@@ -85,8 +86,17 @@
 	}
 </script>
 
-<div class="font-mono text-xs leading-5 overflow-x-auto w-full">
-	<table class="min-w-full w-max border-collapse">
+<div
+	class="font-mono text-xs leading-5 w-full"
+	class:overflow-x-auto={!$wordWrap}
+	class:overflow-x-hidden={$wordWrap}
+>
+	<table
+		class="min-w-full border-collapse"
+		class:w-max={!$wordWrap}
+		class:w-full={$wordWrap}
+		class:table-fixed={$wordWrap}
+	>
 		<caption class="sr-only">Unified diff for {filePath}</caption>
 		<colgroup>
 			<col class="w-[50px] min-w-[50px]" />
