@@ -1,26 +1,10 @@
 import type { Handle } from "@sveltejs/kit";
-import { dev } from "$app/environment";
-
 import { checkRateLimit } from "$lib/server/rate-limit";
 import { logWarn } from "$lib/server/log.js";
 
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-const CSP = [
-	"default-src 'self'",
-	"base-uri 'self'",
-	"frame-ancestors 'none'",
-	"object-src 'none'",
-	"form-action 'self'",
-	dev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self'",
-	"style-src 'self' 'unsafe-inline'",
-	"img-src 'self' data:",
-	"font-src 'self' data:",
-	dev
-		? "connect-src 'self' ws: wss: http: https:"
-		: "connect-src 'self' https://registry.npmjs.org https://registry.npmjs.com https://api.wordpress.org https://downloads.wordpress.org https://api.github.com",
-].join("; ");
 
 function generateToken(): string {
 	const array = new Uint8Array(32);
@@ -29,7 +13,6 @@ function generateToken(): string {
 }
 
 function applySecurityHeaders(response: Response): Response {
-	response.headers.set("Content-Security-Policy", CSP);
 	response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 	response.headers.set("X-Content-Type-Options", "nosniff");
 	response.headers.set("X-Frame-Options", "DENY");

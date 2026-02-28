@@ -43,7 +43,6 @@ describe("hooks.server", () => {
 			resolve: async () => new Response("ok"),
 		});
 
-		expect(response.headers.get("content-security-policy")).toContain("default-src 'self'");
 		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
 		expect(response.headers.get("x-frame-options")).toBe("DENY");
 	});
