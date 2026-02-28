@@ -6,16 +6,16 @@
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"assets": {
 		"directory": ".svelte-kit/cloudflare",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
 	},
 	"limits": {
-		"cpu_ms": 30000
+		"cpu_ms": 30000,
 	},
 	"observability": {
 		"logs": {
 			"enabled": true,
 			"head_sampling_rate": 1,
-			"invocation_logs": true
-		}
-	}
+			"invocation_logs": true,
+		},
+	},
 }

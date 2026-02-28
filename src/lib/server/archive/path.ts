@@ -39,7 +39,10 @@ export function stripZipRoot(path: string, root: string | null): string {
 }
 
 function normalizePath(path: string): string {
-	const cleaned = path.replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/^\/+/, "");
+	const cleaned = path
+		.replace(/\\/g, "/")
+		.replace(/^\.\/+/, "")
+		.replace(/^\/+/, "");
 	if (!cleaned) return "";
 
 	const segments: string[] = [];

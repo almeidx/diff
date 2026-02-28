@@ -6,10 +6,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  ci:
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -32,19 +40,20 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Type and Svelte checks
-        run: pnpm check
+      - name: Test suite
+        run: pnpm test:ci
 
-      - name: Unit tests
-        run: pnpm test
+      - name: Type check
+        run: pnpm check
 
       - name: Build
         run: pnpm build
 
-  playwright:
+  e2e:
+    name: Playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    needs: ci
+    timeout-minutes: 30
+    needs: quality
 
     steps:
       - name: Checkout
@@ -67,5 +76,15 @@ jobs:
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Playwright smoke tests
-        run: pnpm test:smoke
+      - name: Run Playwright tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

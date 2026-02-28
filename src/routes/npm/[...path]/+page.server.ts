@@ -58,15 +58,15 @@ async function resolveCompareUrl(packageName: string, fromVersion: string, toVer
 			async () => {
 				const candidates = [`${fromVersion}...${toVersion}`, `v${fromVersion}...v${toVersion}`];
 
-					const results = await Promise.all(
-						candidates.map(async (range) => {
-							const res = await fetchWithTimeout(`${apiBase}/${range}`, {
-								headers,
-								allowedHosts: GITHUB_ALLOWED_HOSTS,
-							});
-							return res.ok ? `${repoUrl}/compare/${range}` : null;
-						}),
-					);
+				const results = await Promise.all(
+					candidates.map(async (range) => {
+						const res = await fetchWithTimeout(`${apiBase}/${range}`, {
+							headers,
+							allowedHosts: GITHUB_ALLOWED_HOSTS,
+						});
+						return res.ok ? `${repoUrl}/compare/${range}` : null;
+					}),
+				);
 
 				return results.find((url) => url !== null) ?? null;
 			},

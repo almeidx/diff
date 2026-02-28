@@ -13,7 +13,7 @@ Useful commands:
 
 ```bash
 pnpm lint
-pnpm format:check
+pnpm fmt
 pnpm check
 pnpm test
 pnpm build
@@ -62,12 +62,12 @@ If deploying with distributed rate limiting, bind a KV namespace named `RATE_LIM
 
 ```jsonc
 {
-  "kv_namespaces": [
-    {
-      "binding": "RATE_LIMIT_KV",
-      "id": "your-kv-namespace-id"
-    }
-  ]
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT_KV",
+			"id": "your-kv-namespace-id",
+		},
+	],
 }
 ```
 

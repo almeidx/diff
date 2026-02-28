@@ -136,10 +136,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (!event.cookies.get(CSRF_COOKIE_NAME)) {
 		const token = generateToken();
-		response.headers.append(
-			"Set-Cookie",
-			`${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure; HttpOnly`,
-		);
+		response.headers.append("Set-Cookie", `${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure; HttpOnly`);
 	}
 
 	return response;

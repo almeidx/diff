@@ -82,10 +82,7 @@ function createAbortSignal(signal: AbortSignal | null, timeoutMs: number): Abort
 	};
 }
 
-export async function fetchWithTimeout(
-	input: string | URL,
-	options: FetchWithTimeoutOptions = {},
-): Promise<Response> {
+export async function fetchWithTimeout(input: string | URL, options: FetchWithTimeoutOptions = {}): Promise<Response> {
 	const { timeoutMs = DEFAULT_TIMEOUT_MS, allowedHosts, signal, ...requestInit } = options;
 	const url = assertSafeUpstreamUrl(input, { allowedHosts });
 	const abort = createAbortSignal(signal ?? null, timeoutMs);

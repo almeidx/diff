@@ -82,4 +82,3 @@ Key message types and fields:
 
 - `cache_parse_failed` indicates invalid JSON in cache payload for a key.
 - Requests continue by recomputing data; no emergency action needed unless frequent.
-

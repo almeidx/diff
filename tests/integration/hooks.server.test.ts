@@ -111,9 +111,7 @@ describe("hooks.server", () => {
 
 	it("sanitizes package diff redirects", async () => {
 		vi.spyOn(rateLimit, "checkRateLimit").mockResolvedValue({ allowed: true });
-		const event = createEvent(
-			"https://example.com/package-diff?name=@scope/pkg&from=1.0.0&to=2.0.0",
-		);
+		const event = createEvent("https://example.com/package-diff?name=@scope/pkg&from=1.0.0&to=2.0.0");
 
 		const response = await handle({
 			event,

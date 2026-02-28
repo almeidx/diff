@@ -1,6 +1,18 @@
 {
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 120,
-  "tabWidth": 2,
-  "useTabs": true
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"tabWidth": 2,
+	"useTabs": true,
+	"printWidth": 120,
+	"ignorePatterns": [
+		".claude/**",
+		".svelte-kit/**",
+		".wrangler/**",
+		"wrangler-local-state/**",
+		"dist/**",
+		"build/**",
+		"coverage/**",
+		"node_modules/**",
+		"playwright-report/**",
+		"test-results/**"
+	]
 }

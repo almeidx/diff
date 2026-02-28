@@ -37,6 +37,7 @@ src/
 ### Svelte 5
 
 This project uses Svelte 5 with runes:
+
 - `$state()` for reactive state
 - `$derived()` for computed values
 - `$effect()` for side effects
@@ -69,6 +70,7 @@ This project uses Svelte 5 with runes:
 ### Adding a new language for syntax highlighting
 
 Edit `src/lib/highlight/prism.ts`:
+
 1. Add the Prism component import
 2. Add file extension mapping in `extToLang`
 

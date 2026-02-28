@@ -41,18 +41,16 @@ The app will be available at `http://localhost:5173`.
 
 ### Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start development server (fast, no caching) |
-| `pnpm build` | Build for production |
-| `pnpm preview` | Preview with Wrangler (Cloudflare Workers runtime) |
-| `pnpm lint` | Run Oxlint checks |
-| `pnpm lint:fix` | Run Oxlint with auto-fixes where available |
-| `pnpm format` | Format TS/JS config and test files with Oxfmt |
-| `pnpm format:check` | Check Oxfmt formatting without writing |
-| `pnpm check` | Run TypeScript and Svelte checks |
-| `pnpm test` | Run unit tests (Vitest) |
-| `pnpm run deploy` | Deploy to Cloudflare Workers |
+| Command           | Description                                        |
+| ----------------- | -------------------------------------------------- |
+| `pnpm dev`        | Start development server (fast, no caching)        |
+| `pnpm build`      | Build for production                               |
+| `pnpm preview`    | Preview with Wrangler (Cloudflare Workers runtime) |
+| `pnpm lint`       | Check formatting and lint rules                    |
+| `pnpm fmt`        | Format and auto-fix lint issues                    |
+| `pnpm check`      | Run TypeScript and Svelte checks                   |
+| `pnpm test`       | Run unit tests (Vitest)                            |
+| `pnpm run deploy` | Deploy to Cloudflare Workers                       |
 
 ### Development vs Preview
 
@@ -95,12 +93,12 @@ Add this binding in your Cloudflare config if you want shared limits across inst
 
 ```jsonc
 {
-  "kv_namespaces": [
-    {
-      "binding": "RATE_LIMIT_KV",
-      "id": "your-kv-namespace-id"
-    }
-  ]
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT_KV",
+			"id": "your-kv-namespace-id",
+		},
+	],
 }
 ```
 
