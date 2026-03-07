@@ -66,13 +66,3 @@ export async function getCached<T>(
 		inFlight.delete(key);
 	}
 }
-
-export async function invalidateCache(key: string): Promise<void> {
-	if (!isCacheAvailable()) {
-		return;
-	}
-
-	const cache = await caches.open(CACHE_NAME);
-	const cacheKey = new Request(`https://cache.internal/${encodeURIComponent(key)}`);
-	await cache.delete(cacheKey);
-}

@@ -1,6 +1,6 @@
 import type { Handle } from "@sveltejs/kit";
 import { checkRateLimit } from "$lib/server/rate-limit";
-import { logWarn } from "$lib/server/log.js";
+import { logWarn, getClientIp } from "$lib/server/log.js";
 
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
@@ -41,14 +41,6 @@ function encodePathValue(value: string): string {
 		.join("/");
 }
 
-function getClientIp(event: Parameters<Handle>[0]["event"]): string {
-	return (
-		event.request.headers.get("cf-connecting-ip") ||
-		event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-		"unknown"
-	);
-}
-
 export const handle: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname === "/package-diff") {
 		const name = event.url.searchParams.get("name");
@@ -73,7 +65,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			logWarn("request_rate_limited", {
 				path: event.url.pathname,
 				method: event.request.method,
-				ip: getClientIp(event),
+				ip: getClientIp(event.request),
 				retryAfterSeconds: rateLimitResult.retryAfterSeconds ?? 60,
 			});
 			return applySecurityHeaders(
@@ -93,7 +85,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			logWarn("csrf_origin_mismatch", {
 				path: event.url.pathname,
 				method: event.request.method,
-				ip: getClientIp(event),
+				ip: getClientIp(event.request),
 				origin,
 				expectedOrigin: event.url.origin,
 			});
@@ -107,7 +99,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			logWarn("csrf_validation_failed", {
 				path: event.url.pathname,
 				method: event.request.method,
-				ip: getClientIp(event),
+				ip: getClientIp(event.request),
 				hasCookieToken: Boolean(csrfToken),
 				hasHeaderToken: Boolean(headerToken),
 			});

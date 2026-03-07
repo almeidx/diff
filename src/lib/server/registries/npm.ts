@@ -61,11 +61,6 @@ export class NpmRegistry implements Registry {
 		return tarballUrl.toString();
 	}
 
-	async validateVersion(packageName: string, version: string): Promise<boolean> {
-		const metadata = await this.getMetadata(packageName);
-		return version in metadata.versions;
-	}
-
 	async getRepositoryUrl(packageName: string): Promise<string | null> {
 		const metadata = await this.getMetadata(packageName);
 

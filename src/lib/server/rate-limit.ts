@@ -1,4 +1,5 @@
 import type { RequestEvent } from "@sveltejs/kit";
+import { getClientIp } from "$lib/server/log.js";
 
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60000;
@@ -18,7 +19,7 @@ export interface RateLimitResult {
 }
 
 export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResult> {
-	const ip = getClientIp(event);
+	const ip = getClientIp(event.request);
 	const now = Date.now();
 	const kv = event.platform?.env?.RATE_LIMIT_KV;
 
@@ -27,14 +28,6 @@ export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResu
 	}
 
 	return checkMemoryRateLimit(ip, now);
-}
-
-function getClientIp(event: RequestEvent): string {
-	return (
-		event.request.headers.get("cf-connecting-ip") ||
-		event.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-		"unknown"
-	);
 }
 
 async function checkKvRateLimit(kv: RateLimitKvNamespace, ip: string, now: number): Promise<RateLimitResult> {

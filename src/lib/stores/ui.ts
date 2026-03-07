@@ -6,20 +6,7 @@ export type Theme = "light" | "dark";
 export const viewMode = writable<ViewMode>("unified");
 export const theme = writable<Theme>("dark");
 export const wordWrap = writable<boolean>(false);
-export const expandedPaths = writable<Set<string>>(new Set());
 export const collapsedFiles = writable<Set<string>>(new Set());
-
-export function togglePath(path: string): void {
-	expandedPaths.update((set) => {
-		const newSet = new Set(set);
-		if (newSet.has(path)) {
-			newSet.delete(path);
-		} else {
-			newSet.add(path);
-		}
-		return newSet;
-	});
-}
 
 export function toggleFileCollapse(path: string): void {
 	collapsedFiles.update((set) => {
@@ -33,33 +20,6 @@ export function toggleFileCollapse(path: string): void {
 	});
 }
 
-export function expandAllPaths(paths: string[]): void {
-	expandedPaths.update(() => new Set(paths));
-}
-
-export function collapseAllPaths(): void {
-	expandedPaths.update(() => new Set());
-}
-
-export function expandPaths(paths: string[]): void {
-	expandedPaths.update((set) => {
-		const newSet = new Set(set);
-		for (const p of paths) {
-			newSet.add(p);
-		}
-		return newSet;
-	});
-}
-
-export function setExpandedPaths(paths: Iterable<string>): void {
-	expandedPaths.set(new Set(paths));
-}
-
 export function setCollapsedFiles(paths: Iterable<string>): void {
 	collapsedFiles.set(new Set(paths));
-}
-
-export function resetDiffUiState(): void {
-	expandedPaths.set(new Set());
-	collapsedFiles.set(new Set());
 }

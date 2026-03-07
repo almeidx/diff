@@ -76,3 +76,11 @@ export function logWarn(message: string, context?: LogContext): void {
 export function logError(message: string, context?: LogContext): void {
 	writeLog("error", message, context);
 }
+
+export function getClientIp(request: Request): string {
+	return (
+		request.headers.get("cf-connecting-ip") ||
+		request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+		"unknown"
+	);
+}

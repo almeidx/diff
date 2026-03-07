@@ -1,11 +1,5 @@
 export type PackageType = "npm" | "wp";
 
-export interface PackageInfo {
-	type: PackageType;
-	name: string;
-	versions: string[];
-}
-
 export interface FileEntry {
 	path: string;
 	content: string | null;

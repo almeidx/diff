@@ -1,7 +1,6 @@
 export interface Registry {
 	getVersions(packageName: string): Promise<string[]>;
 	getDownloadUrl(packageName: string, version: string): Promise<string>;
-	validateVersion(packageName: string, version: string): Promise<boolean>;
 }
 
 export interface NpmPackageMetadata {
@@ -23,5 +22,5 @@ export interface WordPressPluginInfo {
 	name: string;
 	slug: string;
 	version: string;
-	versions: Record<string, string>;
+	versions?: Record<string, string>;
 }

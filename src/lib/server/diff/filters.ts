@@ -35,7 +35,7 @@ const BINARY_EXTENSIONS = new Set([
 	"ico",
 	"webp",
 	"avif",
-	"svg",
+
 	"bmp",
 	"tiff",
 	"woff",

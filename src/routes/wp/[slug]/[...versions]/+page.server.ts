@@ -5,14 +5,10 @@ import { parseVersionRange } from "$lib/utils/versions";
 import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
 import { isNotFoundError } from "$lib/server/errors";
 
-function parseVersions(versionsPath: string): { fromVersion: string; toVersion: string } | null {
-	return parseVersionRange(versionsPath);
-}
-
 export const load: PageServerLoad = async ({ params }) => {
 	const { slug, versions: versionsPath } = params;
 
-	const parsed = parseVersions(versionsPath);
+	const parsed = parseVersionRange(versionsPath);
 	if (!parsed) {
 		error(400, "Invalid URL format. Expected: /wp/plugin-slug/version1...version2");
 	}

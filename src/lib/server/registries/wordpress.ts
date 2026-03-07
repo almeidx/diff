@@ -69,15 +69,6 @@ export class WordPressRegistry implements Registry {
 		throw new Error(`Version "${version}" not found for plugin "${slug}"`);
 	}
 
-	async validateVersion(slug: string, version: string): Promise<boolean> {
-		const metadata = await this.getMetadata(slug);
-
-		if (metadata.versions && version in metadata.versions) {
-			return true;
-		}
-
-		return version === metadata.version;
-	}
 }
 
 export const wordpressRegistry = new WordPressRegistry();
