@@ -65,7 +65,7 @@ export function highlight(code: string, language: string): string {
 	if (!grammar) return escapeHtml(code);
 
 	if (code.length > MAX_CACHED_CODE_LENGTH) {
-		return Prism.highlight(code, grammar, language);
+		return sanitizePrismOutput(Prism.highlight(code, grammar, language));
 	}
 
 	const cacheKey = `${language}\0${code}`;
@@ -76,7 +76,7 @@ export function highlight(code: string, language: string): string {
 		return cached;
 	}
 
-	const highlighted = Prism.highlight(code, grammar, language);
+	const highlighted = sanitizePrismOutput(Prism.highlight(code, grammar, language));
 	highlightCache.set(cacheKey, highlighted);
 
 	if (highlightCache.size > HIGHLIGHT_CACHE_LIMIT) {
@@ -87,6 +87,12 @@ export function highlight(code: string, language: string): string {
 	}
 
 	return highlighted;
+}
+
+const ALLOWED_TAG = /^<\/?span(?:\s+class="token [a-z0-9 -]+")?>/;
+
+function sanitizePrismOutput(html: string): string {
+	return html.replace(/<\/?[a-z][^>]*>/gi, (tag) => (ALLOWED_TAG.test(tag) ? tag : escapeHtml(tag)));
 }
 
 function escapeHtml(text: string): string {

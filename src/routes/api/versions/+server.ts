@@ -16,6 +16,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		throw error(400, "Invalid type parameter");
 	}
 
+	if (name.length > 300) {
+		throw error(400, "Package name too long");
+	}
+
 	try {
 		const registry = type === "npm" ? npmRegistry : wordpressRegistry;
 		const versions = await registry.getVersions(name);

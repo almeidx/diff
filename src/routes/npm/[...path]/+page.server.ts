@@ -86,6 +86,10 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const { packageName, fromVersion, toVersion } = parsed;
 
+	if (packageName.length > 214 || fromVersion.length > 256 || toVersion.length > 256) {
+		error(400, "Package name or version string too long");
+	}
+
 	let result;
 	try {
 		result = await loadDiffPageData({

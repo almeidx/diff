@@ -6,7 +6,8 @@
 	let { data }: { data: PageData } = $props();
 
 	function handleNavigate(fromVersion: string, toVersion: string) {
-		goto(`/npm/${data.packageName}/${fromVersion}...${toVersion}`);
+		const encodedName = data.packageName.split("/").map(encodeURIComponent).join("/");
+		goto(`/npm/${encodedName}/${encodeURIComponent(fromVersion)}...${encodeURIComponent(toVersion)}`);
 	}
 </script>
 

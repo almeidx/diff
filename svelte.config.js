@@ -29,7 +29,6 @@ const config = {
 					"https://registry.npmjs.com",
 					"https://api.wordpress.org",
 					"https://downloads.wordpress.org",
-					"https://api.github.com",
 				],
 			},
 		},

@@ -61,7 +61,7 @@
 		const contentType = response.headers.get("content-type") || "";
 		if (contentType.includes("application/json")) {
 			try {
-				const data = await response.json();
+				const data = await response.clone().json();
 				if (typeof data?.message === "string" && data.message.trim()) {
 					return data.message;
 				}
@@ -124,10 +124,13 @@
 		isLoading = true;
 
 		try {
+			const encodedFrom = encodeURIComponent(fromVersion.trim());
+			const encodedTo = encodeURIComponent(toVersion.trim());
 			if (packageType === "npm") {
-				await goto(`/npm/${packageName.trim()}/${fromVersion.trim()}...${toVersion.trim()}`);
+				const encodedName = packageName.trim().split("/").map(encodeURIComponent).join("/");
+				await goto(`/npm/${encodedName}/${encodedFrom}...${encodedTo}`);
 			} else {
-				await goto(`/wp/${packageName.trim()}/${fromVersion.trim()}...${toVersion.trim()}`);
+				await goto(`/wp/${encodeURIComponent(packageName.trim())}/${encodedFrom}...${encodedTo}`);
 			}
 		} catch {
 			error = "Failed to navigate. Please check the package name and versions.";

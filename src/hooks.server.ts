@@ -6,6 +6,15 @@ const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+function timingSafeEqual(a: string, b: string): boolean {
+	if (a.length !== b.length) return false;
+	let result = 0;
+	for (let i = 0; i < a.length; i++) {
+		result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+	}
+	return result === 0;
+}
+
 function generateToken(): string {
 	const array = new Uint8Array(32);
 	crypto.getRandomValues(array);
@@ -95,7 +104,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const csrfToken = event.cookies.get(CSRF_COOKIE_NAME);
 		const headerToken = event.request.headers.get(CSRF_HEADER_NAME);
 
-		if (!csrfToken || !headerToken || csrfToken !== headerToken) {
+		if (!csrfToken || !headerToken || !timingSafeEqual(csrfToken, headerToken)) {
 			logWarn("csrf_validation_failed", {
 				path: event.url.pathname,
 				method: event.request.method,
@@ -111,7 +120,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (!event.cookies.get(CSRF_COOKIE_NAME)) {
 		const token = generateToken();
-		response.headers.append("Set-Cookie", `${CSRF_COOKIE_NAME}=${token}; Path=/; SameSite=Strict; Secure; HttpOnly`);
+		event.cookies.set(CSRF_COOKIE_NAME, token, {
+			path: "/",
+			sameSite: "strict",
+			secure: true,
+			httpOnly: false,
+		});
 	}
 
 	return response;

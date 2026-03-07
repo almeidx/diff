@@ -6,7 +6,7 @@
 	let { data }: { data: PageData } = $props();
 
 	function handleNavigate(fromVersion: string, toVersion: string) {
-		goto(`/wp/${data.slug}/${fromVersion}...${toVersion}`);
+		goto(`/wp/${encodeURIComponent(data.slug)}/${encodeURIComponent(fromVersion)}...${encodeURIComponent(toVersion)}`);
 	}
 </script>
 
