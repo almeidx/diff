@@ -116,8 +116,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const response = applySecurityHeaders(await resolve(event));
-
 	if (!event.cookies.get(CSRF_COOKIE_NAME)) {
 		const token = generateToken();
 		event.cookies.set(CSRF_COOKIE_NAME, token, {
@@ -128,5 +126,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
-	return response;
+	return applySecurityHeaders(await resolve(event));
 };
