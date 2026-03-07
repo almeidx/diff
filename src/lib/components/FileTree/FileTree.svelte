@@ -2,7 +2,7 @@
 	import * as treeView from '@zag-js/tree-view';
 	import { normalizeProps, useMachine } from '@zag-js/svelte';
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths } from '$lib/utils/tree';
+	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths, flattenTreePaths } from '$lib/utils/tree';
 	import TreeNodeComponent from './TreeNode.svelte';
 
 	interface Props {
@@ -36,7 +36,7 @@
 			return {
 				nodes: tree,
 				forcedExpandedPaths: new Set<string>(),
-				filePaths: flattenFilePaths(tree),
+				filePaths: flattenTreePaths(tree),
 				matchCount: files.length,
 			};
 		}
@@ -145,22 +145,6 @@
 
 		expandedValue = Array.from(pathsToExpand);
 	});
-
-	function flattenFilePaths(nodes: TreeNode[]): string[] {
-		const paths: string[] = [];
-
-		for (const node of nodes) {
-			if (node.isDirectory) {
-				if (node.children) {
-					paths.push(...flattenFilePaths(node.children));
-				}
-				continue;
-			}
-			paths.push(node.path);
-		}
-
-		return paths;
-	}
 
 	function filterTreeNodes(nodes: TreeNode[], query: string): FilteredTreeResult {
 		const nextForcedExpandedPaths = new Set<string>();

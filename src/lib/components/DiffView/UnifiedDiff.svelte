@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import type { DiffHunk, DiffLine } from '$lib/types/index.js';
+	import { formatHunkHeader, type DiffHunk, type DiffLine } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
 	import { getLanguage } from '$lib/highlight/prism';
 	import DiffLineComponent from './DiffLine.svelte';
@@ -75,14 +75,6 @@
 	function renderMoreRows() {
 		if (!hasMoreRows) return;
 		renderedRowCount = Math.min(allRows.length, renderedRowCount + ROW_BATCH_SIZE);
-	}
-
-	function formatHunkHeader(hunk: DiffHunk): string {
-		const oldRange =
-			hunk.oldCount === 1 ? `${hunk.oldStart}` : `${hunk.oldStart},${hunk.oldCount}`;
-		const newRange =
-			hunk.newCount === 1 ? `${hunk.newStart}` : `${hunk.newStart},${hunk.newCount}`;
-		return `@@ -${oldRange} +${newRange} @@`;
 	}
 </script>
 

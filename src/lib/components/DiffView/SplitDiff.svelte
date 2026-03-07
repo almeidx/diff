@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import type { DiffHunk, DiffLine } from '$lib/types/index.js';
+	import { formatHunkHeader, type DiffHunk, type DiffLine } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
 	import { getLanguage, highlight } from '$lib/highlight/prism';
 
@@ -36,7 +36,7 @@
 	}
 
 	function enhanceVisibleLine(line: RawSplitLine): SplitLine {
-		if (line.isHunkHeader) return line;
+		if (line.isHunkHeader) return { ...line, leftHighlighted: null, rightHighlighted: null };
 
 		return {
 			...line,
@@ -49,15 +49,11 @@
 		const result: RawSplitLine[] = [];
 
 		for (const hunk of hunks) {
-			const oldRange =
-				hunk.oldCount === 1 ? `${hunk.oldStart}` : `${hunk.oldStart},${hunk.oldCount}`;
-			const newRange =
-				hunk.newCount === 1 ? `${hunk.newStart}` : `${hunk.newStart},${hunk.newCount}`;
 			result.push({
 				left: null,
 				right: null,
 				isHunkHeader: true,
-				hunkHeaderText: `@@ -${oldRange} +${newRange} @@`
+				hunkHeaderText: formatHunkHeader(hunk)
 			});
 
 			let i = 0;

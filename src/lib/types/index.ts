@@ -35,6 +35,12 @@ export interface DiffHunk {
 	lines: DiffLine[];
 }
 
+export function formatHunkHeader(hunk: DiffHunk): string {
+	const oldRange = hunk.oldCount === 1 ? `${hunk.oldStart}` : `${hunk.oldStart},${hunk.oldCount}`;
+	const newRange = hunk.newCount === 1 ? `${hunk.newStart}` : `${hunk.newStart},${hunk.newCount}`;
+	return `@@ -${oldRange} +${newRange} @@`;
+}
+
 export interface DiffFile {
 	path: string;
 	status: DiffStatus;

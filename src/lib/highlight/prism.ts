@@ -95,11 +95,14 @@ function sanitizePrismOutput(html: string): string {
 	return html.replace(/<\/?[a-z][^>]*>/gi, (tag) => (ALLOWED_TAG.test(tag) ? tag : escapeHtml(tag)));
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': "&quot;",
+	"'": "&#039;",
+};
+
 function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
+	return text.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch]);
 }

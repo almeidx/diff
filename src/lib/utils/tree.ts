@@ -109,7 +109,7 @@ export function sortFilesLikeTree(files: DiffFile[]): DiffFile[] {
 	});
 }
 
-function flattenTreePaths(nodes: TreeNode[]): string[] {
+export function flattenTreePaths(nodes: TreeNode[]): string[] {
 	const paths: string[] = [];
 	for (const node of nodes) {
 		if (node.isDirectory && node.children) {
