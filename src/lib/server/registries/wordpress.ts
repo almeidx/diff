@@ -68,7 +68,6 @@ export class WordPressRegistry implements Registry {
 
 		throw new Error(`Version "${version}" not found for plugin "${slug}"`);
 	}
-
 }
 
 export const wordpressRegistry = new WordPressRegistry();
