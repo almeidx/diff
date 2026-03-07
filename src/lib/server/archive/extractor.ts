@@ -84,6 +84,7 @@ async function extractTgzFromResponse(response: Response): Promise<FileTree> {
 		}
 		throw e;
 	} finally {
+		await reader.cancel().catch(() => {});
 		reader.releaseLock();
 	}
 }
@@ -424,6 +425,7 @@ async function readResponseBytes(response: Response, maxBytes: number): Promise<
 		result.set(chunk, offset);
 		offset += chunk.byteLength;
 	}
+	chunks.length = 0;
 
 	return result;
 }
@@ -435,7 +437,12 @@ function decodeNullTerminated(bytes: Uint8Array): string {
 
 function parseTarSize(sizeBytes: Uint8Array): number {
 	const sizeStr = decodeNullTerminated(sizeBytes).trim();
-	return parseInt(sizeStr, 8) || 0;
+	if (!sizeStr) return 0;
+	const size = parseInt(sizeStr, 8);
+	if (Number.isNaN(size)) {
+		throw new Error(`Invalid tar header: corrupt size field "${sizeStr}"`);
+	}
+	return size;
 }
 
 function isZeroBlock(block: Uint8Array): boolean {

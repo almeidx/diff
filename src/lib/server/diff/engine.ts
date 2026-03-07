@@ -3,8 +3,10 @@ import type { DiffResult, DiffFile, DiffHunk, DiffLine, DiffStats, FileTree, Pac
 import { computeWordDiff } from "./word-diff.js";
 
 const dmp = new DiffMatchPatch();
+dmp.Diff_Timeout = 5;
 const CONTEXT_LINES = 3;
 const MAX_LINE_TOKENS = 0x10ffff;
+const MAX_WORD_DIFF_LINE_LENGTH = 10_000;
 
 export function computeDiff(
 	oldTree: FileTree,
@@ -275,7 +277,7 @@ function computeLineDiff(oldLines: string[], newLines: string[]): LineDiff[] {
 	const chars1 = linesToChars(oldLines);
 	const chars2 = linesToChars(newLines);
 
-	const diffs = dmp.diff_main(chars1, chars2, false);
+	const diffs = dmp.diff_main(chars1, chars2, true);
 
 	const result: LineDiff[] = [];
 
@@ -297,7 +299,7 @@ function finishHunk(hunks: DiffHunk[], hunk: DiffHunk, contextBuffer: DiffLine[]
 		const lastLine = hunk.lines[hunk.lines.length - 1];
 		if (lastLine.type === "context") {
 			hunk.lines.pop();
-			contextBuffer.shift();
+			contextBuffer.pop();
 		} else {
 			break;
 		}
@@ -311,8 +313,14 @@ function finishHunk(hunks: DiffHunk[], hunk: DiffHunk, contextBuffer: DiffLine[]
 }
 
 function updateHunkCounts(hunk: DiffHunk): void {
-	hunk.oldCount = hunk.lines.filter((l) => l.type !== "add").length;
-	hunk.newCount = hunk.lines.filter((l) => l.type !== "delete").length;
+	let adds = 0;
+	let deletes = 0;
+	for (const l of hunk.lines) {
+		if (l.type === "add") adds++;
+		else if (l.type === "delete") deletes++;
+	}
+	hunk.oldCount = hunk.lines.length - adds;
+	hunk.newCount = hunk.lines.length - deletes;
 }
 
 function addWordDiffToHunks(hunks: DiffHunk[]): void {
@@ -335,6 +343,9 @@ function addWordDiffToHunks(hunks: DiffHunk[]): void {
 
 				const pairCount = Math.min(deleteLines.length, addLines.length);
 				for (let j = 0; j < pairCount; j++) {
+					if (deleteLines[j].content.length + addLines[j].content.length > MAX_WORD_DIFF_LINE_LENGTH) {
+						continue;
+					}
 					const wordDiff = computeWordDiff(deleteLines[j].content, addLines[j].content);
 					deleteLines[j].wordDiff = wordDiff.filter((w) => w.type !== "insert");
 					addLines[j].wordDiff = wordDiff.filter((w) => w.type !== "delete");
@@ -348,5 +359,9 @@ function addWordDiffToHunks(hunks: DiffHunk[]): void {
 
 function countLines(content: string | null): number {
 	if (!content) return 0;
-	return content.split("\n").length;
+	let count = 1;
+	for (let i = 0; i < content.length; i++) {
+		if (content[i] === "\n") count++;
+	}
+	return count;
 }

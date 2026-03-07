@@ -2,6 +2,7 @@ import DiffMatchPatch from "diff-match-patch";
 import type { WordChange } from "$lib/types/index.js";
 
 const dmp = new DiffMatchPatch();
+dmp.Diff_Timeout = 2;
 
 export function computeWordDiff(oldText: string, newText: string): WordChange[] {
 	const diffs = dmp.diff_main(oldText, newText);

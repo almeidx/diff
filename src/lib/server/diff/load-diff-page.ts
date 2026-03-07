@@ -5,7 +5,7 @@ import { getCached } from "$lib/server/cache";
 import { formatInvalidVersionError } from "$lib/utils/versions";
 import { computeDiff } from "./engine.js";
 import { getErrorMessage } from "$lib/server/errors.js";
-import { logInfo, logWarn } from "$lib/server/log.js";
+import { logInfo, logError } from "$lib/server/log.js";
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 
@@ -91,7 +91,7 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 
 		return { diff, versions };
 	} catch (e) {
-		logWarn("diff_load_failed", {
+		logError("diff_load_failed", {
 			packageType,
 			packageName,
 			fromVersion,

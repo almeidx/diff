@@ -1,4 +1,4 @@
-import { logDebug, logWarn } from "$lib/server/log.js";
+import { logDebug, logWarn, logError } from "$lib/server/log.js";
 
 const CACHE_NAME = "diff-cache-v1";
 
@@ -53,8 +53,12 @@ export async function getCached<T>(
 			},
 		});
 
-		await cache.put(cacheKey, response);
-		logDebug("cache_store", { key, ttlSeconds: options.ttlSeconds });
+		try {
+			await cache.put(cacheKey, response);
+			logDebug("cache_store", { key, ttlSeconds: options.ttlSeconds });
+		} catch (e) {
+			logError("cache_put_failed", { key, error: e });
+		}
 		return data;
 	})();
 
