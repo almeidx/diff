@@ -5,7 +5,7 @@ import { getCached } from "$lib/server/cache";
 import { formatInvalidVersionError } from "$lib/utils/versions";
 import { computeDiff } from "./engine.js";
 import { getErrorMessage } from "$lib/server/errors.js";
-import { logInfo, logError } from "$lib/server/log.js";
+import { logInfo, logWarn, logError } from "$lib/server/log.js";
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 

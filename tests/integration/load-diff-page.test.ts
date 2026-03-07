@@ -27,7 +27,6 @@ function createRegistry(overrides: Partial<Registry> = {}): Registry {
 		getVersions: async () => ["2.0.0", "1.0.0"],
 		getDownloadUrl: async (packageName: string, version: string) =>
 			`https://example.test/${packageName}-${version}.tgz`,
-		validateVersion: async () => true,
 		...overrides,
 	};
 }
@@ -39,10 +38,7 @@ describe("loadDiffPageData integration", () => {
 
 	it("returns invalid_version when one or more versions are invalid", async () => {
 		const getDownloadUrl = vi.fn(async (_packageName: string, _version: string) => "unused");
-		const registry = createRegistry({
-			getDownloadUrl,
-			validateVersion: async (_packageName: string, version: string) => version !== "9.9.9",
-		});
+		const registry = createRegistry({ getDownloadUrl });
 
 		const result = await loadDiffPageData({
 			registry,

@@ -15,7 +15,10 @@ function createCookies(seed: Record<string, string> = {}) {
 		get(name: string) {
 			return jar.get(name);
 		},
-	} as const;
+		set(name: string, value: string) {
+			jar.set(name, value);
+		},
+	};
 }
 
 function createEvent(url: string, options: TestEventOptions = {}) {
