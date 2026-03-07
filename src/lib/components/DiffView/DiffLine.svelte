@@ -10,7 +10,7 @@
 
 	let { line, language }: Props = $props();
 
-	function getPrefix(type: string): string {
+	function getPrefix(type: DiffLineType["type"]): string {
 		switch (type) {
 			case 'add':
 				return '+';

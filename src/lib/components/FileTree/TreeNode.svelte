@@ -1,11 +1,14 @@
 <script lang="ts">
 	import type { DiffFile, TreeNode } from '$lib/types/index.js';
+	import type * as treeView from '@zag-js/tree-view';
 	import TreeNodeComponent from './TreeNode.svelte';
+
+	type TreeViewApi = ReturnType<typeof treeView.connect>;
 
 	interface Props {
 		node: TreeNode;
 		indexPath: number[];
-		api: any;
+		api: TreeViewApi;
 		onFileSelect?: (file: DiffFile) => void;
 		selectedPath?: string;
 	}

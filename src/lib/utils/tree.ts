@@ -8,6 +8,8 @@ export function buildFileTree(files: DiffFile[]): TreeNode[] {
 		children: [],
 	};
 
+	const nodeByPath = new Map<string, TreeNode>();
+
 	for (const file of files) {
 		const parts = file.path.split("/");
 		let current = root;
@@ -21,7 +23,7 @@ export function buildFileTree(files: DiffFile[]): TreeNode[] {
 				current.children = [];
 			}
 
-			let child = current.children.find((c) => c.name === part);
+			let child = nodeByPath.get(currentPath);
 
 			if (!child) {
 				child = {
@@ -33,6 +35,7 @@ export function buildFileTree(files: DiffFile[]): TreeNode[] {
 					status: isLast ? file.status : undefined,
 				};
 				current.children.push(child);
+				nodeByPath.set(currentPath, child);
 			}
 
 			if (!isLast) {
@@ -100,7 +103,10 @@ export function sortFilesLikeTree(files: DiffFile[]): DiffFile[] {
 	const tree = buildFileTree(files);
 	const orderedPaths = flattenTreePaths(tree);
 	const fileMap = new Map(files.map((f) => [f.path, f]));
-	return orderedPaths.map((path) => fileMap.get(path)!).filter(Boolean);
+	return orderedPaths.flatMap((path) => {
+		const f = fileMap.get(path);
+		return f ? [f] : [];
+	});
 }
 
 function flattenTreePaths(nodes: TreeNode[]): string[] {

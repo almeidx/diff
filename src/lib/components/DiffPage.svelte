@@ -36,6 +36,11 @@
 	let selectedPath = $state<string | undefined>(undefined);
 	let isNavigating = $derived(!!$navigating);
 
+	$effect(() => {
+		diff;
+		selectedPath = undefined;
+	});
+
 	function handleFileSelect(file: DiffFile) {
 		selectedPath = file.path;
 	}

@@ -27,7 +27,7 @@
 	const fileStats = $derived.by(() => {
 		const stats = new Map<string, { additions: number; deletions: number }>();
 
-		for (const file of visibleFiles) {
+		for (const file of sortedFiles) {
 			let additions = 0;
 			let deletions = 0;
 			for (const hunk of file.hunks) {
@@ -42,14 +42,15 @@
 		return stats;
 	});
 
+	let prevFiles: DiffFile[] | null = null;
 	$effect(() => {
-		const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
-		setCollapsedFiles(minifiedPaths);
-	});
-
-	$effect(() => {
-		renderedCount = Math.min(sortedFiles.length, INITIAL_RENDER_COUNT);
-		lastScrolledPath = null;
+		if (files !== prevFiles) {
+			prevFiles = files;
+			const minifiedPaths = files.filter((f) => f.isMinified).map((f) => f.path);
+			setCollapsedFiles(minifiedPaths);
+			renderedCount = Math.min(sortedFiles.length, INITIAL_RENDER_COUNT);
+			lastScrolledPath = null;
+		}
 	});
 
 	$effect(() => {
