@@ -56,19 +56,17 @@ async function resolveCompareUrl(packageName: string, fromVersion: string, toVer
 		return getCached(
 			`github:compare:${packageName}:${fromVersion}:${toVersion}`,
 			async () => {
-				const candidates = [`${fromVersion}...${toVersion}`, `v${fromVersion}...v${toVersion}`];
+				const candidates = [`v${fromVersion}...v${toVersion}`, `${fromVersion}...${toVersion}`];
 
-				const results = await Promise.all(
-					candidates.map(async (range) => {
-						const res = await fetchWithTimeout(`${apiBase}/${range}`, {
-							headers,
-							allowedHosts: GITHUB_ALLOWED_HOSTS,
-						});
-						return res.ok ? `${repoUrl}/compare/${range}` : null;
-					}),
-				);
+				for (const range of candidates) {
+					const res = await fetchWithTimeout(`${apiBase}/${range}`, {
+						headers,
+						allowedHosts: GITHUB_ALLOWED_HOSTS,
+					});
+					if (res.ok) return `${repoUrl}/compare/${range}`;
+				}
 
-				return results.find((url) => url !== null) ?? null;
+				return null;
 			},
 			{ ttlSeconds: COMPARE_CACHE_TTL },
 		);

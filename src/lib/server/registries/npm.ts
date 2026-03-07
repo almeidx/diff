@@ -17,7 +17,7 @@ export class NpmRegistry implements Registry {
 					: encodeURIComponent(packageName);
 
 				const response = await fetchWithTimeout(`${NPM_REGISTRY}/${encodedName}`, {
-					headers: { Accept: "application/json" },
+					headers: { Accept: "application/vnd.npm.install.v1+json" },
 					allowedHosts: NPM_ALLOWED_HOSTS,
 				});
 
@@ -62,9 +62,27 @@ export class NpmRegistry implements Registry {
 	}
 
 	async getRepositoryUrl(packageName: string): Promise<string | null> {
-		const metadata = await this.getMetadata(packageName);
+		const repoInfo = await getCached(
+			`npm:repo:${packageName}`,
+			async () => {
+				const encodedName = packageName.startsWith("@")
+					? `@${encodeURIComponent(packageName.slice(1))}`
+					: encodeURIComponent(packageName);
 
-		const repo = metadata.repository;
+				const response = await fetchWithTimeout(`${NPM_REGISTRY}/${encodedName}`, {
+					headers: { Accept: "application/json" },
+					allowedHosts: NPM_ALLOWED_HOSTS,
+				});
+
+				if (!response.ok) return null;
+
+				const data = (await response.json()) as NpmPackageMetadata;
+				return data.repository ?? null;
+			},
+			{ ttlSeconds: METADATA_TTL },
+		);
+
+		const repo = repoInfo;
 		if (!repo) return null;
 
 		const raw = typeof repo === "string" ? repo : repo.url;

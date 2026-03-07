@@ -68,10 +68,8 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 					registry.getDownloadUrl(packageName, toVersion),
 				]);
 
-				const [fromTree, toTree] = await Promise.all([
-					fetchAndExtract(fromUrl, archiveFormat),
-					fetchAndExtract(toUrl, archiveFormat),
-				]);
+				const fromTree = await fetchAndExtract(fromUrl, archiveFormat);
+				const toTree = await fetchAndExtract(toUrl, archiveFormat);
 
 				return computeDiff(fromTree, toTree, packageType, packageName, fromVersion, toVersion);
 			},
