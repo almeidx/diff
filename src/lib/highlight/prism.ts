@@ -1,27 +1,15 @@
 import Prism from "prismjs";
-import loadLanguages from "prismjs/components/index.js";
-
-Prism.manual = true;
-loadLanguages([
-	"typescript",
-	"javascript",
-	"jsx",
-	"tsx",
-	"css",
-	"scss",
-	"json",
-	"markdown",
-	"yaml",
-	"php",
-	"sql",
-	"docker",
-	"ini",
-	"handlebars",
-]);
 
 const HIGHLIGHT_CACHE_LIMIT = 2000;
 const MAX_CACHED_CODE_LENGTH = 1200;
 const highlightCache = new Map<string, string>();
+const grammarFallbacks: Record<string, string> = {
+	typescript: "javascript",
+	tsx: "javascript",
+	jsx: "javascript",
+	scss: "css",
+	json: "javascript",
+};
 
 const extToLang: Record<string, string> = {
 	ts: "typescript",
@@ -65,14 +53,15 @@ export function getLanguage(filePath: string): string | null {
 }
 
 export function highlight(code: string, language: string): string {
-	const grammar = Prism.languages[language];
+	const resolvedLanguage = Prism.languages[language] ? language : (grammarFallbacks[language] ?? language);
+	const grammar = Prism.languages[resolvedLanguage];
 	if (!grammar) return escapeHtml(code);
 
 	if (code.length > MAX_CACHED_CODE_LENGTH) {
-		return sanitizePrismOutput(Prism.highlight(code, grammar, language));
+		return sanitizePrismOutput(Prism.highlight(code, grammar, resolvedLanguage));
 	}
 
-	const cacheKey = `${language}\0${code}`;
+	const cacheKey = `${resolvedLanguage}\0${code}`;
 	const cached = highlightCache.get(cacheKey);
 	if (cached !== undefined) {
 		highlightCache.delete(cacheKey);
@@ -80,7 +69,7 @@ export function highlight(code: string, language: string): string {
 		return cached;
 	}
 
-	const highlighted = sanitizePrismOutput(Prism.highlight(code, grammar, language));
+	const highlighted = sanitizePrismOutput(Prism.highlight(code, grammar, resolvedLanguage));
 	highlightCache.set(cacheKey, highlighted);
 
 	if (highlightCache.size > HIGHLIGHT_CACHE_LIMIT) {
