@@ -1,19 +1,23 @@
 import Prism from "prismjs";
-import "prismjs/components/prism-typescript";
-import "prismjs/components/prism-javascript";
-import "prismjs/components/prism-jsx";
-import "prismjs/components/prism-tsx";
-import "prismjs/components/prism-css";
-import "prismjs/components/prism-scss";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-markdown";
-import "prismjs/components/prism-yaml";
-import "prismjs/components/prism-php";
-import "prismjs/components/prism-sql";
-import "prismjs/components/prism-docker";
-import "prismjs/components/prism-ini";
-import "prismjs/components/prism-markup-templating";
-import "prismjs/components/prism-handlebars";
+import loadLanguages from "prismjs/components/index.js";
+
+Prism.manual = true;
+loadLanguages([
+	"typescript",
+	"javascript",
+	"jsx",
+	"tsx",
+	"css",
+	"scss",
+	"json",
+	"markdown",
+	"yaml",
+	"php",
+	"sql",
+	"docker",
+	"ini",
+	"handlebars",
+]);
 
 const HIGHLIGHT_CACHE_LIMIT = 2000;
 const MAX_CACHED_CODE_LENGTH = 1200;
