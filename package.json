@@ -19,11 +19,11 @@
 		"test:smoke": "playwright test"
 	},
 	"dependencies": {
-		"@zag-js/combobox": "^1.38.0",
-		"@zag-js/radio-group": "^1.38.0",
-		"@zag-js/svelte": "^1.38.0",
-		"@zag-js/switch": "^1.38.0",
-		"@zag-js/tree-view": "^1.38.0",
+		"@zag-js/combobox": "^1.38.1",
+		"@zag-js/radio-group": "^1.38.1",
+		"@zag-js/svelte": "^1.38.1",
+		"@zag-js/switch": "^1.38.1",
+		"@zag-js/tree-view": "^1.38.1",
 		"diff-match-patch": "^1.0.5",
 		"fflate": "^0.8.2",
 		"prismjs": "^1.30.0"
@@ -43,7 +43,7 @@
 		"svelte-check": "^4.4.5",
 		"tailwindcss": "^4.2.2",
 		"typescript": "~6.0.2",
-		"vite": "^8.0.2",
+		"vite": "^8.0.3",
 		"vitest": "^4.1.1",
 		"wrangler": "^4.77.0"
 	},
