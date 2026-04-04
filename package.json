@@ -31,7 +31,7 @@
 	"devDependencies": {
 		"@playwright/test": "^1.59.1",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
-		"@sveltejs/kit": "^2.56.0",
+		"@sveltejs/kit": "^2.56.1",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/diff-match-patch": "^1.0.36",
