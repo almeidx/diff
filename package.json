@@ -39,7 +39,7 @@
 		"@types/prismjs": "^1.26.6",
 		"oxfmt": "^0.44.0",
 		"oxlint": "^1.59.0",
-		"svelte": "^5.55.2",
+		"svelte": "^5.55.3",
 		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "~6.0.2",
