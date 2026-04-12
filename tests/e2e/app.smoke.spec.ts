@@ -61,6 +61,8 @@ test("form validation errors are announced", async ({ page }) => {
 	await page.goto("/");
 
 	await page.locator("#package-name").fill("lodash");
+	// Wait for hydration: the "Load versions" button becomes enabled once Svelte's reactive bindings are active
+	await expect(page.getByRole("button", { name: "Load versions" })).toBeEnabled();
 	await page.getByRole("button", { name: "Compare versions" }).click();
 	await expect(page.getByRole("alert")).toContainText("Please enter both versions");
 });
@@ -152,6 +154,8 @@ test("diff page file collapse/expand works", async ({ page }) => {
 
 test("theme toggle switches between light and dark", async ({ page }) => {
 	await page.goto("/");
+	// Wait for all JS modules to load and hydration to complete
+	await page.waitForLoadState("networkidle");
 
 	const themeControl = page.locator("[data-scope='switch'][data-part='control']");
 	await expect(themeControl).toBeVisible();
@@ -159,10 +163,7 @@ test("theme toggle switches between light and dark", async ({ page }) => {
 	const htmlBefore = await page.locator("html").getAttribute("data-theme");
 
 	await themeControl.click();
-	await page.waitForTimeout(200);
-
-	const htmlAfter = await page.locator("html").getAttribute("data-theme");
-	expect(htmlAfter).not.toBe(htmlBefore);
+	await expect(page.locator("html")).not.toHaveAttribute("data-theme", htmlBefore!);
 });
 
 test("home page navigation link works", async ({ page }) => {
