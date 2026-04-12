@@ -19,11 +19,11 @@
 		"test:smoke": "playwright test"
 	},
 	"dependencies": {
-		"@zag-js/combobox": "^1.39.1",
-		"@zag-js/radio-group": "^1.39.1",
-		"@zag-js/svelte": "^1.39.1",
-		"@zag-js/switch": "^1.39.1",
-		"@zag-js/tree-view": "^1.39.1",
+		"@zag-js/combobox": "^1.40.0",
+		"@zag-js/radio-group": "^1.40.0",
+		"@zag-js/svelte": "^1.40.0",
+		"@zag-js/switch": "^1.40.0",
+		"@zag-js/tree-view": "^1.40.0",
 		"diff-match-patch": "^1.0.5",
 		"fflate": "^0.8.2",
 		"prismjs": "^1.30.0"
