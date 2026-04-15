@@ -37,15 +37,15 @@
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/node": "^25.6.0",
 		"@types/prismjs": "^1.26.6",
-		"oxfmt": "^0.44.0",
-		"oxlint": "^1.59.0",
+		"oxfmt": "^0.45.0",
+		"oxlint": "^1.60.0",
 		"svelte": "^5.55.3",
 		"svelte-check": "^4.4.6",
 		"tailwindcss": "^4.2.2",
 		"typescript": "~6.0.2",
 		"vite": "^8.0.8",
 		"vitest": "^4.1.4",
-		"wrangler": "^4.81.1"
+		"wrangler": "^4.82.2"
 	},
 	"packageManager": "pnpm@10.33.0",
 	"pnpm": {
