@@ -25,7 +25,7 @@
 		"@zag-js/switch": "^1.40.0",
 		"@zag-js/tree-view": "^1.40.0",
 		"diff-match-patch": "^1.0.5",
-		"fflate": "^0.8.2",
+		"fflate": "^0.8.3",
 		"prismjs": "^1.30.0"
 	},
 	"devDependencies": {
