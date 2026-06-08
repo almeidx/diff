@@ -21,7 +21,7 @@ export interface RateLimitResult {
 export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResult> {
 	const ip = getClientIp(event.request);
 	const now = Date.now();
-	const kv = event.platform?.env?.RATE_LIMIT_KV;
+	const kv = (event.platform?.env as { RATE_LIMIT_KV?: RateLimitKvNamespace } | undefined)?.RATE_LIMIT_KV;
 
 	if (kv) {
 		return checkKvRateLimit(kv, ip, now);
