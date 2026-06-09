@@ -15,7 +15,10 @@ describe("fetchAndExtract zip", () => {
 			"plugin-name/binary-looking.txt": new Uint8Array([65, 0, 66, 0]),
 		});
 
-		vi.stubGlobal("fetch", vi.fn(async () => new Response(archive)));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response(archive)),
+		);
 
 		const tree = await fetchAndExtract("https://downloads.wordpress.org/plugin/plugin-name.zip", "zip");
 
@@ -30,7 +33,10 @@ describe("fetchAndExtract zip", () => {
 			"readme.txt": strToU8("Plugin readme\n"),
 		});
 
-		vi.stubGlobal("fetch", vi.fn(async () => new Response(archive)));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response(archive)),
+		);
 
 		const tree = await fetchAndExtract("https://downloads.wordpress.org/plugin/plugin-name.zip", "zip");
 

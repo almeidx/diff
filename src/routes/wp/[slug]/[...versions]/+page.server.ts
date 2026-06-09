@@ -20,8 +20,8 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 	const { fromVersion, toVersion } = parsed;
 	const waitUntil = platform?.context
 		? (promise: Promise<unknown>) => {
-			platform.context.waitUntil(promise);
-		}
+				platform.context.waitUntil(promise);
+			}
 		: undefined;
 
 	if (fromVersion.length > 256 || toVersion.length > 256) {

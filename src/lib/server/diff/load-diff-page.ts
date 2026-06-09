@@ -33,7 +33,8 @@ interface LoadDiffPageError {
 export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
-	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey, waitUntil } = options;
+	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey, waitUntil } =
+		options;
 	const startedAt = Date.now();
 
 	const versions = await registry.getVersions(packageName);
