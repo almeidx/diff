@@ -90,7 +90,7 @@ function createAddedFile(
 		type: "add",
 		oldNumber: null,
 		newNumber: i + 1,
-		content,
+		content: detachString(content),
 	}));
 
 	return {
@@ -129,7 +129,7 @@ function createDeletedFile(
 		type: "delete",
 		oldNumber: i + 1,
 		newNumber: null,
-		content,
+		content: detachString(content),
 	}));
 
 	return {
@@ -172,82 +172,6 @@ function createModifiedFile(
 }
 
 function computeHunks(oldLines: string[], newLines: string[]): DiffHunk[] {
-	const lineDiffs = computeLineDiff(oldLines, newLines);
-
-	const hunks: DiffHunk[] = [];
-	let oldLineNum = 1;
-	let newLineNum = 1;
-	let currentHunk: DiffHunk | null = null;
-	let contextBuffer: DiffLine[] = [];
-
-	for (const diff of lineDiffs) {
-		if (diff.type === "equal") {
-			const diffLine: DiffLine = {
-				type: "context",
-				oldNumber: oldLineNum++,
-				newNumber: newLineNum++,
-				content: diff.line,
-			};
-
-			if (currentHunk) {
-				currentHunk.lines.push(diffLine);
-				contextBuffer.push(diffLine);
-
-				if (contextBuffer.length > CONTEXT_LINES) {
-					finishHunk(hunks, currentHunk, contextBuffer);
-					currentHunk = null;
-					contextBuffer = [];
-				}
-			} else {
-				contextBuffer.push(diffLine);
-				if (contextBuffer.length > CONTEXT_LINES) {
-					contextBuffer.shift();
-				}
-			}
-		} else {
-			if (!currentHunk) {
-				currentHunk = {
-					oldStart: Math.max(1, oldLineNum - contextBuffer.length),
-					oldCount: 0,
-					newStart: Math.max(1, newLineNum - contextBuffer.length),
-					newCount: 0,
-					lines: [...contextBuffer],
-				};
-			}
-			contextBuffer = [];
-
-			if (diff.type === "delete") {
-				currentHunk.lines.push({
-					type: "delete",
-					oldNumber: oldLineNum++,
-					newNumber: null,
-					content: diff.line,
-				});
-			} else {
-				currentHunk.lines.push({
-					type: "add",
-					oldNumber: null,
-					newNumber: newLineNum++,
-					content: diff.line,
-				});
-			}
-		}
-	}
-
-	if (currentHunk && currentHunk.lines.some((l) => l.type !== "context")) {
-		updateHunkCounts(currentHunk);
-		hunks.push(currentHunk);
-	}
-
-	return hunks;
-}
-
-interface LineDiff {
-	type: "equal" | "add" | "delete";
-	line: string;
-}
-
-function computeLineDiff(oldLines: string[], newLines: string[]): LineDiff[] {
 	const lineArray: string[] = [];
 	const lineHash = new Map<string, number>();
 
@@ -272,22 +196,83 @@ function computeLineDiff(oldLines: string[], newLines: string[]): LineDiff[] {
 
 	const chars1 = linesToChars(oldLines);
 	const chars2 = linesToChars(newLines);
+	const lineDiffs = dmp.diff_main(chars1, chars2, true);
 
-	const diffs = dmp.diff_main(chars1, chars2, true);
+	const hunks: DiffHunk[] = [];
+	let oldLineNum = 1;
+	let newLineNum = 1;
+	const hunkState: { current: DiffHunk | null } = { current: null };
+	let contextBuffer: DiffLine[] = [];
 
-	const result: LineDiff[] = [];
+	function appendLineDiff(type: "equal" | "add" | "delete", line: string): void {
+		if (type === "equal") {
+			const diffLine: DiffLine = {
+				type: "context",
+				oldNumber: oldLineNum++,
+				newNumber: newLineNum++,
+				content: hunkState.current ? detachString(line) : line,
+			};
 
-	for (const [op, chars] of diffs) {
+			if (hunkState.current) {
+				hunkState.current.lines.push(diffLine);
+				contextBuffer.push(diffLine);
+
+				if (contextBuffer.length > CONTEXT_LINES) {
+					finishHunk(hunks, hunkState.current, contextBuffer);
+					hunkState.current = null;
+					contextBuffer = [];
+				}
+			} else {
+				contextBuffer.push(diffLine);
+				if (contextBuffer.length > CONTEXT_LINES) {
+					contextBuffer.shift();
+				}
+			}
+		} else {
+			if (!hunkState.current) {
+				hunkState.current = {
+					oldStart: Math.max(1, oldLineNum - contextBuffer.length),
+					oldCount: 0,
+					newStart: Math.max(1, newLineNum - contextBuffer.length),
+					newCount: 0,
+					lines: contextBuffer.map(detachDiffLine),
+				};
+			}
+			contextBuffer = [];
+
+			if (type === "delete") {
+				hunkState.current.lines.push({
+					type: "delete",
+					oldNumber: oldLineNum++,
+					newNumber: null,
+					content: detachString(line),
+				});
+			} else {
+				hunkState.current.lines.push({
+					type: "add",
+					oldNumber: null,
+					newNumber: newLineNum++,
+					content: detachString(line),
+				});
+			}
+		}
+	}
+
+	for (const [op, chars] of lineDiffs) {
 		const type = op === 0 ? "equal" : op === 1 ? "add" : "delete";
 
 		for (const token of chars) {
 			const lineIndex = token.codePointAt(0) ?? 0;
-			const line = lineArray[lineIndex] ?? "";
-			result.push({ type, line });
+			appendLineDiff(type, lineArray[lineIndex] ?? "");
 		}
 	}
 
-	return result;
+	if (hunkState.current && hunkState.current.lines.some((l) => l.type !== "context")) {
+		updateHunkCounts(hunkState.current);
+		hunks.push(hunkState.current);
+	}
+
+	return hunks;
 }
 
 function finishHunk(hunks: DiffHunk[], hunk: DiffHunk, contextBuffer: DiffLine[]): void {
@@ -326,4 +311,12 @@ function countLines(content: string | null): number {
 		if (content[i] === "\n") count++;
 	}
 	return count;
+}
+
+function detachDiffLine(line: DiffLine): DiffLine {
+	return { ...line, content: detachString(line.content) };
+}
+
+function detachString(text: string): string {
+	return text.length === 0 ? "" : ` ${text}`.slice(1);
 }
