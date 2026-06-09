@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { DiffLine as DiffLineType } from '$lib/types/index.js';
+	import type { WordChange } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
 	import { highlight } from '$lib/highlight/prism';
 
 	interface Props {
 		line: DiffLineType;
 		language: string | null;
+		wordDiff?: WordChange[];
 	}
 
-	let { line, language }: Props = $props();
+	let { line, language, wordDiff }: Props = $props();
 
 	function getPrefix(type: DiffLineType["type"]): string {
 		switch (type) {
@@ -21,8 +23,9 @@
 		}
 	}
 
+	const visibleWordDiff = $derived(wordDiff ?? line.wordDiff);
 	const highlightedContent = $derived(
-		language && !line.wordDiff ? highlight(line.content, language) : null
+		language && !visibleWordDiff ? highlight(line.content, language) : null
 	);
 </script>
 
@@ -53,5 +56,5 @@
 		class="px-3 whitespace-pre overflow-visible"
 		class:whitespace-pre-wrap={$wordWrap}
 		class:break-all={$wordWrap}
-	><span class="inline-block w-[1ch] select-none">{getPrefix(line.type)}</span>{#if line.wordDiff && line.wordDiff.length > 0}{#each line.wordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="bg-diff-add-highlight rounded-sm">{segment.text}</span>{:else if segment.type === 'delete'}<span class="bg-diff-delete-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else if highlightedContent}{@html highlightedContent}{:else}{line.content}{/if}</td>
+	><span class="inline-block w-[1ch] select-none">{getPrefix(line.type)}</span>{#if visibleWordDiff && visibleWordDiff.length > 0}{#each visibleWordDiff as segment}{#if segment.type === 'equal'}<span>{segment.text}</span>{:else if segment.type === 'insert'}<span class="bg-diff-add-highlight rounded-sm">{segment.text}</span>{:else if segment.type === 'delete'}<span class="bg-diff-delete-highlight rounded-sm">{segment.text}</span>{/if}{/each}{:else if highlightedContent}{@html highlightedContent}{:else}{line.content}{/if}</td>
 </tr>

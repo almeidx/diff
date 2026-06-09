@@ -1,12 +1,10 @@
 import DiffMatchPatch from "diff-match-patch";
 import type { DiffResult, DiffFile, DiffHunk, DiffLine, DiffStats, FileTree, PackageType } from "$lib/types/index.js";
-import { computeWordDiff } from "./word-diff.js";
 
 const dmp = new DiffMatchPatch();
 dmp.Diff_Timeout = 5;
 const CONTEXT_LINES = 3;
 const MAX_LINE_TOKENS = 0x10ffff;
-const MAX_WORD_DIFF_LINE_LENGTH = 10_000;
 
 export function computeDiff(
 	oldTree: FileTree,
@@ -241,8 +239,6 @@ function computeHunks(oldLines: string[], newLines: string[]): DiffHunk[] {
 		hunks.push(currentHunk);
 	}
 
-	addWordDiffToHunks(hunks);
-
 	return hunks;
 }
 
@@ -321,40 +317,6 @@ function updateHunkCounts(hunk: DiffHunk): void {
 	}
 	hunk.oldCount = hunk.lines.length - adds;
 	hunk.newCount = hunk.lines.length - deletes;
-}
-
-function addWordDiffToHunks(hunks: DiffHunk[]): void {
-	for (const hunk of hunks) {
-		let i = 0;
-		while (i < hunk.lines.length) {
-			if (hunk.lines[i].type === "delete") {
-				const deleteLines: DiffLine[] = [];
-				const addLines: DiffLine[] = [];
-
-				while (i < hunk.lines.length && hunk.lines[i].type === "delete") {
-					deleteLines.push(hunk.lines[i]);
-					i++;
-				}
-
-				while (i < hunk.lines.length && hunk.lines[i].type === "add") {
-					addLines.push(hunk.lines[i]);
-					i++;
-				}
-
-				const pairCount = Math.min(deleteLines.length, addLines.length);
-				for (let j = 0; j < pairCount; j++) {
-					if (deleteLines[j].content.length + addLines[j].content.length > MAX_WORD_DIFF_LINE_LENGTH) {
-						continue;
-					}
-					const wordDiff = computeWordDiff(deleteLines[j].content, addLines[j].content);
-					deleteLines[j].wordDiff = wordDiff.filter((w) => w.type !== "insert");
-					addLines[j].wordDiff = wordDiff.filter((w) => w.type !== "delete");
-				}
-			} else {
-				i++;
-			}
-		}
-	}
 }
 
 function countLines(content: string | null): number {
