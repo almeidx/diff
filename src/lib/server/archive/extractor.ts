@@ -1,4 +1,5 @@
-import { Gunzip, unzipSync, gunzipSync } from "fflate";
+import { Gunzip, Unzip, UnzipInflate, gunzipSync } from "fflate";
+import type { UnzipFile } from "fflate";
 import { dev } from "$app/environment";
 import { shouldInclude, isBinaryContent } from "../diff/filters.js";
 import type { FileEntry, FileTree } from "$lib/types/index.js";
@@ -10,6 +11,7 @@ const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
 const MAX_FILES = 5000;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB per file
 const TAR_BLOCK_SIZE = 512;
+const BINARY_CHECK_LENGTH = 8000;
 const textDecoder = new TextDecoder();
 const ARCHIVE_ALLOWED_HOSTS = ["registry.npmjs.org", "registry.npmjs.com", "downloads.wordpress.org"];
 
@@ -31,6 +33,18 @@ interface TarEntryState {
 	remainingPadding: number;
 }
 
+interface PendingZipEntry {
+	normalizedPath: string;
+	content: string;
+	isMinified: boolean;
+	size: number;
+}
+
+interface PreparedZipEntry {
+	normalizedPath: string;
+	isMinified: boolean;
+}
+
 export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promise<FileTree> {
 	const response = await fetchWithTimeout(url, { allowedHosts: ARCHIVE_ALLOWED_HOSTS });
 
@@ -42,8 +56,7 @@ export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promi
 		return extractTgzFromResponse(response);
 	}
 
-	const data = await readResponseBytes(response, MAX_ARCHIVE_SIZE);
-	return extractZip(data);
+	return extractZipFromResponse(response);
 }
 
 async function extractTgzFromResponse(response: Response): Promise<FileTree> {
@@ -173,75 +186,225 @@ function extractTar(data: Uint8Array): FileTree {
 	return { files };
 }
 
-function extractZip(data: Uint8Array): FileTree {
-	const files = new Map<string, FileEntry>();
-	const filterCache = new Map<string, FileFilterResult>();
-	let includedOriginalSize = 0;
+async function extractZipFromResponse(response: Response): Promise<FileTree> {
+	if (!response.body) {
+		const data = await readResponseBytes(response, MAX_ARCHIVE_SIZE);
+		return extractZipFromBuffer(data);
+	}
 
-	let unzipped;
+	const extractor = new ZipStreamExtractor();
+	const unzip = new Unzip((file) => extractor.handleFile(file));
+	unzip.register(UnzipInflate);
+
+	let compressedSize = 0;
+	const reader = response.body.getReader();
+
 	try {
-		unzipped = unzipSync(data, {
-			filter: (file) => {
-				const normalizedPath = normalizeArchivePath(file.name, "zip");
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
 
-				if (!normalizedPath || normalizedPath.endsWith("/")) {
-					return false;
-				}
+			compressedSize += value.byteLength;
+			if (!dev && compressedSize > MAX_ARCHIVE_SIZE) {
+				throw new Error(
+					`Package too large (${Math.round(compressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`,
+				);
+			}
 
-				if (!dev && file.originalSize > MAX_FILE_SIZE) {
-					return false;
-				}
+			unzip.push(value, false);
+			extractor.throwIfFailed();
+		}
 
-				const filterResult = shouldInclude(normalizedPath);
-
-				if (!filterResult.include || filterResult.isBinary) {
-					return false;
-				}
-
-				includedOriginalSize += file.originalSize;
-				if (!dev && includedOriginalSize > MAX_DECOMPRESSED_SIZE) {
-					throw new Error(
-						`Package has too much text content (${Math.round(includedOriginalSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
-					);
-				}
-
-				filterCache.set(file.name, { ...filterResult, normalizedPath });
-				return true;
-			},
-		});
+		unzip.push(new Uint8Array(0), true);
+		return extractor.finish();
 	} catch (e) {
 		if (e instanceof RangeError && e.message.includes("typed array length")) {
 			throw new Error("Package too large when decompressed. This package exceeds memory limits.");
 		}
 		throw e;
+	} finally {
+		await reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
+}
+
+function extractZipFromBuffer(data: Uint8Array): FileTree {
+	const extractor = new ZipStreamExtractor();
+	const unzip = new Unzip((file) => extractor.handleFile(file));
+	unzip.register(UnzipInflate);
+	unzip.push(data, true);
+	return extractor.finish();
+}
+
+class ZipStreamExtractor {
+	private pendingEntries: PendingZipEntry[] = [];
+	private includedPaths: string[] = [];
+	private includedSize = 0;
+	private error: Error | null = null;
+
+	handleFile(file: UnzipFile): void {
+		if (this.error) return;
+
+		const filterResult = this.prepareFile(file);
+		if (!filterResult) return;
+
+		const decoder = new TextDecoder();
+		const binaryDetector = new StreamingBinaryDetector();
+		let content = "";
+		let size = 0;
+		let countedUnknownSize = 0;
+		let skipFile = false;
+
+		file.ondata = (err, chunk, final) => {
+			if (err) {
+				this.fail(err);
+				return;
+			}
+			if (this.error || skipFile) return;
+
+			size += chunk.byteLength;
+
+			if (!dev && size > MAX_FILE_SIZE) {
+				if (file.originalSize === undefined) {
+					this.includedSize -= countedUnknownSize;
+				}
+				skipFile = true;
+				file.terminate();
+				return;
+			}
+
+			if (!dev && file.originalSize === undefined) {
+				countedUnknownSize += chunk.byteLength;
+				this.includedSize += chunk.byteLength;
+				if (this.includedSize > MAX_DECOMPRESSED_SIZE) {
+					this.fail(
+						new Error(
+							`Package has too much text content (${Math.round(this.includedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
+						),
+					);
+					file.terminate();
+					return;
+				}
+			}
+
+			binaryDetector.push(chunk);
+			if (binaryDetector.isBinary) {
+				if (!dev && file.originalSize === undefined) {
+					this.includedSize -= countedUnknownSize;
+				}
+				skipFile = true;
+				file.terminate();
+				return;
+			}
+
+			content += decoder.decode(chunk, { stream: !final });
+
+			if (final) {
+				content += decoder.decode();
+				this.includedPaths.push(filterResult.normalizedPath);
+				this.pendingEntries.push({
+					normalizedPath: filterResult.normalizedPath,
+					content: detachString(content),
+					isMinified: filterResult.isMinified,
+					size,
+				});
+			}
+		};
+
+		try {
+			file.start();
+		} catch (e) {
+			this.fail(e);
+		}
 	}
 
-	const entries = Object.entries(unzipped);
-	const includedPaths = entries
-		.map(([path]) => filterCache.get(path)?.normalizedPath)
-		.filter((path): path is string => Boolean(path));
-	const zipRoot = getCommonZipRoot(includedPaths);
+	finish(): FileTree {
+		this.throwIfFailed();
 
-	for (const [path, content] of entries) {
-		if (!dev && files.size >= MAX_FILES) break;
+		const files = new Map<string, FileEntry>();
+		const zipRoot = getCommonZipRoot(this.includedPaths);
 
-		const filterResult = filterCache.get(path);
+		for (const entry of this.pendingEntries) {
+			if (!dev && files.size >= MAX_FILES) break;
 
-		if (!filterResult) continue;
-		if (isBinaryContent(content)) continue;
-		const normalizedPath = stripZipRoot(filterResult.normalizedPath ?? "", zipRoot);
-		if (!normalizedPath || normalizedPath.endsWith("/")) continue;
+			const normalizedPath = stripZipRoot(entry.normalizedPath, zipRoot);
+			if (!normalizedPath || normalizedPath.endsWith("/")) continue;
 
-		files.set(normalizedPath, {
-			path: normalizedPath,
-			content: textDecoder.decode(content),
-			isBinary: false,
-			isMinified: filterResult.isMinified,
-			size: content.length,
-		});
+			files.set(normalizedPath, {
+				path: normalizedPath,
+				content: entry.content,
+				isBinary: false,
+				isMinified: entry.isMinified,
+				size: entry.size,
+			});
+		}
+
+		return { files };
 	}
 
-	return { files };
+	throwIfFailed(): void {
+		if (this.error) {
+			throw this.error;
+		}
+	}
+
+	private prepareFile(file: UnzipFile): PreparedZipEntry | null {
+		if (!dev && this.pendingEntries.length >= MAX_FILES) return null;
+
+		const normalizedPath = normalizeArchivePath(file.name, "zip");
+		if (!normalizedPath || normalizedPath.endsWith("/")) {
+			return null;
+		}
+
+		const filterResult = shouldInclude(normalizedPath);
+		if (!filterResult.include || filterResult.isBinary) {
+			return null;
+		}
+
+		if (!dev && file.originalSize !== undefined) {
+			if (file.originalSize > MAX_FILE_SIZE) {
+				return null;
+			}
+
+			this.includedSize += file.originalSize;
+			if (this.includedSize > MAX_DECOMPRESSED_SIZE) {
+				this.fail(
+					new Error(
+						`Package has too much text content (${Math.round(this.includedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_DECOMPRESSED_SIZE / 1024 / 1024}MB.`,
+					),
+				);
+				return null;
+			}
+		}
+
+		return { normalizedPath, isMinified: filterResult.isMinified };
+	}
+
+	private fail(error: unknown): void {
+		this.error = error instanceof Error ? error : new Error(String(error));
+	}
+}
+
+class StreamingBinaryDetector {
+	isBinary = false;
+	private checked = 0;
+	private nullCount = 0;
+
+	push(chunk: Uint8Array): void {
+		if (this.isBinary || this.checked >= BINARY_CHECK_LENGTH) return;
+
+		const checkLength = Math.min(chunk.byteLength, BINARY_CHECK_LENGTH - this.checked);
+		for (let i = 0; i < checkLength; i++) {
+			if (chunk[i] === 0) {
+				this.nullCount++;
+				if (this.nullCount > 1) {
+					this.isBinary = true;
+					return;
+				}
+			}
+		}
+		this.checked += checkLength;
+	}
 }
 
 class TarStreamExtractor {
@@ -452,4 +615,8 @@ function isZeroBlock(block: Uint8Array): boolean {
 		}
 	}
 	return true;
+}
+
+function detachString(text: string): string {
+	return text.length === 0 ? "" : ` ${text}`.slice(1);
 }
