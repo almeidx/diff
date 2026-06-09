@@ -43,7 +43,7 @@
 	const language = $derived(getLanguage(filePath));
 
 	function getHighlightedContent(line: DiffLine | null): string | null {
-		if (!line || !language || line.wordDiff) return null;
+		if (!browser || !line || !language || line.wordDiff) return null;
 		return highlight(line.content, language);
 	}
 
@@ -60,8 +60,8 @@
 			...line,
 			leftWordDiff,
 			rightWordDiff,
-			leftHighlighted: getHighlightedContent(line.left),
-			rightHighlighted: getHighlightedContent(line.right)
+			leftHighlighted: leftWordDiff ? null : getHighlightedContent(line.left),
+			rightHighlighted: rightWordDiff ? null : getHighlightedContent(line.right)
 		};
 	}
 

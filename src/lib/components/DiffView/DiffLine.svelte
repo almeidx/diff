@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import type { DiffLine as DiffLineType } from '$lib/types/index.js';
 	import type { WordChange } from '$lib/types/index.js';
 	import { wordWrap } from '$lib/stores/ui';
@@ -25,7 +26,7 @@
 
 	const visibleWordDiff = $derived(wordDiff ?? line.wordDiff);
 	const highlightedContent = $derived(
-		language && !visibleWordDiff ? highlight(line.content, language) : null
+		browser && language && !visibleWordDiff ? highlight(line.content, language) : null
 	);
 </script>
 
