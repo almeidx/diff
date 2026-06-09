@@ -5,7 +5,7 @@ import { parseVersionRange } from "$lib/utils/versions";
 import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
 import { isNotFoundError } from "$lib/server/errors";
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, platform }) => {
 	const { slug, versions: versionsPath } = params;
 
 	if (slug.length > 200 || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
@@ -18,6 +18,11 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	const { fromVersion, toVersion } = parsed;
+	const waitUntil = platform?.context
+		? (promise: Promise<unknown>) => {
+			platform.context.waitUntil(promise);
+		}
+		: undefined;
 
 	if (fromVersion.length > 256 || toVersion.length > 256) {
 		error(400, "Version string too long");
@@ -32,7 +37,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			fromVersion,
 			toVersion,
 			archiveFormat: "zip",
-			diffCacheKey: `diff:wp:${slug}:${fromVersion}:${toVersion}`,
+			diffCacheKey: `diff:v2:wp:${slug}:${fromVersion}:${toVersion}`,
+			waitUntil,
 		});
 	} catch (e) {
 		if (isNotFoundError(e)) {

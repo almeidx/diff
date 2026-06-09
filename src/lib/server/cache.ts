@@ -4,6 +4,7 @@ const CACHE_NAME = "diff-cache-v1";
 
 interface CacheOptions {
 	ttlSeconds: number;
+	waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 const DEFAULT_TTL = 300; // 5 minutes
@@ -53,11 +54,11 @@ export async function getCached<T>(
 			},
 		});
 
-		try {
-			await cache.put(cacheKey, response);
-			logDebug("cache_store", { key, ttlSeconds: options.ttlSeconds });
-		} catch (e) {
-			logError("cache_put_failed", { key, error: e });
+		const storePromise = storeCachedResponse(cache, cacheKey, response, key, options.ttlSeconds);
+		if (options.waitUntil) {
+			options.waitUntil(storePromise);
+		} else {
+			await storePromise;
 		}
 		return data;
 	})();
@@ -68,5 +69,20 @@ export async function getCached<T>(
 		return await loadPromise;
 	} finally {
 		inFlight.delete(key);
+	}
+}
+
+async function storeCachedResponse(
+	cache: Cache,
+	cacheKey: Request,
+	response: Response,
+	key: string,
+	ttlSeconds: number,
+): Promise<void> {
+	try {
+		await cache.put(cacheKey, response);
+		logDebug("cache_store", { key, ttlSeconds });
+	} catch (e) {
+		logError("cache_put_failed", { key, error: e });
 	}
 }

@@ -17,6 +17,7 @@ interface LoadDiffPageOptions {
 	toVersion: string;
 	archiveFormat: "tgz" | "zip";
 	diffCacheKey: string;
+	waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 interface LoadDiffPageSuccess {
@@ -32,7 +33,7 @@ interface LoadDiffPageError {
 export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
-	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey } = options;
+	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, diffCacheKey, waitUntil } = options;
 	const startedAt = Date.now();
 
 	const versions = await registry.getVersions(packageName);
@@ -73,7 +74,7 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 
 				return computeDiff(fromTree, toTree, packageType, packageName, fromVersion, toVersion);
 			},
-			{ ttlSeconds: DIFF_CACHE_TTL },
+			{ ttlSeconds: DIFF_CACHE_TTL, waitUntil },
 		);
 
 		logInfo("diff_loaded", {

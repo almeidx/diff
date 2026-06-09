@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getCached } from "$lib/server/cache";
 
 function delay(ms: number): Promise<void> {
@@ -6,6 +6,10 @@ function delay(ms: number): Promise<void> {
 }
 
 describe("getCached", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	it("deduplicates concurrent requests for the same key", async () => {
 		const fetcher = vi.fn(async () => {
 			await delay(20);
@@ -30,5 +34,27 @@ describe("getCached", () => {
 		await Promise.all([getCached("key-a", fetcher), getCached("key-b", fetcher)]);
 
 		expect(fetcher).toHaveBeenCalledTimes(2);
+	});
+
+	it("can schedule cache writes outside the response path", async () => {
+		const match = vi.fn(async () => undefined);
+		const put = vi.fn(async () => {});
+		const open = vi.fn(async () => ({ match, put }));
+		const waitUntil = vi.fn((promise: Promise<unknown>) => {
+			void promise;
+		});
+
+		vi.stubGlobal("caches", { open });
+
+		const data = await getCached("wait-key", async () => ({ ok: true }), {
+			ttlSeconds: 60,
+			waitUntil,
+		});
+
+		expect(data).toEqual({ ok: true });
+		expect(open).toHaveBeenCalledTimes(1);
+		expect(match).toHaveBeenCalledTimes(1);
+		expect(waitUntil).toHaveBeenCalledTimes(1);
+		expect(put).toHaveBeenCalledTimes(1);
 	});
 });
