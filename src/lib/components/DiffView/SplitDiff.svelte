@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { formatHunkHeader, type DiffHunk, type DiffLine } from '$lib/types/index.js';
+	import type { WordChange } from '$lib/types/index.js';
+	import { getSideWordDiff } from '$lib/diff/word-diff';
 	import { wordWrap } from '$lib/stores/ui';
 	import { getLanguage, highlight } from '$lib/highlight/prism';
 
@@ -17,11 +19,21 @@
 		right: DiffLine | null;
 		isHunkHeader?: boolean;
 		hunkHeaderText?: string;
+		leftWordDiffSource?: WordDiffSource;
+		rightWordDiffSource?: WordDiffSource;
 	}
 
 	interface SplitLine extends RawSplitLine {
 		leftHighlighted?: string | null;
 		rightHighlighted?: string | null;
+		leftWordDiff?: WordChange[];
+		rightWordDiff?: WordChange[];
+	}
+
+	interface WordDiffSource {
+		oldText: string;
+		newText: string;
+		side: 'delete' | 'add';
 	}
 
 	let { hunks, filePath }: Props = $props();
@@ -31,17 +43,25 @@
 	const language = $derived(getLanguage(filePath));
 
 	function getHighlightedContent(line: DiffLine | null): string | null {
-		if (!line || !language || line.wordDiff) return null;
+		if (!browser || !line || !language || line.wordDiff) return null;
 		return highlight(line.content, language);
 	}
 
 	function enhanceVisibleLine(line: RawSplitLine): SplitLine {
 		if (line.isHunkHeader) return { ...line, leftHighlighted: null, rightHighlighted: null };
+		const leftWordDiff = browser && line.leftWordDiffSource
+			? getSideWordDiff(line.leftWordDiffSource.oldText, line.leftWordDiffSource.newText, line.leftWordDiffSource.side)
+			: undefined;
+		const rightWordDiff = browser && line.rightWordDiffSource
+			? getSideWordDiff(line.rightWordDiffSource.oldText, line.rightWordDiffSource.newText, line.rightWordDiffSource.side)
+			: undefined;
 
 		return {
 			...line,
-			leftHighlighted: getHighlightedContent(line.left),
-			rightHighlighted: getHighlightedContent(line.right)
+			leftWordDiff,
+			rightWordDiff,
+			leftHighlighted: leftWordDiff ? null : getHighlightedContent(line.left),
+			rightHighlighted: rightWordDiff ? null : getHighlightedContent(line.right)
 		};
 	}
 
@@ -82,9 +102,17 @@
 
 					const maxLen = Math.max(deleteLines.length, addLines.length);
 					for (let j = 0; j < maxLen; j++) {
+						const left = deleteLines[j] ?? null;
+						const right = addLines[j] ?? null;
 						result.push({
-							left: deleteLines[j] ?? null,
-							right: addLines[j] ?? null
+							left,
+							right,
+							leftWordDiffSource: left && right
+								? { oldText: left.content, newText: right.content, side: 'delete' }
+								: undefined,
+							rightWordDiffSource: left && right
+								? { oldText: left.content, newText: right.content, side: 'add' }
+								: undefined
 						});
 					}
 					continue;
@@ -169,8 +197,8 @@
 							class:bg-bg-tertiary={!line.left}
 						>
 							{#if line.left}
-								{#if line.left.wordDiff}
-									{#each line.left.wordDiff as segment}
+								{#if line.leftWordDiff ?? line.left.wordDiff}
+									{#each line.leftWordDiff ?? line.left.wordDiff ?? [] as segment}
 										{#if segment.type === 'equal'}
 											<span>{segment.text}</span>
 										{:else if segment.type === 'delete'}
@@ -223,8 +251,8 @@
 							class:bg-bg-tertiary={!line.right}
 						>
 							{#if line.right}
-								{#if line.right.wordDiff}
-									{#each line.right.wordDiff as segment}
+								{#if line.rightWordDiff ?? line.right.wordDiff}
+									{#each line.rightWordDiff ?? line.right.wordDiff ?? [] as segment}
 										{#if segment.type === 'equal'}
 											<span>{segment.text}</span>
 										{:else if segment.type === 'insert'}

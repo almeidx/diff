@@ -41,7 +41,12 @@ function parsePath(path: string): ParsedPath | null {
 	};
 }
 
-async function resolveCompareUrl(packageName: string, fromVersion: string, toVersion: string): Promise<string | null> {
+async function resolveCompareUrl(
+	packageName: string,
+	fromVersion: string,
+	toVersion: string,
+	waitUntil?: (promise: Promise<unknown>) => void,
+): Promise<string | null> {
 	try {
 		const repoUrl = await npmRegistry.getRepositoryUrl(packageName);
 		if (!repoUrl) return null;
@@ -68,14 +73,14 @@ async function resolveCompareUrl(packageName: string, fromVersion: string, toVer
 
 				return null;
 			},
-			{ ttlSeconds: COMPARE_CACHE_TTL },
+			{ ttlSeconds: COMPARE_CACHE_TTL, waitUntil },
 		);
 	} catch {
 		return null;
 	}
 }
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, platform }) => {
 	const parsed = parsePath(params.path);
 
 	if (!parsed) {
@@ -83,6 +88,11 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	const { packageName, fromVersion, toVersion } = parsed;
+	const waitUntil = platform?.context
+		? (promise: Promise<unknown>) => {
+				platform.context.waitUntil(promise);
+			}
+		: undefined;
 
 	if (packageName.length > 214 || fromVersion.length > 256 || toVersion.length > 256) {
 		error(400, "Package name or version string too long");
@@ -97,7 +107,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			fromVersion,
 			toVersion,
 			archiveFormat: "tgz",
-			diffCacheKey: `diff:npm:${packageName}:${fromVersion}:${toVersion}`,
+			diffCacheKey: `diff:v2:npm:${packageName}:${fromVersion}:${toVersion}`,
+			waitUntil,
 		});
 	} catch (e) {
 		if (isNotFoundError(e)) {
@@ -106,7 +117,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		error(502, "Failed to fetch package metadata from npm");
 	}
 
-	const compareUrl = "diff" in result ? resolveCompareUrl(packageName, fromVersion, toVersion) : null;
+	const compareUrl = "diff" in result ? resolveCompareUrl(packageName, fromVersion, toVersion, waitUntil) : null;
 
 	return {
 		packageName,

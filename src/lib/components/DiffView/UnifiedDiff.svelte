@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { formatHunkHeader, type DiffHunk, type DiffLine } from '$lib/types/index.js';
+	import type { WordChange } from '$lib/types/index.js';
+	import { getSideWordDiff } from '$lib/diff/word-diff';
 	import { wordWrap } from '$lib/stores/ui';
 	import { getLanguage } from '$lib/highlight/prism';
 	import DiffLineComponent from './DiffLine.svelte';
@@ -18,6 +20,14 @@
 		key: string;
 		headerText?: string;
 		line?: DiffLine;
+		wordDiffSource?: WordDiffSource;
+		wordDiff?: WordChange[];
+	}
+
+	interface WordDiffSource {
+		oldText: string;
+		newText: string;
+		side: 'delete' | 'add';
 	}
 
 	let { hunks, filePath }: Props = $props();
@@ -25,6 +35,28 @@
 	let renderedRowCount = $state(INITIAL_ROW_COUNT);
 
 	const language = $derived(getLanguage(filePath));
+
+	function lineRow(hunkIndex: number, lineIndex: number, line: DiffLine, wordDiffSource?: WordDiffSource): UnifiedRow {
+		return {
+			kind: 'line',
+			key: `l-${hunkIndex}-${lineIndex}`,
+			line,
+			wordDiffSource
+		};
+	}
+
+	function enhanceVisibleRow(row: UnifiedRow): UnifiedRow {
+		if (!browser || !row.wordDiffSource) return row;
+
+		return {
+			...row,
+			wordDiff: getSideWordDiff(
+				row.wordDiffSource.oldText,
+				row.wordDiffSource.newText,
+				row.wordDiffSource.side
+			)
+		};
+	}
 
 	let allRows = $derived.by<UnifiedRow[]>(() => {
 		const rows: UnifiedRow[] = [];
@@ -37,19 +69,59 @@
 				headerText: formatHunkHeader(hunk)
 			});
 
-			for (let lineIndex = 0; lineIndex < hunk.lines.length; lineIndex++) {
-				rows.push({
-					kind: 'line',
-					key: `l-${hunkIndex}-${lineIndex}`,
-					line: hunk.lines[lineIndex]
-				});
+			let lineIndex = 0;
+			while (lineIndex < hunk.lines.length) {
+				const line = hunk.lines[lineIndex];
+
+				if (line.type === 'delete') {
+					const deleteLines: Array<{ line: DiffLine; index: number }> = [];
+					const addLines: Array<{ line: DiffLine; index: number }> = [];
+
+					while (lineIndex < hunk.lines.length && hunk.lines[lineIndex].type === 'delete') {
+						deleteLines.push({ line: hunk.lines[lineIndex], index: lineIndex });
+						lineIndex++;
+					}
+
+					while (lineIndex < hunk.lines.length && hunk.lines[lineIndex].type === 'add') {
+						addLines.push({ line: hunk.lines[lineIndex], index: lineIndex });
+						lineIndex++;
+					}
+
+					const pairCount = Math.min(deleteLines.length, addLines.length);
+					for (let i = 0; i < deleteLines.length; i++) {
+						const pairedLine = i < pairCount ? addLines[i].line : null;
+						rows.push(lineRow(
+							hunkIndex,
+							deleteLines[i].index,
+							deleteLines[i].line,
+							pairedLine
+								? { oldText: deleteLines[i].line.content, newText: pairedLine.content, side: 'delete' }
+								: undefined
+						));
+					}
+					for (let i = 0; i < addLines.length; i++) {
+						const pairedLine = i < pairCount ? deleteLines[i].line : null;
+						rows.push(lineRow(
+							hunkIndex,
+							addLines[i].index,
+							addLines[i].line,
+							pairedLine
+								? { oldText: pairedLine.content, newText: addLines[i].line.content, side: 'add' }
+								: undefined
+						));
+					}
+					continue;
+				}
+
+				rows.push(lineRow(hunkIndex, lineIndex, line));
+				lineIndex++;
 			}
 		}
 
 		return rows;
 	});
 
-	let visibleRows = $derived(allRows.slice(0, renderedRowCount));
+	let visibleRows = $derived(allRows.slice(0, renderedRowCount).map((row) => enhanceVisibleRow(row)));
 	let hasMoreRows = $derived(renderedRowCount < allRows.length);
 
 	$effect(() => {
@@ -111,7 +183,7 @@
 						</td>
 					</tr>
 				{:else if row.line}
-					<DiffLineComponent line={row.line} {language} />
+					<DiffLineComponent line={row.line} {language} wordDiff={row.wordDiff} />
 				{/if}
 			{/each}
 		</tbody>
