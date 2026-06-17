@@ -29,7 +29,7 @@
 		"prismjs": "^1.30.0"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.60.0",
+		"@playwright/test": "^1.61.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
 		"@sveltejs/kit": "^2.65.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
@@ -37,15 +37,15 @@
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/node": "^25.9.3",
 		"@types/prismjs": "^1.26.6",
-		"oxfmt": "^0.54.0",
-		"oxlint": "^1.69.0",
+		"oxfmt": "^0.55.0",
+		"oxlint": "^1.70.0",
 		"svelte": "^5.56.3",
 		"svelte-check": "^4.6.0",
 		"tailwindcss": "^4.3.1",
 		"typescript": "~6.0.3",
 		"vite": "^8.0.16",
-		"vitest": "^4.1.8",
+		"vitest": "^4.1.9",
 		"wrangler": "^4.100.0"
 	},
-	"packageManager": "pnpm@11.6.0"
+	"packageManager": "pnpm@11.7.0"
 }
