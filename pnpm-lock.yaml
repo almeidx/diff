@@ -40,10 +40,10 @@ importers:
         specifier: ^1.61.0
         version: 1.61.0
       '@sveltejs/adapter-cloudflare':
-        specifier: ^7.2.8
+        specifier: ^7.2.9
         version: 7.2.9(@sveltejs/kit@2.66.0(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.56.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0)))(svelte@5.56.3)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0)))(wrangler@4.103.0)
       '@sveltejs/kit':
-        specifier: ^2.65.1
+        specifier: ^2.66.0
         version: 2.66.0(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.56.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0)))(svelte@5.56.3)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0))
       '@sveltejs/vite-plugin-svelte':
         specifier: ^7.1.2
@@ -55,7 +55,7 @@ importers:
         specifier: ^1.0.36
         version: 1.0.36
       '@types/node':
-        specifier: ^25.9.3
+        specifier: ^25.9.4
         version: 25.9.4
       '@types/prismjs':
         specifier: ^1.26.6
@@ -85,7 +85,7 @@ importers:
         specifier: ^4.1.9
         version: 4.1.9(@types/node@25.9.4)(vite@8.0.16(@types/node@25.9.4)(esbuild@0.28.1)(jiti@2.7.0))
       wrangler:
-        specifier: ^4.100.0
+        specifier: ^4.103.0
         version: 4.103.0
 
 packages:
