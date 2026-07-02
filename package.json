@@ -19,11 +19,11 @@
 		"test:smoke": "playwright test"
 	},
 	"dependencies": {
-		"@zag-js/combobox": "^1.41.2",
-		"@zag-js/radio-group": "^1.41.2",
-		"@zag-js/svelte": "^1.41.2",
-		"@zag-js/switch": "^1.41.2",
-		"@zag-js/tree-view": "^1.41.2",
+		"@zag-js/combobox": "^1.42.0",
+		"@zag-js/radio-group": "^1.42.0",
+		"@zag-js/svelte": "^1.42.0",
+		"@zag-js/switch": "^1.42.0",
+		"@zag-js/tree-view": "^1.42.0",
 		"diff-match-patch": "^1.0.5",
 		"fflate": "^0.8.3",
 		"prismjs": "^1.30.0"
@@ -33,19 +33,19 @@
 		"@sveltejs/adapter-cloudflare": "^7.2.9",
 		"@sveltejs/kit": "^2.68.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
-		"@tailwindcss/vite": "^4.3.1",
+		"@tailwindcss/vite": "^4.3.2",
 		"@types/diff-match-patch": "^1.0.36",
 		"@types/node": "^25.9.4",
 		"@types/prismjs": "^1.26.6",
-		"oxfmt": "^0.56.0",
-		"oxlint": "^1.71.0",
+		"oxfmt": "^0.57.0",
+		"oxlint": "^1.72.0",
 		"svelte": "^5.56.4",
 		"svelte-check": "^4.7.1",
-		"tailwindcss": "^4.3.1",
+		"tailwindcss": "^4.3.2",
 		"typescript": "~6.0.3",
-		"vite": "^8.1.0",
+		"vite": "^8.1.2",
 		"vitest": "^4.1.9",
-		"wrangler": "^4.105.0"
+		"wrangler": "^4.106.0"
 	},
 	"packageManager": "pnpm@11.9.0"
 }
