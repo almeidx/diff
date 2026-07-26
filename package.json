@@ -16,7 +16,7 @@
 		"test:ci": "pnpm test",
 		"test:e2e": "pnpm test:smoke",
 		"test:watch": "vitest",
-		"test:smoke": "playwright test"
+		"test:smoke": "svelte-kit sync && playwright test"
 	},
 	"dependencies": {
 		"@zag-js/combobox": "^1.42.0",
