@@ -134,6 +134,22 @@ test("diff page file tree search filters files", async ({ page }) => {
 	await expect(page.locator("text=matching file")).toBeVisible();
 });
 
+test("selecting a file in the tree scrolls its diff into view", async ({ page }) => {
+	await page.goto("/npm/is-number/6.0.0...7.0.0");
+
+	await expect(page.getByRole("tree", { name: "Changed files tree" })).toBeVisible({ timeout: 30_000 });
+
+	const lastFileBlock = page.locator("#file-README-md");
+	await expect(lastFileBlock).toBeVisible();
+	await expect(lastFileBlock).not.toBeInViewport();
+
+	const treeItem = page.getByRole("treeitem", { name: "README.md" });
+	await treeItem.click();
+
+	await expect(treeItem).toHaveAttribute("aria-selected", "true");
+	await expect(lastFileBlock).toBeInViewport({ timeout: 15_000 });
+});
+
 test("diff page file collapse/expand works", async ({ page }) => {
 	await page.goto("/npm/is-number/6.0.0...7.0.0");
 
