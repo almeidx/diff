@@ -140,7 +140,7 @@
 		</div>
 
 		<div class="flex flex-1 items-stretch min-w-0 max-md:flex-col max-md:bg-transparent" style:background="linear-gradient(to right, var(--bg-secondary) 280px, transparent 280px)">
-			<aside class="w-[280px] min-w-[200px] max-w-[400px] border-r border-border bg-bg-secondary overflow-y-auto sticky top-[61px] h-[calc(100vh-61px)] max-md:w-full max-md:max-w-none max-md:h-auto max-md:max-h-[200px] max-md:border-r-0 max-md:border-b max-md:static">
+			<aside class="w-[280px] min-w-[200px] max-w-[400px] border-r border-border bg-bg-secondary overflow-hidden sticky top-[61px] h-[calc(100vh-61px)] max-md:w-full max-md:max-w-none max-md:h-[200px] max-md:border-r-0 max-md:border-b max-md:static">
 				<FileTree
 					files={diff.files}
 					onFileSelect={handleFileSelect}

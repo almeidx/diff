@@ -1,9 +1,7 @@
 <script lang="ts">
-	import * as treeView from '@zag-js/tree-view';
-	import { normalizeProps, useMachine } from '@zag-js/svelte';
-	import type { DiffFile, TreeNode } from '$lib/types/index.js';
-	import { buildFileTree, propagateStatusWithFolders, getSingleChildFolderPaths, flattenTreePaths } from '$lib/utils/tree';
-	import TreeNodeComponent from './TreeNode.svelte';
+	import { untrack } from 'svelte';
+	import type { FileTree as FileTreeInstance, FileTreeRowDecoration, GitStatusEntry } from '@pierre/trees';
+	import type { DiffFile } from '$lib/types/index.js';
 
 	interface Props {
 		files: DiffFile[];
@@ -11,189 +9,150 @@
 		selectedPath?: string;
 	}
 
-	interface FilteredTreeResult {
-		nodes: TreeNode[];
-		forcedExpandedPaths: Set<string>;
-		filePaths: string[];
-		matchCount: number;
-	}
-
-	const machineId = $props.id();
-
 	let { files, onFileSelect, selectedPath }: Props = $props();
+
 	let search = $state('');
-	let expandedValue = $state<string[]>([]);
+	let matchCount = $state(0);
+	let mount = $state<HTMLDivElement | null>(null);
+	let tree = $state<FileTreeInstance | null>(null);
 
-	let treeData = $derived(propagateStatusWithFolders(buildFileTree(files)));
-	let tree = $derived(treeData.nodes);
-	let allFolderPaths = $derived(treeData.folderPaths);
-	let hasAnyFolders = $derived(allFolderPaths.length > 0);
-	let normalizedSearch = $derived(search.trim().toLowerCase());
-	let fileMap = $derived(new Map(files.map((file) => [file.path, file])));
+	let fileMap = new Map<string, DiffFile>();
 
-	let filteredTree = $derived.by<FilteredTreeResult>(() => {
-		if (!normalizedSearch) {
-			return {
-				nodes: tree,
-				forcedExpandedPaths: new Set<string>(),
-				filePaths: flattenTreePaths(tree),
-				matchCount: files.length,
-			};
+	const paths = $derived(files.map((file) => file.path));
+	const gitStatus = $derived<GitStatusEntry[]>(
+		files.map((file) => ({ path: file.path, status: file.status }))
+	);
+	const normalizedSearch = $derived(search.trim());
+	const directoryPaths = $derived.by(() => {
+		const directories = new Set<string>();
+		for (const path of paths) {
+			const segments = path.split('/');
+			for (let i = 1; i < segments.length; i++) {
+				directories.add(segments.slice(0, i).join('/'));
+			}
 		}
+		return Array.from(directories);
+	});
+	const hasAnyFolders = $derived(directoryPaths.length > 0);
 
-		return filterTreeNodes(tree, normalizedSearch);
+	$effect(() => {
+		fileMap = new Map(files.map((file) => [file.path, file]));
 	});
 
-	let displayTree = $derived(filteredTree.nodes);
-	let visibleFilePaths = $derived(filteredTree.filePaths);
-	let searchMatchCount = $derived(filteredTree.matchCount);
-	let forcedExpandedPaths = $derived(filteredTree.forcedExpandedPaths);
-
-	const treeCollection = $derived(
-		treeView.collection({
-			rootNode: {
-				name: 'root',
-				path: 'root',
-				isDirectory: true,
-				children: displayTree,
-			},
-			nodeToValue: (node) => node.path,
-			nodeToString: (node) => node.name,
-			nodeToChildren: (node) => node.children ?? [],
-			nodeToChildrenCount: (node) => node.children?.length,
-		}),
-	);
-
-	const service = useMachine(treeView.machine, () => ({
-		id: `file-tree-${machineId}`,
-		collection: treeCollection,
-		selectionMode: 'single' as const,
-		expandedValue: normalizedSearch ? Array.from(forcedExpandedPaths) : expandedValue,
-		selectedValue: selectedPath ? [selectedPath] : [],
-		onExpandedChange: ({ expandedValue: nextExpanded }) => {
-			if (!normalizedSearch) {
-				expandedValue = nextExpanded;
-			}
-		},
-		onSelectionChange: ({ selectedNodes }) => {
-			const selectedNode = selectedNodes[0] as TreeNode | undefined;
-			if (selectedNode?.file && onFileSelect) {
-				onFileSelect(selectedNode.file);
-			}
-		},
-	}));
-
-	const api = $derived(treeView.connect(service, normalizeProps));
-
-	function handleExpandAll() {
-		api.expand();
+	function decorateRow(path: string): FileTreeRowDecoration | null {
+		return fileMap.get(path)?.isMinified ? { text: 'minified', title: 'Minified file' } : null;
 	}
 
-	function handleCollapseAll() {
-		api.collapse();
+	function labelTree(instance: FileTreeInstance) {
+		const host = instance.getFileTreeContainer();
+		host?.shadowRoot?.querySelector('[role="tree"]')?.setAttribute('aria-label', 'Changed files tree');
+	}
+
+	$effect(() => {
+		const container = mount;
+		if (!container) return;
+
+		let disposed = false;
+		const initial = untrack(() => ({
+			paths,
+			gitStatus,
+			selectedPath
+		}));
+
+		void (async () => {
+			const { FileTree } = await import('@pierre/trees');
+			if (disposed) return;
+
+			const instance = new FileTree({
+				paths: initial.paths,
+				gitStatus: initial.gitStatus,
+				flattenEmptyDirectories: true,
+				initialExpansion: 'open',
+				initialSelectedPaths: initial.selectedPath ? [initial.selectedPath] : [],
+				fileTreeSearchMode: 'hide-non-matches',
+				searchFakeFocus: true,
+				renderRowDecoration: ({ row }) => decorateRow(row.path),
+				onSelectionChange: (selectedPaths) => {
+					const file = fileMap.get(selectedPaths[0] ?? '');
+					if (file) onFileSelect?.(file);
+				}
+			});
+
+			instance.render({ containerWrapper: container });
+			labelTree(instance);
+			tree = instance;
+		})();
+
+		return () => {
+			disposed = true;
+			tree?.cleanUp();
+			tree = null;
+		};
+	});
+
+	let appliedPathsKey: string | null = null;
+	$effect(() => {
+		const key = paths.join('\n');
+		const nextStatus = gitStatus;
+		if (!tree) return;
+
+		if (appliedPathsKey === null) {
+			appliedPathsKey = key;
+			return;
+		}
+		if (appliedPathsKey === key) return;
+
+		appliedPathsKey = key;
+		tree.resetPaths(paths, { initialExpandedPaths: directoryPaths });
+		tree.setGitStatus(nextStatus);
+		labelTree(tree);
+	});
+
+	$effect(() => {
+		const query = normalizedSearch;
+		if (!tree) return;
+
+		tree.setSearch(query || null);
+		matchCount = query ? tree.getSearchMatchingPaths().length : files.length;
+	});
+
+	function setAllExpanded(expanded: boolean) {
+		if (!tree) return;
+
+		for (const path of directoryPaths) {
+			const item = tree.getItem(path);
+			if (item && 'expand' in item) {
+				if (expanded) item.expand();
+				else item.collapse();
+			}
+		}
 	}
 
 	function clearSearch() {
 		search = '';
 	}
 
-	function selectFileByPath(path: string, focus = false) {
-		const file = fileMap.get(path);
-		if (!file || !onFileSelect) return;
-
-		onFileSelect(file);
-		if (focus) {
-			api.focus(path);
-		}
-	}
-
 	function handleSearchKeydown(event: KeyboardEvent) {
-		if (!visibleFilePaths.length) return;
+		if (event.key !== 'Enter' && event.key !== 'ArrowDown') return;
+		if (!tree) return;
 
-		if (event.key === 'Enter' || event.key === 'ArrowDown') {
-			event.preventDefault();
-			selectFileByPath(visibleFilePaths[0], true);
-		}
-	}
+		const candidates = normalizedSearch ? tree.getSearchMatchingPaths() : paths;
+		const first = candidates.find((path) => fileMap.has(path));
+		if (!first) return;
 
-	$effect(() => {
-		if (files.length === 0) {
-			expandedValue = [];
-			return;
-		}
-
-		const pathsToExpand = new Set<string>();
-
-		for (const node of tree) {
-			if (node.isDirectory) {
-				pathsToExpand.add(node.path);
-			}
-		}
-
-		const firstFile = files[0];
-		const parts = firstFile.path.split('/');
-		if (parts.length > 1) {
-			for (let i = 0; i < parts.length - 1; i++) {
-				pathsToExpand.add(parts.slice(0, i + 1).join('/'));
-			}
-		}
-
-		const singleChildPaths = getSingleChildFolderPaths(tree);
-		for (const path of singleChildPaths) {
-			pathsToExpand.add(path);
-		}
-
-		expandedValue = Array.from(pathsToExpand);
-	});
-
-	function filterTreeNodes(nodes: TreeNode[], query: string): FilteredTreeResult {
-		const nextForcedExpandedPaths = new Set<string>();
-		const filePaths: string[] = [];
-		let matchCount = 0;
-
-		function filterNodeList(nodeList: TreeNode[]): TreeNode[] {
-			const result: TreeNode[] = [];
-
-			for (const node of nodeList) {
-				const pathMatch = node.path.toLowerCase().includes(query);
-
-				if (node.isDirectory) {
-					const filteredChildren = node.children ? filterNodeList(node.children) : [];
-
-					if (pathMatch || filteredChildren.length > 0) {
-						nextForcedExpandedPaths.add(node.path);
-						result.push({ ...node, children: filteredChildren });
-					}
-
-					continue;
-				}
-
-				if (pathMatch) {
-					matchCount++;
-					filePaths.push(node.path);
-					result.push(node);
-				}
-			}
-
-			return result;
-		}
-
-		return {
-			nodes: filterNodeList(nodes),
-			forcedExpandedPaths: nextForcedExpandedPaths,
-			filePaths,
-			matchCount,
-		};
+		event.preventDefault();
+		tree.getItem(first)?.select();
+		tree.focusPath(first);
 	}
 </script>
 
-<nav class="overflow-y-auto overflow-x-hidden text-[13px]" aria-label="Changed files" {...api.getRootProps()}>
-	<div class="p-2 border-b border-border bg-bg-secondary space-y-2">
+<nav class="flex flex-col h-full overflow-hidden text-[13px]" aria-label="Changed files">
+	<div class="p-2 border-b border-border bg-bg-secondary space-y-2 shrink-0">
 		{#if hasAnyFolders && !normalizedSearch}
 			<div class="flex gap-1">
 				<button
 					type="button"
-					onclick={handleExpandAll}
+					onclick={() => setAllExpanded(true)}
 					title="Expand all folders"
 					class="flex items-center gap-1 px-2 py-1 text-[11px] bg-bg-tertiary border border-border rounded text-text-secondary cursor-pointer transition-all hover:bg-bg-primary hover:text-text-primary"
 				>
@@ -204,7 +163,7 @@
 				</button>
 				<button
 					type="button"
-					onclick={handleCollapseAll}
+					onclick={() => setAllExpanded(false)}
 					title="Collapse all folders"
 					class="flex items-center gap-1 px-2 py-1 text-[11px] bg-bg-tertiary border border-border rounded text-text-secondary cursor-pointer transition-all hover:bg-bg-primary hover:text-text-primary"
 				>
@@ -236,24 +195,24 @@
 		</div>
 		{#if normalizedSearch}
 			<p class="text-[11px] text-text-muted px-0.5">
-				{searchMatchCount} matching file{searchMatchCount === 1 ? '' : 's'}
+				{matchCount} matching file{matchCount === 1 ? '' : 's'}
 			</p>
 		{/if}
 	</div>
-	<span class="sr-only" {...api.getLabelProps()}>Changed files tree</span>
-	<ul class="list-none p-2" {...api.getTreeProps()}>
-		{#if displayTree.length === 0}
-			<li class="px-2 py-2 text-xs text-text-muted">No files match your search.</li>
-		{:else}
-			{#each displayTree as node, rootIndex (node.path)}
-				<TreeNodeComponent
-					{node}
-					indexPath={[rootIndex]}
-					{api}
-					{onFileSelect}
-					{selectedPath}
-				/>
-			{/each}
-		{/if}
-	</ul>
+
+	<div class="flex-1 min-h-0 tree-host" bind:this={mount}></div>
 </nav>
+
+<style>
+	.tree-host {
+		color-scheme: light;
+		--trees-fg-override: var(--text-primary);
+		--trees-bg-override: var(--bg-secondary);
+		--trees-border-color-override: var(--border-color);
+		--trees-selected-bg-override: var(--bg-tertiary);
+	}
+
+	:global([data-theme='dark']) .tree-host {
+		color-scheme: dark;
+	}
+</style>
