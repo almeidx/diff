@@ -149,7 +149,7 @@
 				<div class="overflow-hidden w-full">
 					{#if file.isBinary}
 						<div class="p-6 text-center text-text-muted italic">Binary file not shown</div>
-					{:else if file.patch === ''}
+					{:else if !file.patch}
 						<div class="p-6 text-center text-text-muted italic">
 							{#if file.status === 'added'}
 								Empty file added

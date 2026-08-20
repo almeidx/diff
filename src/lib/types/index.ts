@@ -31,6 +31,7 @@ export interface DiffStats {
 	deletions: number;
 }
 
+/** Cached for 24h; bump DIFF_SCHEMA_VERSION in server/diff/cache-key.ts when this changes shape. */
 export interface DiffResult {
 	packageType: PackageType;
 	packageName: string;

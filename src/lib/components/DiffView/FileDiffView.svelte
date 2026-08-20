@@ -41,7 +41,9 @@
 			created.render({ fileDiff, containerWrapper: mount });
 			appliedKey = JSON.stringify(initial);
 			instance = created;
-		})();
+		})().catch((error) => {
+			console.error(`Failed to render diff for ${file.path}`, error);
+		});
 
 		return () => {
 			disposed = true;
