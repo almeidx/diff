@@ -31,6 +31,14 @@ export interface DiffStats {
 	deletions: number;
 }
 
+/** Identifies the comparison a diff came from, so the client can fetch more of it. */
+export interface DiffSource {
+	packageType: PackageType;
+	packageName: string;
+	fromVersion: string;
+	toVersion: string;
+}
+
 /** Cached for 24h; bump DIFF_SCHEMA_VERSION in server/diff/cache-key.ts when this changes shape. */
 export interface DiffResult {
 	packageType: PackageType;
