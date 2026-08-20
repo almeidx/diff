@@ -1,4 +1,4 @@
-import type { DiffFile, TreeNode, DiffStatus } from "$lib/types/index.js";
+import type { DiffFile, TreeNode } from "$lib/types/index.js";
 
 export function buildFileTree(files: DiffFile[]): TreeNode[] {
 	const root: TreeNode = {
@@ -60,45 +60,6 @@ function sortTreeNodes(nodes: TreeNode[]): TreeNode[] {
 		});
 }
 
-interface PropagateResult {
-	nodes: TreeNode[];
-	folderPaths: string[];
-}
-
-export function propagateStatusWithFolders(nodes: TreeNode[]): PropagateResult {
-	const folderPaths: string[] = [];
-
-	const updatedNodes = nodes.map((node) => {
-		if (node.isDirectory) {
-			folderPaths.push(node.path);
-
-			if (node.children) {
-				const childResult = propagateStatusWithFolders(node.children);
-				folderPaths.push(...childResult.folderPaths);
-
-				const statuses = new Set<DiffStatus>();
-				for (const child of childResult.nodes) {
-					if (child.status) {
-						statuses.add(child.status);
-					}
-				}
-
-				let status: DiffStatus | undefined;
-				if (statuses.size === 1) {
-					status = Array.from(statuses)[0];
-				} else if (statuses.size > 1) {
-					status = "modified";
-				}
-
-				return { ...node, children: childResult.nodes, status };
-			}
-		}
-		return node;
-	});
-
-	return { nodes: updatedNodes, folderPaths };
-}
-
 export function sortFilesLikeTree(files: DiffFile[]): DiffFile[] {
 	const tree = buildFileTree(files);
 	const orderedPaths = flattenTreePaths(tree);
@@ -118,32 +79,5 @@ export function flattenTreePaths(nodes: TreeNode[]): string[] {
 			paths.push(node.path);
 		}
 	}
-	return paths;
-}
-
-export function getSingleChildFolderPaths(nodes: TreeNode[]): string[] {
-	const paths: string[] = [];
-
-	function traverse(nodeList: TreeNode[]) {
-		if (nodeList.length === 1 && nodeList[0].isDirectory) {
-			const node = nodeList[0];
-			paths.push(node.path);
-			if (node.children) {
-				traverse(node.children);
-			}
-		} else {
-			for (const node of nodeList) {
-				if (node.isDirectory && node.children) {
-					const folderChildren = node.children.filter((c) => c.isDirectory);
-					if (folderChildren.length === 1 && node.children.length === 1) {
-						paths.push(folderChildren[0].path);
-						traverse(folderChildren[0].children || []);
-					}
-				}
-			}
-		}
-	}
-
-	traverse(nodes);
 	return paths;
 }

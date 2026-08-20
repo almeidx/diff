@@ -64,6 +64,7 @@ The app will be available at `http://localhost:5173`.
 - [fflate](https://github.com/101arrowz/fflate) - Fast zip/gzip decompression
 - [diff-match-patch](https://github.com/google/diff-match-patch) - Diff algorithm
 - [@pierre/diffs](https://diffs.com/) - Diff rendering and syntax highlighting
+- [@pierre/trees](https://trees.software/) - File tree navigator
 
 ## Limits
 
