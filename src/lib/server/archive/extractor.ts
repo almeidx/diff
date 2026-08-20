@@ -3,7 +3,13 @@ import type { UnzipFile } from "fflate";
 import { dev } from "$app/environment";
 import { shouldInclude, isBinaryContent } from "../diff/filters.js";
 import type { FileEntry, FileTree } from "$lib/types/index.js";
-import { getCommonZipRoot, normalizeArchivePath, stripZipRoot } from "./path.js";
+import {
+	createTarRootStripper,
+	getCommonZipRoot,
+	isDirectoryEntry,
+	normalizeArchivePath,
+	stripZipRoot,
+} from "./path.js";
 import { fetchWithTimeout } from "$lib/server/http.js";
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -124,6 +130,7 @@ function extractTgzFromBuffer(data: Uint8Array): FileTree {
 
 function extractTar(data: Uint8Array): FileTree {
 	const files = new Map<string, FileEntry>();
+	const stripRoot = createTarRootStripper();
 	let offset = 0;
 	let totalIncludedSize = 0;
 
@@ -143,7 +150,7 @@ function extractTar(data: Uint8Array): FileTree {
 			name = `${prefix}/${name}`;
 		}
 
-		const normalizedPath = normalizeArchivePath(name, "tgz");
+		const normalizedPath = stripRoot(name);
 		const size = parseTarSize(header.subarray(124, 136));
 		const typeFlag = header[156];
 
@@ -351,8 +358,8 @@ class ZipStreamExtractor {
 	private prepareFile(file: UnzipFile): PreparedZipEntry | null {
 		if (!dev && this.pendingEntries.length >= MAX_FILES) return null;
 
-		const normalizedPath = normalizeArchivePath(file.name, "zip");
-		if (!normalizedPath || normalizedPath.endsWith("/")) {
+		const normalizedPath = normalizeArchivePath(file.name);
+		if (!normalizedPath || isDirectoryEntry(file.name)) {
 			return null;
 		}
 
@@ -409,6 +416,7 @@ class StreamingBinaryDetector {
 
 class TarStreamExtractor {
 	private files = new Map<string, FileEntry>();
+	private readonly stripRoot = createTarRootStripper();
 	private headerBuffer = new Uint8Array(TAR_BLOCK_SIZE);
 	private headerOffset = 0;
 	private currentEntry: TarEntryState | null = null;
@@ -491,7 +499,7 @@ class TarStreamExtractor {
 			name = `${prefix}/${name}`;
 		}
 
-		const normalizedPath = normalizeArchivePath(name, "tgz");
+		const normalizedPath = this.stripRoot(name);
 		const size = parseTarSize(header.subarray(124, 136));
 		const typeFlag = header[156];
 		const paddedSize = Math.ceil(size / TAR_BLOCK_SIZE) * TAR_BLOCK_SIZE;
