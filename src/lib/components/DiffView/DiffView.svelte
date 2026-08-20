@@ -27,15 +27,7 @@
 		const stats = new Map<string, { additions: number; deletions: number }>();
 
 		for (const file of sortedFiles) {
-			let additions = 0;
-			let deletions = 0;
-			for (const hunk of file.hunks) {
-				for (const line of hunk.lines) {
-					if (line.type === 'add') additions++;
-					else if (line.type === 'delete') deletions++;
-				}
-			}
-			stats.set(file.path, { additions, deletions });
+			stats.set(file.path, { additions: file.additions, deletions: file.deletions });
 		}
 
 		return stats;
@@ -157,7 +149,7 @@
 				<div class="overflow-hidden w-full">
 					{#if file.isBinary}
 						<div class="p-6 text-center text-text-muted italic">Binary file not shown</div>
-					{:else if file.hunks.length === 0}
+					{:else if file.patch === ''}
 						<div class="p-6 text-center text-text-muted italic">
 							{#if file.status === 'added'}
 								Empty file added

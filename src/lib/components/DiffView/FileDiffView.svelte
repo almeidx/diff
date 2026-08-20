@@ -2,7 +2,6 @@
 	import { untrack } from 'svelte';
 	import type { FileDiff as FileDiffInstance, FileDiffOptions } from '@pierre/diffs';
 	import type { DiffFile } from '$lib/types/index.js';
-	import { toGitPatch } from '$lib/diff/patch';
 	import { theme, viewMode, wordWrap } from '$lib/stores/ui';
 
 	interface Props {
@@ -25,7 +24,7 @@
 
 	$effect(() => {
 		const mount = container;
-		const patch = toGitPatch(file);
+		const patch = file.patch;
 		if (!mount) return;
 
 		let disposed = false;

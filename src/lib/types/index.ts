@@ -14,33 +14,15 @@ export interface FileTree {
 
 export type DiffStatus = "added" | "deleted" | "modified";
 
-export interface DiffLine {
-	type: "context" | "add" | "delete";
-	oldNumber: number | null;
-	newNumber: number | null;
-	content: string;
-}
-
-export interface DiffHunk {
-	oldStart: number;
-	oldCount: number;
-	newStart: number;
-	newCount: number;
-	lines: DiffLine[];
-}
-
-export function formatHunkHeader(hunk: DiffHunk): string {
-	const oldRange = hunk.oldCount === 1 ? `${hunk.oldStart}` : `${hunk.oldStart},${hunk.oldCount}`;
-	const newRange = hunk.newCount === 1 ? `${hunk.newStart}` : `${hunk.newStart},${hunk.newCount}`;
-	return `@@ -${oldRange} +${newRange} @@`;
-}
-
 export interface DiffFile {
 	path: string;
 	status: DiffStatus;
 	isBinary: boolean;
 	isMinified: boolean;
-	hunks: DiffHunk[];
+	/** Git-format patch for this file. Empty when there is nothing renderable. */
+	patch: string;
+	additions: number;
+	deletions: number;
 }
 
 export interface DiffStats {
