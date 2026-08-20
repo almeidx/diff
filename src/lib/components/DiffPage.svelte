@@ -33,6 +33,17 @@
 		onNavigate
 	}: Props = $props();
 
+	const source = $derived(
+		diff
+			? {
+					packageType: diff.packageType,
+					packageName: diff.packageName,
+					fromVersion: diff.fromVersion,
+					toVersion: diff.toVersion
+				}
+			: undefined
+	);
+
 	let selectedPath = $state<string | undefined>(undefined);
 	let isNavigating = $derived(!!$navigating);
 
@@ -148,7 +159,7 @@
 				/>
 			</aside>
 			<main class="flex-1 p-4 min-w-0 max-md:p-2 max-md:w-full max-md:box-border">
-				<DiffView files={diff.files} {selectedPath} />
+				<DiffView files={diff.files} {selectedPath} {source} />
 			</main>
 		</div>
 	{/if}

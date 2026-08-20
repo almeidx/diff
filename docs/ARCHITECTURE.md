@@ -20,7 +20,8 @@ Diff is a SvelteKit application deployed to Cloudflare Workers. It compares two 
   - streaming `.tgz` decompression and tar parsing
   - filtered zip extraction for WordPress archives
 - `src/lib/server/diff/*`
-  Diff engine producing hunks for the client renderer.
+  Diff engine producing patches for the client renderer, plus on-demand file
+  contents for context expansion.
 - `src/lib/components/*`
   UI components for tree navigation, stats, and diff rendering.
 
@@ -30,12 +31,15 @@ Diff is a SvelteKit application deployed to Cloudflare Workers. It compares two 
 2. `GET /api/versions` returns candidate versions.
 3. Route server load validates versions and computes/loads cached diff.
 4. Page renders file tree + diff view; UI state controls split/unified mode and wrapping.
+5. Expanding a collapsed region calls `GET /api/file-contents` for that file's full
+   contents on both sides. Patches only carry three lines of context, so the renderer
+   needs the whole file to reveal more.
 
 ## Caching
 
 `src/lib/server/cache.ts` uses Cloudflare Cache API when available.
 
-- Registry metadata and computed diffs are cached.
+- Registry metadata, computed diffs, and per-file contents are cached.
 - Local `pnpm dev` runs without Cache API, so cache calls fall back to direct fetch/compute.
 
 ## Performance Strategies

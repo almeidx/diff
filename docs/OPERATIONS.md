@@ -54,6 +54,7 @@ Key message types and fields:
 
 - `diff_loaded`: includes `packageType`, `packageName`, versions, diff stats, `durationMs`.
 - `diff_load_failed`: includes package/version context and serialized error.
+- `file_contents_loaded`: includes package/version context, `path`, `found`, `durationMs`.
 - `diff_invalid_version`: includes invalidity booleans for `fromVersion`/`toVersion`.
 - `request_rate_limited`: includes `path`, `method`, `ip`, `retryAfterSeconds`.
 - `csrf_validation_failed`: includes `path`, `method`, token presence flags, and IP.

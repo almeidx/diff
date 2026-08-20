@@ -1,14 +1,45 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { FileDiff as FileDiffInstance, FileDiffOptions } from '@pierre/diffs';
-	import type { DiffFile } from '$lib/types/index.js';
+	import type {
+		FileDiff as FileDiffInstance,
+		FileDiffMetadata,
+		FileDiffOptions,
+		FileDiffLoadedFiles
+	} from '@pierre/diffs';
+	import type { DiffFile, DiffSource } from '$lib/types/index.js';
 	import { theme, viewMode, wordWrap } from '$lib/stores/ui';
 
 	interface Props {
 		file: DiffFile;
+		source?: DiffSource;
 	}
 
-	let { file }: Props = $props();
+	let { file, source }: Props = $props();
+
+	async function loadDiffFiles(fileDiff: FileDiffMetadata): Promise<FileDiffLoadedFiles> {
+		if (!source) throw new Error('Cannot expand context without a diff source');
+
+		const params = new URLSearchParams({
+			type: source.packageType,
+			name: source.packageName,
+			from: source.fromVersion,
+			to: source.toVersion,
+			path: fileDiff.name
+		});
+
+		const response = await fetch(`/api/file-contents?${params}`);
+		if (!response.ok) throw new Error(`Could not load full contents of ${fileDiff.name}`);
+
+		const { oldContents, newContents } = (await response.json()) as {
+			oldContents: string;
+			newContents: string;
+		};
+
+		return {
+			oldFile: { name: fileDiff.prevName ?? fileDiff.name, contents: oldContents },
+			newFile: { name: fileDiff.name, contents: newContents }
+		};
+	}
 
 	let container = $state<HTMLDivElement | null>(null);
 	let instance = $state<FileDiffInstance | null>(null);
@@ -19,7 +50,8 @@
 		disableFileHeader: true,
 		overflow: $wordWrap ? 'wrap' : 'scroll',
 		theme: { dark: 'github-dark', light: 'github-light' },
-		themeType: $theme
+		themeType: $theme,
+		loadDiffFiles: source ? loadDiffFiles : undefined
 	});
 
 	$effect(() => {

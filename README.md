@@ -10,6 +10,7 @@ A web application for comparing different versions of npm packages and WordPress
 - Unified and split diff views
 - Syntax highlighting for common languages
 - Word-level diff highlighting within changed lines
+- Expandable context around changes, fetched on demand
 - File tree filtering and keyboard navigation
 - Dark/light theme support
 - Mobile responsive

@@ -150,6 +150,32 @@ test("selecting a file in the tree scrolls its diff into view", async ({ page })
 	await expect(lastFileBlock).toBeInViewport({ timeout: 15_000 });
 });
 
+test("expanding a collapsed region loads surrounding context", async ({ page }) => {
+	await page.goto("/npm/is-number/6.0.0...7.0.0");
+
+	await expect(page.getByRole("tree", { name: "Changed files tree" })).toBeVisible({ timeout: 30_000 });
+
+	const fileBlock = page.locator("#file-package-json");
+	const renderedLines = fileBlock.locator("[data-line-index]");
+	await expect(renderedLines.first()).toBeAttached({ timeout: 30_000 });
+
+	const linesBefore = await renderedLines.count();
+	expect(linesBefore).toBeGreaterThan(0);
+
+	const collapsedRegion = fileBlock.locator("[data-separator]", { hasText: /unmodified line/ }).first();
+	await expect(collapsedRegion).toBeVisible();
+
+	const expandButton = collapsedRegion.locator("[data-expand-button]").first();
+
+	const contentsResponse = page.waitForResponse(
+		(response) => response.url().includes("/api/file-contents") && response.status() === 200,
+	);
+	await expandButton.click();
+	await contentsResponse;
+
+	await expect.poll(async () => renderedLines.count(), { timeout: 15_000 }).toBeGreaterThan(linesBefore);
+});
+
 test("diff page file collapse/expand works", async ({ page }) => {
 	await page.goto("/npm/is-number/6.0.0...7.0.0");
 

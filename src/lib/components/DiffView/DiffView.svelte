@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { tick } from 'svelte';
-	import type { DiffFile } from '$lib/types/index.js';
+	import type { DiffFile, DiffSource } from '$lib/types/index.js';
 	import { collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
 	import { sortFilesLikeTree } from '$lib/utils/tree';
 	import FileDiffView from './FileDiffView.svelte';
@@ -12,9 +12,10 @@
 	interface Props {
 		files: DiffFile[];
 		selectedPath?: string;
+		source?: DiffSource;
 	}
 
-	let { files, selectedPath }: Props = $props();
+	let { files, selectedPath, source }: Props = $props();
 	let renderedCount = $state(INITIAL_RENDER_COUNT);
 	let loadMoreSentinel = $state<HTMLDivElement | null>(null);
 	let lastScrolledPath = $state<string | null>(null);
@@ -160,7 +161,7 @@
 							{/if}
 						</div>
 					{:else}
-						<FileDiffView {file} />
+						<FileDiffView {file} {source} />
 					{/if}
 				</div>
 			{/if}
