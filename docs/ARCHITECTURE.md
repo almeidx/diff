@@ -20,7 +20,7 @@ Diff is a SvelteKit application deployed to Cloudflare Workers. It compares two 
   - streaming `.tgz` decompression and tar parsing
   - filtered zip extraction for WordPress archives
 - `src/lib/server/diff/*`
-  Diff engine and word-diff computation.
+  Diff engine producing hunks for the client renderer.
 - `src/lib/components/*`
   UI components for tree navigation, stats, and diff rendering.
 

@@ -14,17 +14,11 @@ export interface FileTree {
 
 export type DiffStatus = "added" | "deleted" | "modified";
 
-export interface WordChange {
-	type: "equal" | "insert" | "delete";
-	text: string;
-}
-
 export interface DiffLine {
 	type: "context" | "add" | "delete";
 	oldNumber: number | null;
 	newNumber: number | null;
 	content: string;
-	wordDiff?: WordChange[];
 }
 
 export interface DiffHunk {

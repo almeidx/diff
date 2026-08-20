@@ -1,6 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import '$lib/highlight/prism-theme.css';
 	import { theme, type Theme } from '$lib/stores/ui';
 	import { browser } from '$app/environment';
 

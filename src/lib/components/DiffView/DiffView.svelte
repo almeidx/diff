@@ -2,10 +2,9 @@
 	import { browser } from '$app/environment';
 	import { tick } from 'svelte';
 	import type { DiffFile } from '$lib/types/index.js';
-	import { viewMode, collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
+	import { collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
 	import { sortFilesLikeTree } from '$lib/utils/tree';
-	import UnifiedDiff from './UnifiedDiff.svelte';
-	import SplitDiff from './SplitDiff.svelte';
+	import FileDiffView from './FileDiffView.svelte';
 
 	const INITIAL_RENDER_COUNT = 40;
 	const RENDER_BATCH_SIZE = 30;
@@ -168,10 +167,8 @@
 								No changes
 							{/if}
 						</div>
-					{:else if $viewMode === 'unified'}
-						<UnifiedDiff hunks={file.hunks} filePath={file.path} />
 					{:else}
-						<SplitDiff hunks={file.hunks} filePath={file.path} />
+						<FileDiffView {file} />
 					{/if}
 				</div>
 			{/if}

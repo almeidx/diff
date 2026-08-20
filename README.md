@@ -63,7 +63,7 @@ The app will be available at `http://localhost:5173`.
 - [Cloudflare Workers](https://workers.cloudflare.com/) - Edge runtime
 - [fflate](https://github.com/101arrowz/fflate) - Fast zip/gzip decompression
 - [diff-match-patch](https://github.com/google/diff-match-patch) - Diff algorithm
-- [Prism.js](https://prismjs.com/) - Syntax highlighting
+- [@pierre/diffs](https://diffs.com/) - Diff rendering and syntax highlighting
 
 ## Limits
 
