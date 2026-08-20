@@ -3,6 +3,7 @@ import type { PageServerLoad } from "./$types";
 import { wordpressRegistry } from "$lib/server/registries/wordpress";
 import { parseVersionRange } from "$lib/utils/versions";
 import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
+import { buildDiffCacheKey } from "$lib/server/diff/cache-key";
 import { isNotFoundError } from "$lib/server/errors";
 
 export const load: PageServerLoad = async ({ params, platform }) => {
@@ -37,7 +38,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 			fromVersion,
 			toVersion,
 			archiveFormat: "zip",
-			diffCacheKey: `diff:v2:wp:${slug}:${fromVersion}:${toVersion}`,
+			diffCacheKey: buildDiffCacheKey("wp", slug, fromVersion, toVersion),
 			waitUntil,
 		});
 	} catch (e) {

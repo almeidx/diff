@@ -4,6 +4,7 @@ import { npmRegistry } from "$lib/server/registries/npm";
 import { getCached } from "$lib/server/cache";
 import { parseVersionRange } from "$lib/utils/versions";
 import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
+import { buildDiffCacheKey } from "$lib/server/diff/cache-key";
 import { isNotFoundError } from "$lib/server/errors";
 import { fetchWithTimeout } from "$lib/server/http";
 
@@ -107,7 +108,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 			fromVersion,
 			toVersion,
 			archiveFormat: "tgz",
-			diffCacheKey: `diff:v2:npm:${packageName}:${fromVersion}:${toVersion}`,
+			diffCacheKey: buildDiffCacheKey("npm", packageName, fromVersion, toVersion),
 			waitUntil,
 		});
 	} catch (e) {
