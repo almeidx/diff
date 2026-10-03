@@ -1,7 +1,7 @@
 import type { Registry, WordPressPluginInfo } from "./types.js";
 import { getCached } from "../cache.js";
-import { compareVersions } from "$lib/utils/versions.js";
-import { fetchWithTimeout, assertSafeUpstreamUrl } from "$lib/server/http.js";
+import { compareVersions } from "#lib/utils/versions.js";
+import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/server/http.js";
 
 const WP_API = "https://api.wordpress.org/plugins/info/1.2/";
 const WP_DOWNLOADS = "https://downloads.wordpress.org/plugin";
@@ -26,9 +26,9 @@ export class WordPressRegistry implements Registry {
 					throw new Error(`Failed to fetch WordPress plugin: ${response.statusText}`);
 				}
 
-				const data = await response.json();
+				const data = (await response.json()) as WordPressPluginInfo | false | { error: string };
 
-				if (data === false || data.error) {
+				if (data === false || ("error" in data && data.error)) {
 					throw new Error(`Plugin "${slug}" not found on WordPress.org`);
 				}
 

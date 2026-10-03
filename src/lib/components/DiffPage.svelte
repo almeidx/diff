@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { navigating } from '$app/stores';
-	import type { DiffError, DiffFile, DiffResult } from '$lib/types/index.js';
-	import FileTree from '$lib/components/FileTree/FileTree.svelte';
-	import DiffView from '$lib/components/DiffView/DiffView.svelte';
-	import StatsBar from '$lib/components/StatsBar.svelte';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import ViewToggle from '$lib/components/ViewToggle.svelte';
-	import VersionSelector from '$lib/components/VersionSelector.svelte';
-	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+	import { navigating } from '$app/state';
+	import type { DiffError, DiffFile, DiffResult } from '#lib/types/index.js';
+	import FileTree from '#lib/components/FileTree/FileTree.svelte';
+	import DiffView from '#lib/components/DiffView/DiffView.svelte';
+	import StatsBar from '#lib/components/StatsBar.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import ViewToggle from '#lib/components/ViewToggle.svelte';
+	import VersionSelector from '#lib/components/VersionSelector.svelte';
+	import ScrollToTop from '#lib/components/ScrollToTop.svelte';
 
 	interface Props {
 		packageLabel: string;
@@ -45,7 +45,7 @@
 	);
 
 	let selectedPath = $state<string | undefined>(undefined);
-	let isNavigating = $derived(!!$navigating);
+	let isNavigating = $derived(navigating.to !== null);
 
 	$effect(() => {
 		diff;

@@ -73,6 +73,8 @@ If deploying with distributed rate limiting, bind a KV namespace named `RATE_LIM
 
 Without this binding, the app falls back to per-instance in-memory limits.
 
+Cloudflare bindings and runtime APIs are read from `cloudflare:workers` (not SvelteKit's `platform`). Their types live in the generated `worker-configuration.d.ts`; run `pnpm cf-typegen` after changing `wrangler.jsonc`.
+
 ## Pull Requests
 
 PR descriptions should include:

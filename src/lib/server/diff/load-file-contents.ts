@@ -1,8 +1,8 @@
-import type { PackageType } from "$lib/types/index.js";
-import type { Registry } from "$lib/server/registries/types.js";
-import { fetchAndExtract } from "$lib/server/archive/extractor";
-import { getCached } from "$lib/server/cache";
-import { logInfo } from "$lib/server/log.js";
+import type { PackageType } from "#lib/types/index.js";
+import type { Registry } from "#lib/server/registries/types.js";
+import { fetchAndExtract } from "#lib/server/archive/extractor.js";
+import { getCached } from "#lib/server/cache.js";
+import { logInfo } from "#lib/server/log.js";
 
 const FILE_CONTENTS_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 

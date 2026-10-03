@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as zagSwitch from '@zag-js/switch';
 	import { normalizeProps, useMachine } from '@zag-js/svelte';
-	import { theme } from '$lib/stores/ui';
+	import { theme } from '#lib/stores/ui.js';
 
 	const machineId = $props.id();
 

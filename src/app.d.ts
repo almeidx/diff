@@ -1,16 +1,10 @@
 /// <reference types="@sveltejs/kit" />
 
 declare global {
-	namespace App {
-		interface Platform {
-			env: {
-				RATE_LIMIT_KV?: {
-					get(key: string): Promise<string | null>;
-					put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-				};
-			};
-			context: ExecutionContext;
-			caches: CacheStorage;
+	namespace Cloudflare {
+		interface Env {
+			/** Optional binding; rate limiting falls back to in-memory counters when absent. */
+			RATE_LIMIT_KV?: KVNamespace;
 		}
 	}
 }

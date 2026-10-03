@@ -2,7 +2,7 @@
 	import * as zagSwitch from '@zag-js/switch';
 	import * as radioGroup from '@zag-js/radio-group';
 	import { normalizeProps, useMachine } from '@zag-js/svelte';
-	import { viewMode, wordWrap, type ViewMode } from '$lib/stores/ui';
+	import { viewMode, wordWrap, type ViewMode } from '#lib/stores/ui.js';
 
 	const machineId = $props.id();
 

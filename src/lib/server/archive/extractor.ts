@@ -1,8 +1,8 @@
 import { Gunzip, Unzip, UnzipInflate, gunzipSync } from "fflate";
 import type { UnzipFile } from "fflate";
-import { dev } from "$app/environment";
+import { dev } from "$app/env";
 import { shouldInclude, isBinaryContent } from "../diff/filters.js";
-import type { FileEntry, FileTree } from "$lib/types/index.js";
+import type { FileEntry, FileTree } from "#lib/types/index.js";
 import {
 	createTarRootStripper,
 	getCommonZipRoot,
@@ -10,7 +10,7 @@ import {
 	normalizeArchivePath,
 	stripZipRoot,
 } from "./path.js";
-import { fetchWithTimeout } from "$lib/server/http.js";
+import { fetchWithTimeout } from "#lib/server/http.js";
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB

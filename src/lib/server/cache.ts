@@ -1,4 +1,4 @@
-import { logDebug, logWarn, logError } from "$lib/server/log.js";
+import { logDebug, logWarn, logError } from "#lib/server/log.js";
 
 const CACHE_NAME = "diff-cache-v1";
 

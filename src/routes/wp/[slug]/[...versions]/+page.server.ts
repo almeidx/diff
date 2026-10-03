@@ -1,12 +1,13 @@
 import { error } from "@sveltejs/kit";
+import { waitUntil } from "cloudflare:workers";
 import type { PageServerLoad } from "./$types";
-import { wordpressRegistry } from "$lib/server/registries/wordpress";
-import { parseVersionRange } from "$lib/utils/versions";
-import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
-import { buildDiffCacheKey } from "$lib/server/diff/cache-key";
-import { isNotFoundError } from "$lib/server/errors";
+import { wordpressRegistry } from "#lib/server/registries/wordpress.js";
+import { parseVersionRange } from "#lib/utils/versions.js";
+import { loadDiffPageData } from "#lib/server/diff/load-diff-page.js";
+import { buildDiffCacheKey } from "#lib/server/diff/cache-key.js";
+import { isNotFoundError } from "#lib/server/errors.js";
 
-export const load: PageServerLoad = async ({ params, platform }) => {
+export const load: PageServerLoad = async ({ params }) => {
 	const { slug, versions: versionsPath } = params;
 
 	if (slug.length > 200 || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
@@ -19,11 +20,6 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 	}
 
 	const { fromVersion, toVersion } = parsed;
-	const waitUntil = platform?.context
-		? (promise: Promise<unknown>) => {
-				platform.context.waitUntil(promise);
-			}
-		: undefined;
 
 	if (fromVersion.length > 256 || toVersion.length > 256) {
 		error(400, "Version string too long");

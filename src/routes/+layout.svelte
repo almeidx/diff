@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import { theme, type Theme } from '$lib/stores/ui';
-	import { browser } from '$app/environment';
+	import { theme, type Theme } from '#lib/stores/ui.js';
+	import { browser } from '$app/env';
 
 	let { children } = $props();
 

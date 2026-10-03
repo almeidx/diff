@@ -1,5 +1,6 @@
 import type { RequestEvent } from "@sveltejs/kit";
-import { getClientIp } from "$lib/server/log.js";
+import { env } from "cloudflare:workers";
+import { getClientIp } from "#lib/server/log.js";
 
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60000;
@@ -7,11 +8,6 @@ const CLEANUP_INTERVAL_MS = 60000;
 
 const memoryIpCounts = new Map<string, { count: number; resetAt: number }>();
 let lastMemoryCleanup = Date.now();
-
-interface RateLimitKvNamespace {
-	get(key: string): Promise<string | null>;
-	put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-}
 
 export interface RateLimitResult {
 	allowed: boolean;
@@ -21,7 +17,7 @@ export interface RateLimitResult {
 export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResult> {
 	const ip = getClientIp(event.request);
 	const now = Date.now();
-	const kv = (event.platform?.env as { RATE_LIMIT_KV?: RateLimitKvNamespace } | undefined)?.RATE_LIMIT_KV;
+	const kv = env.RATE_LIMIT_KV;
 
 	if (kv) {
 		return checkKvRateLimit(kv, ip, now);
@@ -30,7 +26,7 @@ export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResu
 	return checkMemoryRateLimit(ip, now);
 }
 
-async function checkKvRateLimit(kv: RateLimitKvNamespace, ip: string, now: number): Promise<RateLimitResult> {
+async function checkKvRateLimit(kv: KVNamespace, ip: string, now: number): Promise<RateLimitResult> {
 	const windowId = Math.floor(now / WINDOW_MS);
 	const key = `rate:${windowId}:${ip}`;
 	const rawCount = await kv.get(key);

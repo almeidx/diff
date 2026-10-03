@@ -7,7 +7,7 @@ import type {
 	FileEntry,
 	FileTree,
 	PackageType,
-} from "$lib/types/index.js";
+} from "#lib/types/index.js";
 
 const CONTEXT_LINES = 3;
 

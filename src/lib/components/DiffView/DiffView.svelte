@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { tick } from 'svelte';
-	import type { DiffFile, DiffSource } from '$lib/types/index.js';
-	import { collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '$lib/stores/ui';
-	import { sortFilesLikeTree } from '$lib/utils/tree';
+	import type { DiffFile, DiffSource } from '#lib/types/index.js';
+	import { collapsedFiles, toggleFileCollapse, setCollapsedFiles } from '#lib/stores/ui.js';
+	import { sortFilesLikeTree } from '#lib/utils/tree.js';
 	import FileDiffView from './FileDiffView.svelte';
 
 	const INITIAL_RENDER_COUNT = 40;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DiffStats } from '$lib/types/index.js';
+	import type { DiffStats } from '#lib/types/index.js';
 
 	interface Props {
 		stats: DiffStats;

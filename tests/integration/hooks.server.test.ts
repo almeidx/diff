@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { handle } from "../../src/hooks.server";
-import * as rateLimit from "$lib/server/rate-limit";
+import { handle } from "../../src/hooks.server.js";
+import * as rateLimit from "#lib/server/rate-limit.js";
 
 interface TestEventOptions {
 	method?: string;
@@ -28,7 +28,6 @@ function createEvent(url: string, options: TestEventOptions = {}) {
 		url: new URL(url),
 		request: new Request(url, { method, headers: new Headers(headers) }),
 		cookies: createCookies(cookies),
-		platform: undefined,
 	} as any;
 }
 

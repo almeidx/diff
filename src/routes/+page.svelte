@@ -2,8 +2,8 @@
 	import { goto } from "$app/navigation";
 	import * as radioGroup from "@zag-js/radio-group";
 	import { normalizeProps, useMachine } from "@zag-js/svelte";
-	import ThemeToggle from "$lib/components/ThemeToggle.svelte";
-	import VersionSelector from "$lib/components/VersionSelector.svelte";
+	import ThemeToggle from "#lib/components/ThemeToggle.svelte";
+	import VersionSelector from "#lib/components/VersionSelector.svelte";
 
 	let packageType = $state<"npm" | "wp">("npm");
 	let packageName = $state("");
@@ -61,7 +61,7 @@
 		const contentType = response.headers.get("content-type") || "";
 		if (contentType.includes("application/json")) {
 			try {
-				const data = await response.clone().json();
+				const data = (await response.clone().json()) as { message?: unknown } | null;
 				if (typeof data?.message === "string" && data.message.trim()) {
 					return data.message;
 				}
@@ -91,7 +91,7 @@
 				throw new Error(await getResponseErrorMessage(response));
 			}
 
-			const data = await response.json();
+			const data = (await response.json()) as { versions: string[] };
 			versions = data.versions;
 
 			if (versions.length >= 2) {

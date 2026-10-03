@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { FileTree as FileTreeInstance, FileTreeRowDecoration, GitStatusEntry } from '@pierre/trees';
-	import type { DiffFile } from '$lib/types/index.js';
+	import type { DiffFile } from '#lib/types/index.js';
 
 	interface Props {
 		files: DiffFile[];
