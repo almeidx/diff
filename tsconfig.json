@@ -5,6 +5,5 @@
 		"strict": true,
 		"types": ["node", "$app/types"]
 	},
-	"include": ["src", "tests", "*"],
-	"exclude": [".svelte-kit", "dist", "build", "coverage", "playwright-report", "test-results", "wrangler-local-state"]
+	"include": ["src", "tests", "*.ts"]
 }

@@ -8,7 +8,7 @@
 	"scripts": {
 		"build": "vite build",
 		"build:typecheck": "pnpm cf-typegen && tsc --noEmit",
-		"cf-typegen": "wrangler types",
+		"cf-typegen": "wrangler types && node scripts/cf-typegen.mjs",
 		"check": "pnpm cf-typegen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "pnpm cf-typegen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"deploy": "wrangler deploy",
