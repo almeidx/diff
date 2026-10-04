@@ -2,7 +2,6 @@
 .DS_Store
 .svelte-kit/
 .wrangler/
-worker-configuration.d.ts
 wrangler-local-state/
 dist/
 build/

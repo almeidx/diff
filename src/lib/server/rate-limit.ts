@@ -26,7 +26,7 @@ export async function checkRateLimit(event: RequestEvent): Promise<RateLimitResu
 	return checkMemoryRateLimit(ip, now);
 }
 
-async function checkKvRateLimit(kv: KVNamespace, ip: string, now: number): Promise<RateLimitResult> {
+async function checkKvRateLimit(kv: Cloudflare.KVNamespace, ip: string, now: number): Promise<RateLimitResult> {
 	const windowId = Math.floor(now / WINDOW_MS);
 	const key = `rate:${windowId}:${ip}`;
 	const rawCount = await kv.get(key);

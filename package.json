@@ -7,10 +7,9 @@
 	},
 	"scripts": {
 		"build": "vite build",
-		"build:typecheck": "pnpm cf-typegen && tsc --noEmit",
-		"cf-typegen": "wrangler types && node scripts/cf-typegen.mjs",
-		"check": "pnpm cf-typegen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "pnpm cf-typegen && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"build:typecheck": "tsc --noEmit",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"deploy": "wrangler deploy",
 		"dev": "vite dev",
 		"fmt": "oxfmt && oxlint --fix",
