@@ -1,14 +1,14 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
-const libDir = fileURLToPath(new URL("./src/lib", import.meta.url));
-const appEnvironmentStub = fileURLToPath(new URL("./tests/helpers/app-environment.stub.ts", import.meta.url));
+const appEnvStub = fileURLToPath(new URL("./tests/helpers/app-env.stub.ts", import.meta.url));
+const cloudflareWorkersStub = fileURLToPath(new URL("./tests/helpers/cloudflare-workers.stub.ts", import.meta.url));
 
 export default defineConfig({
 	resolve: {
 		alias: {
-			$lib: libDir,
-			"$app/environment": appEnvironmentStub,
+			"$app/env": appEnvStub,
+			"cloudflare:workers": cloudflareWorkersStub,
 		},
 	},
 	test: {

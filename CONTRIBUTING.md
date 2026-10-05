@@ -73,6 +73,8 @@ If deploying with distributed rate limiting, bind a KV namespace named `RATE_LIM
 
 Without this binding, the app falls back to per-instance in-memory limits.
 
+Cloudflare bindings and runtime APIs are read from `cloudflare:workers` (not SvelteKit's `platform`). The app declares the surface it uses (`env`, `waitUntil`, `KVNamespace`) by hand in `src/app.d.ts`; extend it when adopting more Workers APIs rather than pulling in generated runtime types.
+
 ## Pull Requests
 
 PR descriptions should include:

@@ -1,11 +1,11 @@
-import type { PackageType, DiffResult, DiffError } from "$lib/types/index.js";
-import type { Registry } from "$lib/server/registries/types.js";
-import { fetchAndExtract } from "$lib/server/archive/extractor";
-import { getCached } from "$lib/server/cache";
-import { formatInvalidVersionError } from "$lib/utils/versions";
+import type { PackageType, DiffResult, DiffError } from "#lib/types/index.js";
+import type { Registry } from "#lib/server/registries/types.js";
+import { fetchAndExtract } from "#lib/server/archive/extractor.js";
+import { getCached } from "#lib/server/cache.js";
+import { formatInvalidVersionError } from "#lib/utils/versions.js";
 import { computeDiff } from "./engine.js";
-import { getErrorMessage } from "$lib/server/errors.js";
-import { logInfo, logWarn, logError } from "$lib/server/log.js";
+import { getErrorMessage } from "#lib/server/errors.js";
+import { logInfo, logWarn, logError } from "#lib/server/log.js";
 
 const DIFF_CACHE_TTL = 86400; // 24 hours (versions are immutable)
 

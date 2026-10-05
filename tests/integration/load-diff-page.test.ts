@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FileTree } from "$lib/types/index.js";
-import type { Registry } from "$lib/server/registries/types.js";
-import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
-import * as extractor from "$lib/server/archive/extractor";
+import type { FileTree } from "#lib/types/index.js";
+import type { Registry } from "#lib/server/registries/types.js";
+import { loadDiffPageData } from "#lib/server/diff/load-diff-page.js";
+import * as extractor from "#lib/server/archive/extractor.js";
 
 function createTree(path: string, content: string): FileTree {
 	return {

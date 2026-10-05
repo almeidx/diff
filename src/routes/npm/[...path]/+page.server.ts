@@ -1,12 +1,13 @@
 import { error } from "@sveltejs/kit";
+import { waitUntil } from "cloudflare:workers";
 import type { PageServerLoad } from "./$types";
-import { npmRegistry } from "$lib/server/registries/npm";
-import { getCached } from "$lib/server/cache";
-import { parseVersionRange } from "$lib/utils/versions";
-import { loadDiffPageData } from "$lib/server/diff/load-diff-page";
-import { buildDiffCacheKey } from "$lib/server/diff/cache-key";
-import { isNotFoundError } from "$lib/server/errors";
-import { fetchWithTimeout } from "$lib/server/http";
+import { npmRegistry } from "#lib/server/registries/npm.js";
+import { getCached } from "#lib/server/cache.js";
+import { parseVersionRange } from "#lib/utils/versions.js";
+import { loadDiffPageData } from "#lib/server/diff/load-diff-page.js";
+import { buildDiffCacheKey } from "#lib/server/diff/cache-key.js";
+import { isNotFoundError } from "#lib/server/errors.js";
+import { fetchWithTimeout } from "#lib/server/http.js";
 
 const COMPARE_CACHE_TTL = 86400; // 24 hours
 const GITHUB_ALLOWED_HOSTS = ["api.github.com"];
@@ -81,7 +82,7 @@ async function resolveCompareUrl(
 	}
 }
 
-export const load: PageServerLoad = async ({ params, platform }) => {
+export const load: PageServerLoad = async ({ params }) => {
 	const parsed = parsePath(params.path);
 
 	if (!parsed) {
@@ -89,11 +90,6 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 	}
 
 	const { packageName, fromVersion, toVersion } = parsed;
-	const waitUntil = platform?.context
-		? (promise: Promise<unknown>) => {
-				platform.context.waitUntil(promise);
-			}
-		: undefined;
 
 	if (packageName.length > 214 || fromVersion.length > 256 || toVersion.length > 256) {
 		error(400, "Package name or version string too long");

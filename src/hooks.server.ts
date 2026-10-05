@@ -1,6 +1,6 @@
-import type { Handle } from "@sveltejs/kit";
-import { checkRateLimit } from "$lib/server/rate-limit";
-import { logWarn, getClientIp } from "$lib/server/log.js";
+import type { Handle } from "@sveltejs/kit/hooks";
+import { checkRateLimit } from "#lib/server/rate-limit.js";
+import { logWarn, getClientIp } from "#lib/server/log.js";
 
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";

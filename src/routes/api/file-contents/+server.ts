@@ -1,15 +1,16 @@
-import { json, error, isHttpError } from "@sveltejs/kit";
+import { error, isHttpError } from "@sveltejs/kit";
+import { waitUntil } from "cloudflare:workers";
 import type { RequestHandler } from "./$types";
-import { npmRegistry } from "$lib/server/registries/npm";
-import { wordpressRegistry } from "$lib/server/registries/wordpress";
-import { loadFileContents } from "$lib/server/diff/load-file-contents";
-import { getErrorMessage, isNotFoundError } from "$lib/server/errors";
+import { npmRegistry } from "#lib/server/registries/npm.js";
+import { wordpressRegistry } from "#lib/server/registries/wordpress.js";
+import { loadFileContents } from "#lib/server/diff/load-file-contents.js";
+import { getErrorMessage, isNotFoundError } from "#lib/server/errors.js";
 
 const MAX_NAME_LENGTH = 300;
 const MAX_VERSION_LENGTH = 256;
 const MAX_PATH_LENGTH = 1000;
 
-export const GET: RequestHandler = async ({ url, platform }) => {
+export const GET: RequestHandler = async ({ url }) => {
 	const type = url.searchParams.get("type");
 	const name = url.searchParams.get("name")?.trim();
 	const fromVersion = url.searchParams.get("from")?.trim();
@@ -32,12 +33,6 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		error(400, "Version string or file path too long");
 	}
 
-	const waitUntil = platform?.context
-		? (promise: Promise<unknown>) => {
-				platform.context.waitUntil(promise);
-			}
-		: undefined;
-
 	try {
 		const contents = await loadFileContents({
 			registry: type === "npm" ? npmRegistry : wordpressRegistry,
@@ -54,7 +49,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 			error(404, "File contents are not available for expansion");
 		}
 
-		return json(contents);
+		return Response.json(contents);
 	} catch (e) {
 		if (isHttpError(e)) throw e;
 

@@ -1,4 +1,4 @@
-import type { PackageType } from "$lib/types/index.js";
+import type { PackageType } from "#lib/types/index.js";
 
 /**
  * Identifies the cached `DiffResult` payload.

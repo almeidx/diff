@@ -1,4 +1,4 @@
-import type { DiffFile, TreeNode } from "$lib/types/index.js";
+import type { DiffFile, TreeNode } from "#lib/types/index.js";
 
 export function buildFileTree(files: DiffFile[]): TreeNode[] {
 	const root: TreeNode = {

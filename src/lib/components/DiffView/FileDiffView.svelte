@@ -6,8 +6,8 @@
 		FileDiffOptions,
 		FileDiffLoadedFiles
 	} from '@pierre/diffs';
-	import type { DiffFile, DiffSource } from '$lib/types/index.js';
-	import { theme, viewMode, wordWrap } from '$lib/stores/ui';
+	import type { DiffFile, DiffSource } from '#lib/types/index.js';
+	import { theme, viewMode, wordWrap } from '#lib/stores/ui.js';
 
 	interface Props {
 		file: DiffFile;

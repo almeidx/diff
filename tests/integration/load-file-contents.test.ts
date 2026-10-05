@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { FileEntry, FileTree } from "$lib/types/index.js";
-import type { Registry } from "$lib/server/registries/types.js";
-import { loadFileContents } from "$lib/server/diff/load-file-contents";
-import * as extractor from "$lib/server/archive/extractor";
+import type { FileEntry, FileTree } from "#lib/types/index.js";
+import type { Registry } from "#lib/server/registries/types.js";
+import { loadFileContents } from "#lib/server/diff/load-file-contents.js";
+import * as extractor from "#lib/server/archive/extractor.js";
 
 function entry(path: string, content: string | null, overrides: Partial<FileEntry> = {}): FileEntry {
 	return {

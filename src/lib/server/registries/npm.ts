@@ -1,7 +1,7 @@
 import type { Registry, NpmPackageMetadata } from "./types.js";
 import { getCached } from "../cache.js";
-import { compareVersions } from "$lib/utils/versions.js";
-import { fetchWithTimeout, assertSafeUpstreamUrl } from "$lib/server/http.js";
+import { compareVersions } from "#lib/utils/versions.js";
+import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/server/http.js";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const METADATA_TTL = 300; // 5 minutes
