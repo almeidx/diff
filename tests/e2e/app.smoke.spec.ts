@@ -1,13 +1,22 @@
 import { expect, test } from "@playwright/test";
 
 test("home page renders with hardened headers and accessible controls", async ({ page }) => {
+	// "/" is prerendered; security headers come from static/_headers deployed via wrangler.
 	const response = await page.goto("/");
 
 	expect(response).not.toBeNull();
+	expect(response!.status()).toBe(200);
 	const headers = response!.headers();
-	expect(headers["content-security-policy"]).toContain("default-src 'self'");
+	expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
 	expect(headers["x-content-type-options"]).toBe("nosniff");
 	expect(headers["x-frame-options"]).toBe("DENY");
+	expect(headers["permissions-policy"]).toContain("camera=()");
+	expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+
+	// Kit's script CSP is emitted as a <meta> tag on the document itself.
+	const kitCspMeta = page.locator('meta[http-equiv="Content-Security-Policy"]');
+	await expect(kitCspMeta).toHaveCount(1);
+	expect(await kitCspMeta.getAttribute("content")).toContain("default-src 'self'");
 
 	await expect(page.getByRole("heading", { name: "Compare package versions" })).toBeVisible();
 	await expect(page).toHaveTitle(/Diff/i);
@@ -17,17 +26,6 @@ test("home page renders with hardened headers and accessible controls", async ({
 	await expect(page.getByRole("button", { name: "Compare versions" })).toBeVisible();
 	await expect(page.locator("label", { hasText: "Package name" })).toBeVisible();
 	await expect(page.locator("#package-name")).toHaveAttribute("placeholder", /lodash/i);
-});
-
-test("CSRF cookie is set with correct attributes", async ({ page }) => {
-	await page.goto("/");
-
-	const cookies = await page.context().cookies();
-	const csrfCookie = cookies.find((c) => c.name === "csrf_token");
-	expect(csrfCookie).toBeDefined();
-	expect(csrfCookie!.sameSite).toBe("Strict");
-	expect(csrfCookie!.httpOnly).toBe(false);
-	expect(csrfCookie!.value.length).toBeGreaterThanOrEqual(32);
 });
 
 test("package type radios update the form labels", async ({ page }) => {
@@ -46,7 +44,12 @@ test("version fetch flow exposes combobox selectors", async ({ page }) => {
 	await page.goto("/");
 
 	await page.locator("#package-name").fill("lodash");
+	// The button is enabled once the client bundle has hydrated.
+	await expect(page.getByRole("button", { name: "Load versions" })).toBeEnabled();
 	await page.getByRole("button", { name: "Load versions" }).click();
+
+	// Versions are fetched through the Web Worker; an aria-live region announces completion.
+	await expect(page.locator("[aria-live]").filter({ hasText: /Loaded \d+ versions/ })).toBeVisible({ timeout: 30_000 });
 
 	const fromCombobox = page.getByRole("combobox", { name: "From version" });
 	const toCombobox = page.getByRole("combobox", { name: "To version" });
@@ -82,11 +85,14 @@ test("diff page exposes keyboard-accessible file tree", async ({ page }) => {
 });
 
 test("invalid compare URLs return error pages", async ({ page }) => {
-	await page.goto("/npm/react");
+	// Deep links are served the SPA shell with HTTP 404; the error UI renders client-side.
+	const response = await page.goto("/npm/react");
+	expect(response!.status()).toBe(404);
 	await expect(page.getByRole("heading", { level: 1 })).toHaveText("400");
 	await expect(page.getByText("Invalid URL format. Expected: /npm/package/version1...version2")).toBeVisible();
 
-	await page.goto("/wp/akismet/not-a-range");
+	const wpResponse = await page.goto("/wp/akismet/not-a-range");
+	expect(wpResponse!.status()).toBe(404);
 	await expect(page.getByRole("heading", { level: 1 })).toHaveText("400");
 	await expect(page.getByText("Invalid URL format. Expected: /wp/plugin-slug/version1...version2")).toBeVisible();
 });
@@ -151,27 +157,28 @@ test("selecting a file in the tree scrolls its diff into view", async ({ page })
 });
 
 test("expanding a collapsed region loads surrounding context", async ({ page }) => {
-	await page.goto("/npm/is-number/6.0.0...7.0.0");
+	// chalk 4.1.2...5.0.0 has expandable hunks (ms 2.1.2...2.1.3 does not).
+	await page.goto("/npm/chalk/4.1.2...5.0.0");
 
 	await expect(page.getByRole("tree", { name: "Changed files tree" })).toBeVisible({ timeout: 30_000 });
 
-	const fileBlock = page.locator("#file-package-json");
+	const fileBlock = page
+		.locator("[id^='file-']")
+		.filter({ has: page.locator("[data-expand-button]") })
+		.first();
+	await expect(fileBlock).toBeVisible({ timeout: 30_000 });
+
 	const renderedLines = fileBlock.locator("[data-line-index]");
 	await expect(renderedLines.first()).toBeAttached({ timeout: 30_000 });
 
 	const linesBefore = await renderedLines.count();
 	expect(linesBefore).toBeGreaterThan(0);
 
-	const collapsedRegion = fileBlock.locator("[data-separator]", { hasText: /unmodified line/ }).first();
-	await expect(collapsedRegion).toBeVisible();
+	const expandButton = fileBlock.locator("[data-expand-button]").first();
+	await expect(expandButton).toBeVisible();
 
-	const expandButton = collapsedRegion.locator("[data-expand-button]").first();
-
-	const contentsResponse = page.waitForResponse(
-		(response) => response.url().includes("/api/file-contents") && response.status() === 200,
-	);
+	// Expansion loads surrounding context via the worker RPC (no /api routes anymore).
 	await expandButton.click();
-	await contentsResponse;
 
 	await expect.poll(async () => renderedLines.count(), { timeout: 15_000 }).toBeGreaterThan(linesBefore);
 });
