@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
-import { compare } from "#lib/compare/client.js";
+import { compareWithProgress } from "#lib/stores/progress.js";
 import { isNotFoundError } from "#lib/errors.js";
 import { parseVersionRange } from "#lib/utils/versions.js";
 
@@ -50,7 +50,7 @@ export const load: PageLoad = async ({ params }) => {
 
 	let result;
 	try {
-		result = await compare("npm", packageName, fromVersion, toVersion);
+		result = await compareWithProgress("npm", packageName, fromVersion, toVersion);
 	} catch (e) {
 		if (isNotFoundError(e)) {
 			error(404, `Package "${packageName}" not found on npm`);

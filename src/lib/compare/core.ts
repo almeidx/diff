@@ -1,4 +1,4 @@
-import type { FileContentsPair, FileTree, PackageType } from "#lib/types/index.js";
+import type { CompareProgress, FileContentsPair, FileTree, PackageType } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
 import { npmRegistry, wordpressRegistry } from "#lib/registries/index.js";
@@ -17,10 +17,16 @@ export function compare(
 	name: string,
 	fromVersion: string,
 	toVersion: string,
+	onProgress?: (progress: CompareProgress) => void,
 ): Promise<LoadDiffPageResult> {
 	// Worker message handlers run concurrently: an older comparison can finish
-	// after a newer one started. Only the newest compare may update the trees.
+	// after a newer one started. Only the newest compare may update the trees
+	// or emit progress.
 	const seq = ++compareSeq;
+	const emit = (progress: CompareProgress) => {
+		if (seq !== compareSeq) return;
+		onProgress?.(progress);
+	};
 	return loadDiffPageData({
 		registry: type === "npm" ? npmRegistry : wordpressRegistry,
 		packageType: type,
@@ -33,6 +39,7 @@ export function compare(
 			lastFromTree = fromTree;
 			lastToTree = toTree;
 		},
+		onProgress: onProgress ? emit : undefined,
 	});
 }
 

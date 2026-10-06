@@ -88,8 +88,18 @@ describe("loadDiffPageData integration", () => {
 		expect(result.diff.files[0]?.path).toBe("index.js");
 
 		expect(fetchAndExtractSpy).toHaveBeenCalledTimes(2);
-		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(1, "https://example.test/pkg-1.0.0.tgz", "tgz");
-		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(2, "https://example.test/pkg-2.0.0.tgz", "tgz");
+		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
+			1,
+			"https://example.test/pkg-1.0.0.tgz",
+			"tgz",
+			expect.any(Function),
+		);
+		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
+			2,
+			"https://example.test/pkg-2.0.0.tgz",
+			"tgz",
+			expect.any(Function),
+		);
 	});
 
 	it("returns fetch_error when archive extraction fails", async () => {

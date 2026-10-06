@@ -51,7 +51,21 @@ interface PreparedZipEntry {
 	isMinified: boolean;
 }
 
-export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promise<FileTree> {
+/** Cumulative compressed bytes read so far; totalBytes is null when the response has no length. */
+export type ArchiveProgress = (bytes: number, totalBytes: number | null) => void;
+
+function responseTotalBytes(response: Response): number | null {
+	const header = response.headers.get("content-length");
+	if (!header) return null;
+	const total = Number(header);
+	return Number.isFinite(total) && total >= 0 ? total : null;
+}
+
+export async function fetchAndExtract(
+	url: string,
+	format: "tgz" | "zip",
+	onProgress?: ArchiveProgress,
+): Promise<FileTree> {
 	const response = await fetchWithTimeout(url, { allowedHosts: ARCHIVE_ALLOWED_HOSTS, timeoutMs: 120_000 });
 
 	if (!response.ok) {
@@ -59,15 +73,16 @@ export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promi
 	}
 
 	if (format === "tgz") {
-		return extractTgzFromResponse(response);
+		return extractTgzFromResponse(response, onProgress);
 	}
 
-	return extractZipFromResponse(response);
+	return extractZipFromResponse(response, onProgress);
 }
 
-async function extractTgzFromResponse(response: Response): Promise<FileTree> {
+async function extractTgzFromResponse(response: Response, onProgress?: ArchiveProgress): Promise<FileTree> {
 	if (!response.body) {
 		const data = await readResponseBytes(response, MAX_ARCHIVE_SIZE);
+		onProgress?.(data.byteLength, data.byteLength);
 		return extractTgzFromBuffer(data);
 	}
 
@@ -77,6 +92,7 @@ async function extractTgzFromResponse(response: Response): Promise<FileTree> {
 		extractor.push(chunk);
 	};
 
+	const totalBytes = responseTotalBytes(response);
 	let compressedSize = 0;
 	const reader = response.body.getReader();
 
@@ -91,6 +107,7 @@ async function extractTgzFromResponse(response: Response): Promise<FileTree> {
 					`Package too large (${Math.round(compressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`,
 				);
 			}
+			onProgress?.(compressedSize, totalBytes);
 
 			gunzip.push(value, false);
 		}
@@ -193,9 +210,10 @@ function extractTar(data: Uint8Array): FileTree {
 	return { files };
 }
 
-async function extractZipFromResponse(response: Response): Promise<FileTree> {
+async function extractZipFromResponse(response: Response, onProgress?: ArchiveProgress): Promise<FileTree> {
 	if (!response.body) {
 		const data = await readResponseBytes(response, MAX_ARCHIVE_SIZE);
+		onProgress?.(data.byteLength, data.byteLength);
 		return extractZipFromBuffer(data);
 	}
 
@@ -203,6 +221,7 @@ async function extractZipFromResponse(response: Response): Promise<FileTree> {
 	const unzip = new Unzip((file) => extractor.handleFile(file));
 	unzip.register(UnzipInflate);
 
+	const totalBytes = responseTotalBytes(response);
 	let compressedSize = 0;
 	const reader = response.body.getReader();
 
@@ -217,6 +236,7 @@ async function extractZipFromResponse(response: Response): Promise<FileTree> {
 					`Package too large (${Math.round(compressedSize / 1024 / 1024)}MB). Maximum supported size is ${MAX_ARCHIVE_SIZE / 1024 / 1024}MB.`,
 				);
 			}
+			onProgress?.(compressedSize, totalBytes);
 
 			unzip.push(value, false);
 			extractor.throwIfFailed();

@@ -31,6 +31,18 @@ export interface DiffStats {
 	deletions: number;
 }
 
+/** Stage of a running comparison, emitted as progress by the worker pipeline. */
+export type CompareStage = "metadata" | "download" | "diff";
+
+export interface CompareProgress {
+	stage: CompareStage;
+	/** Which archive a download event refers to. */
+	side?: "from" | "to";
+	bytes?: number;
+	totalBytes?: number | null;
+	done?: boolean;
+}
+
 /** Identifies the comparison a diff came from, so the client can fetch more of it. */
 export interface DiffSource {
 	packageType: PackageType;

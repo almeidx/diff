@@ -5,12 +5,13 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "./protocol.js";
-import type { FileContentsPair, PackageType } from "#lib/types/index.js";
+import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 
 type Pending = {
 	resolve: (value: VersionsPayload | ComparePayload | FileContentsPayload) => void;
 	reject: (error: Error) => void;
+	onProgress?: (progress: CompareProgress) => void;
 };
 
 let worker: Worker | null = null;
@@ -32,6 +33,10 @@ function getWorker(): Worker {
 		const response = event.data;
 		const entry = pending.get(response.id);
 		if (!entry) return;
+		if (response.kind === "progress") {
+			entry.onProgress?.(response.progress);
+			return;
+		}
 		pending.delete(response.id);
 		if (response.kind === "error") {
 			entry.reject(new Error(response.message));
@@ -71,8 +76,18 @@ export function compare(
 	name: string,
 	fromVersion: string,
 	toVersion: string,
+	onProgress?: (progress: CompareProgress) => void,
 ): Promise<LoadDiffPageResult> {
-	return call({ kind: "compare", type, name, fromVersion, toVersion }) as Promise<LoadDiffPageResult>;
+	const id = nextId++;
+	const { promise, resolve, reject } = Promise.withResolvers<VersionsPayload | ComparePayload | FileContentsPayload>();
+	pending.set(id, { resolve, reject, onProgress });
+	try {
+		getWorker().postMessage({ kind: "compare", type, name, fromVersion, toVersion, id } satisfies WorkerRequest);
+	} catch (error) {
+		pending.delete(id);
+		reject(error instanceof Error ? error : new Error(String(error)));
+	}
+	return promise as Promise<LoadDiffPageResult>;
 }
 
 export function fileContents(path: string): Promise<FileContentsPair | null> {

@@ -1,4 +1,4 @@
-import type { PackageType, DiffResult, DiffError, FileTree } from "#lib/types/index.js";
+import type { PackageType, DiffResult, DiffError, FileTree, CompareProgress } from "#lib/types/index.js";
 import type { Registry } from "#lib/registries/types.js";
 import { fetchAndExtract } from "#lib/archive/extractor.js";
 import { formatInvalidVersionError } from "#lib/utils/versions.js";
@@ -14,6 +14,8 @@ export interface LoadDiffPageOptions {
 	archiveFormat: "tgz" | "zip";
 	/** Optional observer for the extracted trees, used by the compare pipeline to keep file contents available. */
 	onTrees?: (fromTree: FileTree, toTree: FileTree) => void;
+	/** Optional progress observer for pipeline stages (metadata, downloads, diff). */
+	onProgress?: (progress: CompareProgress) => void;
 }
 
 interface LoadDiffPageSuccess {
@@ -29,8 +31,10 @@ interface LoadDiffPageError {
 export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
-	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, onTrees } = options;
+	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, onTrees, onProgress } = options;
+	onProgress?.({ stage: "metadata" });
 	const versions = await registry.getVersions(packageName);
+	onProgress?.({ stage: "metadata", done: true });
 	const availableVersions = new Set(versions);
 	const fromValid = availableVersions.has(fromVersion);
 	const toValid = availableVersions.has(toVersion);
@@ -52,9 +56,21 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 			registry.getDownloadUrl(packageName, toVersion),
 		]);
 
-		const fromTree = await fetchAndExtract(fromUrl, archiveFormat);
-		const toTree = await fetchAndExtract(toUrl, archiveFormat);
+		const fromTreePromise = fetchAndExtract(fromUrl, archiveFormat, (bytes, totalBytes) => {
+			onProgress?.({ stage: "download", side: "from", bytes, totalBytes });
+		}).then((tree) => {
+			onProgress?.({ stage: "download", side: "from", done: true });
+			return tree;
+		});
+		const toTreePromise = fetchAndExtract(toUrl, archiveFormat, (bytes, totalBytes) => {
+			onProgress?.({ stage: "download", side: "to", bytes, totalBytes });
+		}).then((tree) => {
+			onProgress?.({ stage: "download", side: "to", done: true });
+			return tree;
+		});
+		const [fromTree, toTree] = await Promise.all([fromTreePromise, toTreePromise]);
 
+		onProgress?.({ stage: "diff" });
 		const diff = computeDiff(fromTree, toTree, packageType, packageName, fromVersion, toVersion);
 		onTrees?.(fromTree, toTree);
 

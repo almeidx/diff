@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { theme, type Theme } from '#lib/stores/ui.js';
 	import { browser } from '$app/env';
+	import CompareProgress from '#lib/components/CompareProgress.svelte';
 
 	let { children } = $props();
 
@@ -28,3 +29,5 @@
 <div class="min-h-screen flex flex-col">
 	{@render children()}
 </div>
+
+<CompareProgress />

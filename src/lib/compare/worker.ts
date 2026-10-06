@@ -5,10 +5,14 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "./protocol.js";
+import type { CompareProgress } from "#lib/types/index.js";
 import { compare, fileContents, versions } from "./core.js";
 import { getErrorMessage } from "#lib/errors.js";
 
-export async function handleRequest(request: WorkerRequest): Promise<WorkerResponse> {
+export async function handleRequest(
+	request: WorkerRequest,
+	emitProgress?: (progress: CompareProgress) => void,
+): Promise<WorkerResponse> {
 	try {
 		let value: VersionsPayload | ComparePayload | FileContentsPayload;
 		switch (request.kind) {
@@ -16,7 +20,7 @@ export async function handleRequest(request: WorkerRequest): Promise<WorkerRespo
 				value = await versions(request.type, request.name);
 				break;
 			case "compare":
-				value = await compare(request.type, request.name, request.fromVersion, request.toVersion);
+				value = await compare(request.type, request.name, request.fromVersion, request.toVersion, emitProgress);
 				break;
 			case "fileContents":
 				value = await fileContents(request.path);
@@ -28,12 +32,21 @@ export async function handleRequest(request: WorkerRequest): Promise<WorkerRespo
 	}
 }
 
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-	const request = event.data;
-	const response = await handleRequest(request);
-	try {
-		self.postMessage(response);
-	} catch {
-		// Port closed or message failed to serialize; nothing to recover.
-	}
-};
+if (typeof self !== "undefined") {
+	self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+		const request = event.data;
+		const response = await handleRequest(request, (progress) => {
+			const message: WorkerResponse = { id: request.id, kind: "progress", progress };
+			try {
+				self.postMessage(message);
+			} catch {
+				// Port closed; nothing to recover.
+			}
+		});
+		try {
+			self.postMessage(response);
+		} catch {
+			// Port closed or message failed to serialize; nothing to recover.
+		}
+	};
+}
