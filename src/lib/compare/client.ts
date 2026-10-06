@@ -8,7 +8,10 @@ import type {
 import type { FileContentsPair, PackageType } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 
-type Pending = { resolve: (value: VersionsPayload | ComparePayload | FileContentsPayload) => void; reject: (error: Error) => void };
+type Pending = {
+	resolve: (value: VersionsPayload | ComparePayload | FileContentsPayload) => void;
+	reject: (error: Error) => void;
+};
 
 let worker: Worker | null = null;
 let nextId = 0;
@@ -43,7 +46,10 @@ function getWorker(): Worker {
 	return w;
 }
 
-function call(request: Omit<WorkerRequest, "id">): Promise<VersionsPayload | ComparePayload | FileContentsPayload> {
+/** Distributive so each request variant keeps its own fields (plain Omit would collapse the union). */
+type WithoutId<T> = T extends { id: number } ? Omit<T, "id"> : never;
+
+function call(request: WithoutId<WorkerRequest>): Promise<VersionsPayload | ComparePayload | FileContentsPayload> {
 	const id = nextId++;
 	const { promise, resolve, reject } = Promise.withResolvers<VersionsPayload | ComparePayload | FileContentsPayload>();
 	pending.set(id, { resolve, reject });

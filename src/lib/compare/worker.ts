@@ -1,4 +1,10 @@
-import type { ComparePayload, FileContentsPayload, VersionsPayload, WorkerRequest, WorkerResponse } from "./protocol.js";
+import type {
+	ComparePayload,
+	FileContentsPayload,
+	VersionsPayload,
+	WorkerRequest,
+	WorkerResponse,
+} from "./protocol.js";
 import { compare, fileContents, versions } from "./core.js";
 import { getErrorMessage } from "#lib/errors.js";
 
