@@ -1,3 +1,9 @@
+/**
+ * Thrown when an archive trips an extraction limit. Kept distinct from plain
+ * fetch failures so the UI can offer the user-opted "without limits" bypass.
+ */
+export class LimitExceededError extends Error {}
+
 export function isNotFoundError(error: unknown): boolean {
 	return error instanceof Error && /not found/i.test(error.message);
 }

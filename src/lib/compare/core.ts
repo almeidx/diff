@@ -1,6 +1,7 @@
 import type { CompareProgress, FileContentsPair, FileTree, PackageType } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
+import { DEFAULT_LIMITS, type ArchiveLimits } from "#lib/archive/limits.js";
 import { npmRegistry, wordpressRegistry } from "#lib/registries/index.js";
 
 /** Trees retained from the last successful compare(), so fileContents() never re-downloads archives. */
@@ -18,6 +19,7 @@ export function compare(
 	fromVersion: string,
 	toVersion: string,
 	onProgress?: (progress: CompareProgress) => void,
+	limits: ArchiveLimits = DEFAULT_LIMITS,
 ): Promise<LoadDiffPageResult> {
 	// Worker message handlers run concurrently: an older comparison can finish
 	// after a newer one started. Only the newest compare may update the trees
@@ -34,6 +36,7 @@ export function compare(
 		fromVersion,
 		toVersion,
 		archiveFormat: type === "npm" ? "tgz" : "zip",
+		limits,
 		onTrees: (fromTree, toTree) => {
 			if (seq !== compareSeq) return;
 			lastFromTree = fromTree;

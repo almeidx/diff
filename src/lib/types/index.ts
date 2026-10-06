@@ -86,4 +86,8 @@ export interface PackageError {
 	message: string;
 }
 
-export type DiffError = VersionError | PackageError | { type: "fetch_error"; message: string };
+export type DiffError =
+	| VersionError
+	| PackageError
+	| { type: "fetch_error"; message: string }
+	| { type: "limit_exceeded"; message: string };

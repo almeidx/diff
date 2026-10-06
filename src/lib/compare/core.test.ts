@@ -4,6 +4,7 @@ import type { FileTree } from "#lib/types/index.js";
 import type { LoadDiffPageOptions } from "#lib/diff/load-diff-page.js";
 import { compare, fileContents, getFileContentsPair } from "./core.js";
 import * as loadDiffPage from "#lib/diff/load-diff-page.js";
+import { DEFAULT_LIMITS, NO_LIMITS } from "#lib/archive/limits.js";
 
 function tree(entries: Array<{ path: string; content: string; isBinary?: boolean }>): FileTree {
 	return {
@@ -122,5 +123,29 @@ describe("compare tree retention", () => {
 
 		expect(await fileContents("b.js")).toEqual({ oldContents: "second-old", newContents: "second-new" });
 		expect(await fileContents("a.js")).toBeNull();
+	});
+});
+
+describe("compare limits", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("forwards the requested limits and defaults to loadDiffPageData", async () => {
+		const fakeResult = {
+			diff: { files: [], stats: { files: 0, insertions: 0, deletions: 0 } },
+			versions: [],
+		};
+		const loadDiffPageDataSpy = vi
+			.spyOn(loadDiffPage, "loadDiffPageData")
+			.mockReturnValue(Promise.resolve(fakeResult as never));
+
+		await compare("npm", "pkg", "1.0.0", "2.0.0", undefined, NO_LIMITS);
+		let options = loadDiffPageDataSpy.mock.calls.at(-1)![0] as LoadDiffPageOptions;
+		expect(options.limits).toBe(NO_LIMITS);
+
+		await compare("npm", "pkg", "1.0.0", "2.0.0");
+		options = loadDiffPageDataSpy.mock.calls.at(-1)![0] as LoadDiffPageOptions;
+		expect(options.limits).toBe(DEFAULT_LIMITS);
 	});
 });

@@ -48,14 +48,14 @@ There is no server cache — there is no server. Registry metadata is memoized i
 
 ## Operational Constraints
 
-Extraction guardrails are enforced client-side as constants in `src/lib/archive/extractor.ts` and are identical everywhere:
+Extraction guardrails are defined in `src/lib/archive/limits.ts`, enforced in `src/lib/archive/extractor.ts`, and identical everywhere:
 
-- 50MB max compressed archive
-- ~128MB max decompressed text budget
-- 5,000 max files per package
-- 1MB max per file
+- 100MB max compressed archive
+- ~256MB max decompressed budget
+- 10,000 max files per package
+- 2MB max per file (larger single files are skipped)
 
-The app enforces these guardrails before expensive decompression/diff work and surfaces user-readable errors when limits are exceeded.
+The app enforces these guardrails before expensive decompression/diff work and surfaces user-readable errors when limits are exceeded. Exceeding a limit produces a `limit_exceeded` error whose diff-page message warns about the cost and offers a "Compare without limits" action that reruns the comparison with every cap removed (`?limits=off`, preserved across version changes). That bypass is an explicit user opt-in: oversized extractions can exhaust tab memory or crash the page.
 
 ## Security
 

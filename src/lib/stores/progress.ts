@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 import type { CompareProgress, PackageType } from "#lib/types/index.js";
+import type { ArchiveLimits } from "#lib/archive/limits.js";
 import { compare } from "#lib/compare/client.js";
 
 export type ProgressStepStatus = "pending" | "active" | "done";
@@ -71,10 +72,11 @@ export async function compareWithProgress(
 	name: string,
 	fromVersion: string,
 	toVersion: string,
+	limits?: ArchiveLimits,
 ): Promise<LoadDiffPageResult> {
 	beginCompareProgress();
 	try {
-		return await compare(type, name, fromVersion, toVersion, applyCompareProgress);
+		return await compare(type, name, fromVersion, toVersion, applyCompareProgress, limits);
 	} finally {
 		endCompareProgress();
 	}

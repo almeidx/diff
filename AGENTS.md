@@ -15,9 +15,10 @@ miss while changing the code.
 - Any new upstream fetch host must be added to the CSP `connect-src` in
   `vite.config.ts`; security headers (including `frame-ancestors`) belong in
   `static/_headers`.
-- Archive handling is resource-sensitive. Preserve size/count limits, reject
-  unsafe paths, and filter unwanted or binary entries before doing expensive
-  decompression or diff work.
+- Archive handling is resource-sensitive. Keep the size/count limits in
+  `src/lib/archive/limits.ts` as the default — the only bypass is the explicit
+  user opt-in surfaced on the diff page — reject unsafe paths, and filter
+  unwanted or binary entries before doing expensive decompression or diff work.
 - Keep registry-specific fetching behind `src/lib/registries/`; shared
   comparison and archive code should not depend on npm- or WordPress-only
   response shapes.

@@ -20,6 +20,7 @@
 		diff?: DiffResult;
 		error?: DiffError;
 		onNavigate: (fromVersion: string, toVersion: string) => void;
+		onBypassLimits?: () => void;
 	}
 
 	let {
@@ -30,7 +31,8 @@
 		versions,
 		diff,
 		error,
-		onNavigate
+		onNavigate,
+		onBypassLimits
 	}: Props = $props();
 
 	// Resolved out-of-band so the GitHub lookup never blocks rendering the diff.
@@ -125,6 +127,21 @@
 							<span class="px-2 py-1 text-text-muted text-xs">+{error.availableVersions.length - 20} more</span>
 						{/if}
 					</div>
+				{:else if error.type === 'limit_exceeded'}
+					<h2 class="mb-2 text-diff-delete-text">Package exceeds size limits</h2>
+					<p class="mb-3 text-text-secondary">{error.message}</p>
+					<p class="mb-3 text-text-secondary">
+						You can still compare it: everything runs in your browser, but a package this large may use a lot of memory, freeze the tab, or crash the page.
+					</p>
+					{#if onBypassLimits}
+						<button
+							type="button"
+							class="flex items-center justify-center gap-2 px-4 py-2.5 border-none rounded-lg bg-link text-white text-sm font-medium transition-opacity hover:opacity-90"
+							onclick={onBypassLimits}
+						>
+							Compare without limits
+						</button>
+					{/if}
 				{:else}
 					<h2 class="mb-2 text-diff-delete-text">Failed to load diff</h2>
 					<p class="mb-3 text-text-secondary">{error.message}</p>

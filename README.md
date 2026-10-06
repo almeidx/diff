@@ -68,16 +68,16 @@ No server code is involved: registry metadata is memoized in-session only, and n
 
 ## Limits
 
-The following client-side guardrails apply in production builds:
+Comparisons run entirely in your browser, so the guardrails below exist to keep extraction and diffing from exhausting tab memory. They apply identically everywhere (local dev and production):
 
-- Maximum compressed archive size: 50MB
-- Maximum decompressed size: ~128MB
-- Maximum files per package: 5,000
-- Maximum file size: 1MB per file
+- Maximum compressed archive size: 100MB
+- Maximum decompressed size: ~256MB
+- Maximum files per package: 10,000
+- Maximum file size: 2MB per file (larger single files are skipped)
 
-These are constants in `src/lib/archive/extractor.ts`; adjust them there if you need larger packages. They are enforced before expensive decompression/diff work, with clear user-facing errors.
+When a package exceeds these, the diff page explains the tradeoff and offers a **Compare without limits** button that reruns the comparison with every cap removed (`?limits=off` in the URL, preserved across version changes). Skipping the limits is an explicit opt-in: oversized extractions can freeze the tab or crash the browser.
 
-`pnpm dev` skips these limits so you can diff larger packages locally.
+The defaults live in `src/lib/archive/limits.ts`.
 
 ## Performance Notes
 
@@ -88,7 +88,7 @@ These are constants in `src/lib/archive/extractor.ts`; adjust them there if you 
 ## Troubleshooting
 
 - `Package too large` errors:
-  The archive exceeds the client-side limits above. Adjust the constants in `src/lib/archive/extractor.ts` if your machine can handle larger packages.
+  The archive exceeds the client-side limits above. Use the **Compare without limits** option on the diff page if your machine can handle larger packages.
 - `Corrupted or truncated tar archive`:
   The upstream package tarball is malformed or incomplete; retry and confirm the package version exists.
 - No versions returned for package/plugin:

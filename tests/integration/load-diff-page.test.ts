@@ -4,6 +4,8 @@ import type { FileTree } from "#lib/types/index.js";
 import type { Registry } from "#lib/registries/types.js";
 import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
 import * as extractor from "#lib/archive/extractor.js";
+import { DEFAULT_LIMITS, NO_LIMITS } from "#lib/archive/limits.js";
+import { LimitExceededError } from "#lib/errors.js";
 
 function createTree(path: string, content: string): FileTree {
 	return {
@@ -93,12 +95,14 @@ describe("loadDiffPageData integration", () => {
 			"https://example.test/pkg-1.0.0.tgz",
 			"tgz",
 			expect.any(Function),
+			DEFAULT_LIMITS,
 		);
 		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
 			2,
 			"https://example.test/pkg-2.0.0.tgz",
 			"tgz",
 			expect.any(Function),
+			DEFAULT_LIMITS,
 		);
 	});
 
@@ -122,5 +126,51 @@ describe("loadDiffPageData integration", () => {
 		}
 		expect(result.error.type).toBe("fetch_error");
 		expect(result.error.message).toBe("upstream unavailable");
+	});
+
+	it("passes the configured limits through to extraction", async () => {
+		const fetchAndExtractSpy = vi
+			.spyOn(extractor, "fetchAndExtract")
+			.mockResolvedValue(createTree("index.js", "export const value = 1;\n"));
+
+		await loadDiffPageData({
+			registry: createRegistry(),
+			packageType: "npm",
+			packageName: "pkg",
+			fromVersion: "1.0.0",
+			toVersion: "2.0.0",
+			archiveFormat: "tgz",
+			limits: NO_LIMITS,
+		});
+
+		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
+			1,
+			"https://example.test/pkg-1.0.0.tgz",
+			"tgz",
+			expect.any(Function),
+			NO_LIMITS,
+		);
+	});
+
+	it("maps extraction limit errors to limit_exceeded", async () => {
+		vi.spyOn(extractor, "fetchAndExtract").mockRejectedValue(
+			new LimitExceededError("Package too large (60MB). Maximum supported size is 50MB."),
+		);
+
+		const result = await loadDiffPageData({
+			registry: createRegistry(),
+			packageType: "npm",
+			packageName: "pkg",
+			fromVersion: "1.0.0",
+			toVersion: "2.0.0",
+			archiveFormat: "tgz",
+		});
+
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			throw new Error("Expected error result");
+		}
+		expect(result.error.type).toBe("limit_exceeded");
+		expect(result.versions).toEqual(["2.0.0", "1.0.0"]);
 	});
 });
