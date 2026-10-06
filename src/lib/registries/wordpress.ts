@@ -1,41 +1,49 @@
 import type { Registry, WordPressPluginInfo } from "./types.js";
-import { getCached } from "../cache.js";
 import { compareVersions } from "#lib/utils/versions.js";
-import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/server/http.js";
+import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/http.js";
 
 const WP_API = "https://api.wordpress.org/plugins/info/1.2/";
 const WP_DOWNLOADS = "https://downloads.wordpress.org/plugin";
-const METADATA_TTL = 300; // 5 minutes
 const WORDPRESS_ALLOWED_HOSTS = ["api.wordpress.org", "downloads.wordpress.org"];
 
 export class WordPressRegistry implements Registry {
-	private async getMetadata(slug: string): Promise<WordPressPluginInfo> {
-		return getCached(
-			`wp:metadata:${slug}`,
-			async () => {
-				const url = new URL(WP_API);
-				url.searchParams.set("action", "plugin_information");
-				url.searchParams.set("request[slug]", slug);
+	private metadataMemo = new Map<string, Promise<WordPressPluginInfo>>();
 
-				const response = await fetchWithTimeout(url.toString(), {
-					headers: { Accept: "application/json" },
-					allowedHosts: WORDPRESS_ALLOWED_HOSTS,
-				});
+	private memo<T>(memo: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
+		const existing = memo.get(key);
+		if (existing) return existing;
 
-				if (!response.ok) {
-					throw new Error(`Failed to fetch WordPress plugin: ${response.statusText}`);
-				}
+		const promise = load().catch((error: unknown) => {
+			memo.delete(key);
+			throw error;
+		});
+		memo.set(key, promise);
+		return promise;
+	}
 
-				const data = (await response.json()) as WordPressPluginInfo | false | { error: string };
+	private getMetadata(slug: string): Promise<WordPressPluginInfo> {
+		return this.memo(this.metadataMemo, slug, async () => {
+			const url = new URL(WP_API);
+			url.searchParams.set("action", "plugin_information");
+			url.searchParams.set("request[slug]", slug);
 
-				if (data === false || ("error" in data && data.error)) {
-					throw new Error(`Plugin "${slug}" not found on WordPress.org`);
-				}
+			const response = await fetchWithTimeout(url.toString(), {
+				headers: { Accept: "application/json" },
+				allowedHosts: WORDPRESS_ALLOWED_HOSTS,
+			});
 
-				return data as WordPressPluginInfo;
-			},
-			{ ttlSeconds: METADATA_TTL },
-		);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch WordPress plugin: ${response.statusText}`);
+			}
+
+			const data = (await response.json()) as WordPressPluginInfo | false | { error: string };
+
+			if (data === false || ("error" in data && data.error)) {
+				throw new Error(`Plugin "${slug}" not found on WordPress.org`);
+			}
+
+			return data as WordPressPluginInfo;
+		});
 	}
 
 	async getVersions(slug: string): Promise<string[]> {

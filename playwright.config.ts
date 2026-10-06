@@ -14,7 +14,9 @@ export default defineConfig({
 		trace: "retain-on-failure",
 	},
 	webServer: {
-		command: "pnpm dev --host 127.0.0.1 --port 4173",
+		// Build then serve the real static-asset server (wrangler dev, assets-only):
+		// exercises prerendered /, SPA-shell 404 fallback and _headers deployment.
+		command: "pnpm build && pnpm exec wrangler dev --port 4173",
 		url: "http://127.0.0.1:4173",
 		reuseExistingServer: !process.env.CI,
 		timeout: 120_000,

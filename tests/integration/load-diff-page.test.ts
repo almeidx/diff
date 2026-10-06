@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FileTree } from "#lib/types/index.js";
-import type { Registry } from "#lib/server/registries/types.js";
-import { loadDiffPageData } from "#lib/server/diff/load-diff-page.js";
-import * as extractor from "#lib/server/archive/extractor.js";
+import type { Registry } from "#lib/registries/types.js";
+import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
+import * as extractor from "#lib/archive/extractor.js";
 
 function createTree(path: string, content: string): FileTree {
 	return {
@@ -47,7 +47,6 @@ describe("loadDiffPageData integration", () => {
 			fromVersion: "1.0.0",
 			toVersion: "9.9.9",
 			archiveFormat: "tgz",
-			diffCacheKey: "diff:npm:lodash:1.0.0:9.9.9",
 		});
 
 		expect("error" in result).toBe(true);
@@ -76,7 +75,6 @@ describe("loadDiffPageData integration", () => {
 			fromVersion: "1.0.0",
 			toVersion: "2.0.0",
 			archiveFormat: "tgz",
-			diffCacheKey: "diff:npm:pkg:1.0.0:2.0.0",
 		});
 
 		expect("diff" in result).toBe(true);
@@ -90,8 +88,18 @@ describe("loadDiffPageData integration", () => {
 		expect(result.diff.files[0]?.path).toBe("index.js");
 
 		expect(fetchAndExtractSpy).toHaveBeenCalledTimes(2);
-		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(1, "https://example.test/pkg-1.0.0.tgz", "tgz");
-		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(2, "https://example.test/pkg-2.0.0.tgz", "tgz");
+		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
+			1,
+			"https://example.test/pkg-1.0.0.tgz",
+			"tgz",
+			expect.any(Function),
+		);
+		expect(fetchAndExtractSpy).toHaveBeenNthCalledWith(
+			2,
+			"https://example.test/pkg-2.0.0.tgz",
+			"tgz",
+			expect.any(Function),
+		);
 	});
 
 	it("returns fetch_error when archive extraction fails", async () => {
@@ -106,7 +114,6 @@ describe("loadDiffPageData integration", () => {
 			fromVersion: "5.0.0",
 			toVersion: "5.1.0",
 			archiveFormat: "zip",
-			diffCacheKey: "diff:wp:akismet:5.0.0:5.1.0",
 		});
 
 		expect("error" in result).toBe(true);

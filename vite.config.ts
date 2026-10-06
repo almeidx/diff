@@ -1,4 +1,4 @@
-import adapter from "@sveltejs/adapter-cloudflare";
+import adapter from "@sveltejs/adapter-static";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
@@ -9,20 +9,17 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit({
 			preprocess: vitePreprocess(),
+			paths: {
+				relative: false,
+			},
 			adapter: adapter({
-				platformProxy: {
-					environment: undefined,
-					persist: {
-						path: "./wrangler-local-state",
-					},
-				},
+				fallback: "404.html",
 			}),
 			csp: {
 				mode: "auto",
 				directives: {
 					"default-src": ["self"],
 					"base-uri": ["self"],
-					"frame-ancestors": ["none"],
 					"object-src": ["none"],
 					"form-action": ["self"],
 					"script-src": ["self"],
@@ -35,11 +32,15 @@ export default defineConfig({
 						"https://registry.npmjs.com",
 						"https://api.wordpress.org",
 						"https://downloads.wordpress.org",
+						"https://api.github.com",
 					],
 				},
 			},
 		}),
 	],
+	worker: {
+		format: "es",
+	},
 	build: {
 		target: "esnext",
 	},

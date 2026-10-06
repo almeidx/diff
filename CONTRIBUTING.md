@@ -31,10 +31,8 @@ pnpm preview
 
 - Use TypeScript strict mode patterns.
 - Preserve Svelte 5 runes style (`$state`, `$derived`, `$effect`).
-- Keep Cloudflare Worker constraints in mind:
-  - No Node-only runtime APIs in server code.
-  - Favor streaming/incremental processing for large payloads.
-  - Avoid unnecessary memory copies.
+- The app is fully client-side; runtime code must use Web APIs only (no Node-only modules in anything bundled for the browser).
+- Favor streaming/incremental processing for large payloads and avoid unnecessary memory copies.
 - Prefer explicit, user-facing errors for registry/network/archive failures.
 
 ## UI and UX Expectations
@@ -55,25 +53,6 @@ When adding features, include tests for:
 - New parsing logic
 - Error handling paths
 - Performance-sensitive edge cases (large file/diff behavior)
-
-## Cloudflare Configuration
-
-If deploying with distributed rate limiting, bind a KV namespace named `RATE_LIMIT_KV`.
-
-```jsonc
-{
-	"kv_namespaces": [
-		{
-			"binding": "RATE_LIMIT_KV",
-			"id": "your-kv-namespace-id",
-		},
-	],
-}
-```
-
-Without this binding, the app falls back to per-instance in-memory limits.
-
-Cloudflare bindings and runtime APIs are read from `cloudflare:workers` (not SvelteKit's `platform`). The app declares the surface it uses (`env`, `waitUntil`, `KVNamespace`) by hand in `src/app.d.ts`; extend it when adopting more Workers APIs rather than pulling in generated runtime types.
 
 ## Pull Requests
 

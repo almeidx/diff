@@ -2,21 +2,9 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "diff",
 	"compatibility_date": "2025-11-17",
-	"compatibility_flags": ["nodejs_compat"],
-	"main": ".svelte-kit/cloudflare/_worker.js",
 	"assets": {
-		"directory": ".svelte-kit/cloudflare",
-		"binding": "ASSETS",
-	},
-	"limits": {
-		"cpu_ms": 30000,
-	},
-	"observability": {
-		"logs": {
-			"enabled": true,
-			"head_sampling_rate": 1,
-			"invocation_logs": true,
-		},
+		"directory": "build",
+		"not_found_handling": "404-page",
 	},
 	"previews": {},
 }

@@ -10,14 +10,12 @@ A web application for comparing different versions of npm packages and WordPress
 - Unified and split diff views
 - Syntax highlighting for common languages
 - Word-level diff highlighting within changed lines
-- Expandable context around changes, fetched on demand
+- Expandable context around changes, served from in-memory file trees
 - File tree filtering and keyboard navigation
 - Dark/light theme support
 - Mobile responsive
 
 ## Running Locally
-
-Running locally removes the size and memory limits imposed by Cloudflare Workers, allowing you to diff larger packages.
 
 ### Prerequisites
 
@@ -42,41 +40,44 @@ The app will be available at `http://localhost:5173`.
 
 ### Scripts
 
-| Command           | Description                                        |
-| ----------------- | -------------------------------------------------- |
-| `pnpm dev`        | Start development server (fast, no caching)        |
-| `pnpm build`      | Build for production                               |
-| `pnpm preview`    | Preview with Wrangler (Cloudflare Workers runtime) |
-| `pnpm lint`       | Check formatting and lint rules                    |
-| `pnpm fmt`        | Format and auto-fix lint issues                    |
-| `pnpm check`      | Run TypeScript and Svelte checks                   |
-| `pnpm test`       | Run unit tests (Vitest)                            |
-| `pnpm run deploy` | Deploy to Cloudflare Workers                       |
-
-### Development vs Preview
-
-- `pnpm dev` - Uses Vite's dev server. Faster hot reload, but no Cloudflare Cache API (caching is skipped).
-- `pnpm preview` - Uses Wrangler to simulate the Cloudflare Workers environment locally, including the Cache API.
+| Command           | Description                                |
+| ----------------- | ------------------------------------------ |
+| `pnpm dev`        | Start development server                   |
+| `pnpm build`      | Build for production (static output)       |
+| `pnpm preview`    | Preview the production build locally       |
+| `pnpm lint`       | Check formatting and lint rules            |
+| `pnpm fmt`        | Format and auto-fix lint issues            |
+| `pnpm check`      | Run TypeScript and Svelte checks           |
+| `pnpm test`       | Run unit tests (Vitest)                    |
+| `pnpm run deploy` | Deploy static assets to Cloudflare Workers |
 
 ## Tech Stack
 
-- [SvelteKit](https://kit.svelte.dev/) - Full-stack framework
-- [Cloudflare Workers](https://workers.cloudflare.com/) - Edge runtime
+- [SvelteKit](https://kit.svelte.dev/) - Static, client-only app (adapter-static)
+- [Cloudflare Workers](https://workers.cloudflare.com/) - Static asset hosting (no server-side compute)
 - [fflate](https://github.com/101arrowz/fflate) - Fast zip/gzip decompression
 - [jsdiff](https://github.com/kpdecker/jsdiff) - Diff algorithm
 - [@pierre/diffs](https://diffs.com/) - Diff rendering and syntax highlighting
 - [@pierre/trees](https://trees.software/) - File tree navigator
 
+## How It Works
+
+Everything runs in your browser. The app fetches package metadata directly from the npm registry, the WordPress.org API, and the GitHub API (all of which allow cross-origin requests), downloads the package archives, extracts them in-memory, and computes the diff client-side. Extracted file trees are retained in-session, so expanding context around a change reads full file contents from memory instead of re-downloading archives.
+
+No server code is involved: registry metadata is memoized in-session only, and nothing persists between visits.
+
 ## Limits
 
-The hosted version has the following limits due to Cloudflare Workers constraints:
+The following client-side guardrails apply in production builds:
 
 - Maximum compressed archive size: 50MB
 - Maximum decompressed size: ~128MB
 - Maximum files per package: 5,000
 - Maximum file size: 1MB per file
 
-For larger packages, run locally where these limits don't apply.
+These are constants in `src/lib/archive/extractor.ts`; adjust them there if you need larger packages. They are enforced before expensive decompression/diff work, with clear user-facing errors.
+
+`pnpm dev` skips these limits so you can diff larger packages locally.
 
 ## Performance Notes
 
@@ -84,34 +85,14 @@ For larger packages, run locally where these limits don't apply.
 - npm `.tgz` archives are extracted in a streaming path to lower peak memory pressure.
 - Zip extraction still requires full archive download due format constraints.
 
-## Rate Limiting
-
-Rate limiting supports two modes:
-
-- KV-backed distributed rate limiting when `RATE_LIMIT_KV` is bound in Cloudflare.
-- In-memory fallback when running locally without KV.
-
-Add this binding in your Cloudflare config if you want shared limits across instances:
-
-```jsonc
-{
-	"kv_namespaces": [
-		{
-			"binding": "RATE_LIMIT_KV",
-			"id": "your-kv-namespace-id",
-		},
-	],
-}
-```
-
 ## Troubleshooting
 
 - `Package too large` errors:
-  Run locally (`pnpm dev`) to bypass Cloudflare Worker runtime limits.
+  The archive exceeds the client-side limits above. Adjust the constants in `src/lib/archive/extractor.ts` if your machine can handle larger packages.
 - `Corrupted or truncated tar archive`:
   The upstream package tarball is malformed or incomplete; retry and confirm the package version exists.
 - No versions returned for package/plugin:
-  Check package name/slug spelling and that your network can reach npm/WordPress APIs.
+  Check package name/slug spelling and that your network (and any browser extensions/blockers) can reach the npm/WordPress APIs.
 - UI slows down on huge diffs:
   Use file-tree filtering to narrow the diff and load relevant files first.
 
