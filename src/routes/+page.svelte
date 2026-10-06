@@ -289,8 +289,7 @@
 		</form>
 
 		<div class="mt-8 p-4 bg-bg-secondary border border-border rounded-lg text-center">
-			<p class="text-sm text-text-secondary m-0">Everything runs in your browser. Very large packages are capped by size limits, and the diff page offers an opt-in "compare without limits" fallback.</p>
-			<p class="text-sm text-text-secondary m-0 mt-2"><a href="https://github.com/almeidx/diff" target="_blank" rel="noopener" class="text-link no-underline hover:underline">View on GitHub</a></p>
+			<p class="text-sm text-text-secondary m-0">Everything runs in your browser.</p>
 		</div>
 	</main>
 </div>

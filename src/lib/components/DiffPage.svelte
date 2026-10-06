@@ -130,9 +130,7 @@
 				{:else if error.type === 'limit_exceeded'}
 					<h2 class="mb-2 text-diff-delete-text">Package exceeds size limits</h2>
 					<p class="mb-3 text-text-secondary">{error.message}</p>
-					<p class="mb-3 text-text-secondary">
-						You can still compare it: everything runs in your browser, but a package this large may use a lot of memory, freeze the tab, or crash the page.
-					</p>
+					<p class="mb-3 text-text-secondary">A package this large may use a lot of memory, freeze the tab, or crash the page.</p>
 					{#if onBypassLimits}
 						<button
 							type="button"
@@ -145,7 +143,7 @@
 				{:else}
 					<h2 class="mb-2 text-diff-delete-text">Failed to load diff</h2>
 					<p class="mb-3 text-text-secondary">{error.message}</p>
-					<p class="text-sm text-text-muted">This may be due to package size limits or network issues. Try again later or try a different version range.</p>
+					<p class="text-sm text-text-muted">Possibly size limits or a network issue. Try again or pick a different version range.</p>
 				{/if}
 			</div>
 		</div>
