@@ -6,38 +6,25 @@
 		FileDiffOptions,
 		FileDiffLoadedFiles
 	} from '@pierre/diffs';
-	import type { DiffFile, DiffSource } from '#lib/types/index.js';
+	import type { DiffFile, FileContentsPair } from '#lib/types/index.js';
 	import { theme, viewMode, wordWrap } from '#lib/stores/ui.js';
 
 	interface Props {
 		file: DiffFile;
-		source?: DiffSource;
+		loadContext?: (name: string) => Promise<FileContentsPair | null>;
 	}
 
-	let { file, source }: Props = $props();
+	let { file, loadContext }: Props = $props();
 
 	async function loadDiffFiles(fileDiff: FileDiffMetadata): Promise<FileDiffLoadedFiles> {
-		if (!source) throw new Error('Cannot expand context without a diff source');
+		if (!loadContext) throw new Error('Cannot expand context without a diff source');
 
-		const params = new URLSearchParams({
-			type: source.packageType,
-			name: source.packageName,
-			from: source.fromVersion,
-			to: source.toVersion,
-			path: fileDiff.name
-		});
-
-		const response = await fetch(`/api/file-contents?${params}`);
-		if (!response.ok) throw new Error(`Could not load full contents of ${fileDiff.name}`);
-
-		const { oldContents, newContents } = (await response.json()) as {
-			oldContents: string;
-			newContents: string;
-		};
+		const contents = await loadContext(fileDiff.name);
+		if (!contents) throw new Error(`Could not load full contents of ${fileDiff.name}`);
 
 		return {
-			oldFile: { name: fileDiff.prevName ?? fileDiff.name, contents: oldContents },
-			newFile: { name: fileDiff.name, contents: newContents }
+			oldFile: { name: fileDiff.prevName ?? fileDiff.name, contents: contents.oldContents },
+			newFile: { name: fileDiff.name, contents: contents.newContents }
 		};
 	}
 
@@ -51,7 +38,7 @@
 		overflow: $wordWrap ? 'wrap' : 'scroll',
 		theme: { dark: 'github-dark', light: 'github-light' },
 		themeType: $theme,
-		loadDiffFiles: source ? loadDiffFiles : undefined
+		loadDiffFiles: loadContext ? loadDiffFiles : undefined
 	});
 
 	$effect(() => {

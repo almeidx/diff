@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
+	import { versions as fetchVersions } from "#lib/compare/client.js";
 	import * as radioGroup from "@zag-js/radio-group";
 	import { normalizeProps, useMachine } from "@zag-js/svelte";
 	import ThemeToggle from "#lib/components/ThemeToggle.svelte";
@@ -57,23 +58,6 @@
 		}
 	});
 
-	async function getResponseErrorMessage(response: Response): Promise<string> {
-		const contentType = response.headers.get("content-type") || "";
-		if (contentType.includes("application/json")) {
-			try {
-				const data = (await response.clone().json()) as { message?: unknown } | null;
-				if (typeof data?.message === "string" && data.message.trim()) {
-					return data.message;
-				}
-			} catch {
-				// Fall through to text parsing.
-			}
-		}
-
-		const text = await response.text();
-		return text.trim() || "Failed to fetch versions";
-	}
-
 	async function loadVersions() {
 		if (!packageName.trim()) {
 			error = "Please enter a package name";
@@ -85,14 +69,7 @@
 		versions = [];
 
 		try {
-			const response = await fetch(`/api/versions?type=${packageType}&name=${encodeURIComponent(packageName.trim())}`);
-
-			if (!response.ok) {
-				throw new Error(await getResponseErrorMessage(response));
-			}
-
-			const data = (await response.json()) as { versions: string[] };
-			versions = data.versions;
+			versions = await fetchVersions(packageType, packageName.trim());
 
 			if (versions.length >= 2) {
 				toVersion = versions[0];
@@ -312,7 +289,7 @@
 		</form>
 
 		<div class="mt-8 p-4 bg-bg-secondary border border-border rounded-lg text-center">
-			<p class="text-sm text-text-secondary m-0">Need to compare larger packages? Run locally to bypass size limits.</p>
+			<p class="text-sm text-text-secondary m-0">Size limits are enforced client-side and can be adjusted in <code>src/lib/archive/extractor.ts</code>.</p>
 			<p class="text-sm text-text-secondary m-0 mt-2"><a href="https://github.com/almeidx/diff" target="_blank" rel="noopener" class="text-link no-underline hover:underline">View on GitHub</a></p>
 		</div>
 	</main>

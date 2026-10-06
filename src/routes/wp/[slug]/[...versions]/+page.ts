@@ -1,13 +1,10 @@
 import { error } from "@sveltejs/kit";
-import { waitUntil } from "cloudflare:workers";
-import type { PageServerLoad } from "./$types";
-import { wordpressRegistry } from "#lib/server/registries/wordpress.js";
+import type { PageLoad } from "./$types";
+import { compare } from "#lib/compare/client.js";
+import { isNotFoundError } from "#lib/errors.js";
 import { parseVersionRange } from "#lib/utils/versions.js";
-import { loadDiffPageData } from "#lib/server/diff/load-diff-page.js";
-import { buildDiffCacheKey } from "#lib/server/diff/cache-key.js";
-import { isNotFoundError } from "#lib/server/errors.js";
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params }) => {
 	const { slug, versions: versionsPath } = params;
 
 	if (slug.length > 200 || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
@@ -27,16 +24,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	let result;
 	try {
-		result = await loadDiffPageData({
-			registry: wordpressRegistry,
-			packageType: "wp",
-			packageName: slug,
-			fromVersion,
-			toVersion,
-			archiveFormat: "zip",
-			diffCacheKey: buildDiffCacheKey("wp", slug, fromVersion, toVersion),
-			waitUntil,
-		});
+		result = await compare("wp", slug, fromVersion, toVersion);
 	} catch (e) {
 		if (isNotFoundError(e)) {
 			error(404, `Plugin "${slug}" not found on WordPress.org`);

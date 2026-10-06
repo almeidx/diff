@@ -10,7 +10,7 @@ import {
 	normalizeArchivePath,
 	stripZipRoot,
 } from "./path.js";
-import { fetchWithTimeout } from "#lib/server/http.js";
+import { fetchWithTimeout } from "#lib/http.js";
 
 const MAX_ARCHIVE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DECOMPRESSED_SIZE = 128 * 1024 * 1024; // 128MB
@@ -52,7 +52,7 @@ interface PreparedZipEntry {
 }
 
 export async function fetchAndExtract(url: string, format: "tgz" | "zip"): Promise<FileTree> {
-	const response = await fetchWithTimeout(url, { allowedHosts: ARCHIVE_ALLOWED_HOSTS });
+	const response = await fetchWithTimeout(url, { allowedHosts: ARCHIVE_ALLOWED_HOSTS, timeoutMs: 120_000 });
 
 	if (!response.ok) {
 		throw new Error(`Failed to fetch archive: ${response.statusText}`);

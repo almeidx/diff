@@ -2,84 +2,59 @@
 
 ## Scope
 
-This guide covers deploy, verification, and incident response for the hosted Cloudflare Worker.
+This guide covers deploy, verification, and incident response for the hosted static deployment.
 
 ## Runtime and Config
 
-- Runtime: Cloudflare Workers via SvelteKit Cloudflare adapter.
+- Runtime: static assets on Cloudflare Workers (assets-only config, no compute); the SPA fallback `404.html` handles client-side routing via `not_found_handling: "404-page"`.
 - Main config: `wrangler.jsonc`.
-- Optional KV binding for distributed rate limiting: `RATE_LIMIT_KV`.
-- Worker limits enforced in app code:
+- App limits enforced client-side in `src/lib/archive/extractor.ts`:
   - 50MB max compressed archive
   - ~128MB max decompressed text budget
   - 5,000 max files per package
   - 1MB max per file
+- Security headers (including `frame-ancestors` CSP) come from `static/_headers`.
 
 ## Standard Release Flow
 
 1. Sync dependencies:
    `pnpm install --frozen-lockfile`
 2. Run local quality gates:
-   `pnpm check && pnpm test && pnpm build && pnpm test:smoke`
-3. (Optional) Validate Cloudflare runtime locally:
+   `pnpm check && pnpm test && pnpm build`
+3. (Optional) Validate the production build locally:
    `pnpm preview`
 4. Deploy:
-   `pnpm run deploy`
+   `pnpm run deploy` (uploads the static build via `wrangler deploy`)
 5. Post-deploy smoke checks:
    - Open `/`
    - Open a known compare URL (`/npm/react/18.2.0...18.3.1`)
-   - Open an invalid compare URL and confirm 400 page
+   - Open an unknown route and confirm the SPA fallback renders
 
 ## Rollback
 
-Rollback is a redeploy of the last known good commit:
+Rollback is a redeploy of the last known good build:
 
-1. Revert the offending commit(s) in git.
+1. Check out the last known good commit.
 2. Re-run gates:
    `pnpm check && pnpm test && pnpm build`
 3. Deploy:
    `pnpm run deploy`
 
-## Logs
+## Logs and Observability
 
-App logs are structured JSON lines written through `src/lib/server/log.ts`.
-
-Tail logs from Cloudflare:
-
-```bash
-pnpm wrangler tail --format=json
-```
-
-Key message types and fields:
-
-- `diff_loaded`: includes `packageType`, `packageName`, versions, diff stats, `durationMs`.
-- `diff_load_failed`: includes package/version context and serialized error.
-- `file_contents_loaded`: includes package/version context, `path`, `found`, `durationMs`.
-- `diff_invalid_version`: includes invalidity booleans for `fromVersion`/`toVersion`.
-- `request_rate_limited`: includes `path`, `method`, `ip`, `retryAfterSeconds`.
-- `csrf_validation_failed`: includes `path`, `method`, token presence flags, and IP.
-- `cache_parse_failed`: includes cache key and parse error details.
+There are none. The app is static: no worker executes per request, so there are no worker logs, no telemetry, and no metrics. All work happens in visitors' browsers; failures surface as in-app error messages. Debug issues by reproducing locally (`pnpm dev` or `pnpm preview`) with browser devtools.
 
 ## Incident Playbook
 
-### Spike in 429 responses
+There is no server to fail, so incidents reduce to upstream problems:
 
-- Confirm whether `RATE_LIMIT_KV` is configured in production.
-- If KV is missing, limits are per-instance (in-memory) and can behave inconsistently.
-- Adjust `RATE_LIMIT`/`WINDOW_MS` in `src/lib/server/rate-limit.ts` only if needed.
+### Registry/API outages (npm, WordPress.org, GitHub)
 
-### Spike in diff fetch failures
+- Confirm upstream health (npm status page, WordPress.org health, GitHub status).
+- Failures surface to users as error messages in the UI; nothing to remediate server-side.
+- If an upstream changes its CORS policy, browser fetches will fail with network errors; update the affected registry client and the CSP `connect-src` in `vite.config.ts` if hosts change.
 
-- Check `diff_load_failed` logs for registry/network/archive errors.
-- Validate npm/WordPress upstream health.
-- Confirm failures are not caused by archive size or decompression limits.
+### Archive download failures
 
-### Frequent CSRF 403 responses
-
-- Check `csrf_validation_failed` logs for missing cookie/header patterns.
-- Confirm clients include `x-csrf-token` copied from `csrf_token` cookie.
-
-### Cache parse warnings
-
-- `cache_parse_failed` indicates invalid JSON in cache payload for a key.
-- Requests continue by recomputing data; no emergency action needed unless frequent.
+- Verify `downloads.wordpress.org` / npm tarball URLs are reachable and still CORS-enabled.
+- Confirm failures are not caused by the client-side size/decompression limits before escalating upstream.

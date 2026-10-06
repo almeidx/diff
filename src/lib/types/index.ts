@@ -39,7 +39,12 @@ export interface DiffSource {
 	toVersion: string;
 }
 
-/** Cached for 24h; bump DIFF_SCHEMA_VERSION in server/diff/cache-key.ts when this changes shape. */
+/** Full contents of one file on both sides of a comparison. */
+export interface FileContentsPair {
+	oldContents: string;
+	newContents: string;
+}
+
 export interface DiffResult {
 	packageType: PackageType;
 	packageName: string;
