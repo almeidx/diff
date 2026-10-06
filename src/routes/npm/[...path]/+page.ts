@@ -1,7 +1,9 @@
 import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
+import { WORKER_CRASH_MESSAGE } from "#lib/compare/client.js";
 import { compareWithProgress } from "#lib/stores/progress.js";
 import { isNotFoundError } from "#lib/errors.js";
+import { limitsFromSearchParams } from "#lib/archive/limits.js";
 import { parseVersionRange } from "#lib/utils/versions.js";
 
 interface ParsedPath {
@@ -35,7 +37,7 @@ function parsePath(path: string): ParsedPath | null {
 	};
 }
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, url }) => {
 	const parsed = parsePath(params.path);
 
 	if (!parsed) {
@@ -48,12 +50,17 @@ export const load: PageLoad = async ({ params }) => {
 		error(400, "Package name or version string too long");
 	}
 
+	const limits = limitsFromSearchParams(url.searchParams);
+
 	let result;
 	try {
-		result = await compareWithProgress("npm", packageName, fromVersion, toVersion);
+		result = await compareWithProgress("npm", packageName, fromVersion, toVersion, limits);
 	} catch (e) {
 		if (isNotFoundError(e)) {
 			error(404, `Package "${packageName}" not found on npm`);
+		}
+		if (e instanceof Error && e.message === WORKER_CRASH_MESSAGE) {
+			error(500, "The comparison worker crashed, likely because the package is too large for this browser.");
 		}
 		error(502, "Failed to fetch package metadata from npm");
 	}

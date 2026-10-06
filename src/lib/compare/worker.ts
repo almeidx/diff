@@ -20,7 +20,14 @@ export async function handleRequest(
 				value = await versions(request.type, request.name);
 				break;
 			case "compare":
-				value = await compare(request.type, request.name, request.fromVersion, request.toVersion, emitProgress);
+				value = await compare(
+					request.type,
+					request.name,
+					request.fromVersion,
+					request.toVersion,
+					emitProgress,
+					request.limits,
+				);
 				break;
 			case "fileContents":
 				value = await fileContents(request.path);

@@ -1,3 +1,4 @@
+import { gzipSync, strToU8 } from "fflate";
 import { expect, test } from "@playwright/test";
 
 test("home page renders with hardened headers and accessible controls", async ({ page }) => {
@@ -323,4 +324,55 @@ test.describe("tablet responsiveness", () => {
 		const sidebar = page.locator("aside");
 		await expect(sidebar).toBeVisible();
 	});
+});
+
+// 11,000 files trip the default 10,000-file cap, while identical contents keep
+// the bypassed rerun cheap to compute in the browser.
+function buildOversizedTgz(): Buffer {
+	const entries: Array<{ name: string; content: string }> = [];
+	for (let i = 0; i < 11_000; i++) {
+		entries.push({ name: `limit-pkg/src/file-${String(i).padStart(5, "0")}.txt`, content: "same\n" });
+	}
+
+	const blocksPerEntry = 2; // one header block + one padded content block
+	const tar = new Uint8Array((entries.length * blocksPerEntry + 2) * 512);
+	let offset = 0;
+	for (const entry of entries) {
+		const bytes = strToU8(entry.content);
+		const header = tar.subarray(offset, offset + 512);
+		header.set(new TextEncoder().encode(entry.name), 0);
+		header.set(new TextEncoder().encode(bytes.length.toString(8).padStart(11, "0") + " "), 124);
+		header[156] = 48; // typeflag '0' = regular file
+		header.fill(32, 148, 156);
+		let checksum = 0;
+		for (const byte of header) checksum += byte;
+		header.set(new TextEncoder().encode(checksum.toString(8).padStart(6, "0") + "\0 "), 148);
+		tar.set(bytes, offset + 512);
+		offset += blocksPerEntry * 512;
+	}
+
+	return Buffer.from(gzipSync(tar));
+}
+
+test("oversized packages offer a warned bypass that reruns without limits", async ({ page }) => {
+	const tgz = buildOversizedTgz();
+	const packument = {
+		versions: {
+			"1.0.0": { dist: { tarball: "https://registry.npmjs.org/limit-pkg/-/limit-pkg-1.0.0.tgz" } },
+			"2.0.0": { dist: { tarball: "https://registry.npmjs.org/limit-pkg/-/limit-pkg-2.0.0.tgz" } },
+		},
+	};
+
+	await page.route("**/registry.npmjs.org/limit-pkg", (route) => route.fulfill({ json: packument }));
+	await page.route("**/registry.npmjs.org/limit-pkg/-/*.tgz", (route) => route.fulfill({ body: tgz }));
+
+	await page.goto("/npm/limit-pkg/1.0.0...2.0.0");
+
+	await expect(page.getByRole("heading", { name: "Package exceeds size limits" })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole("button", { name: "Compare without limits" })).toBeVisible();
+
+	await page.getByRole("button", { name: "Compare without limits" }).click();
+
+	await expect(page).toHaveURL(/limits=off/);
+	await expect(page.getByText("0 files changed")).toBeVisible({ timeout: 30_000 });
 });

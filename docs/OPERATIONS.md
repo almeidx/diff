@@ -8,11 +8,12 @@ This guide covers deploy, verification, and incident response for the hosted sta
 
 - Runtime: static assets on Cloudflare Workers (assets-only config, no compute); the SPA fallback `404.html` handles client-side routing via `not_found_handling: "404-page"`.
 - Main config: `wrangler.jsonc`.
-- App limits enforced client-side in `src/lib/archive/extractor.ts`:
-  - 50MB max compressed archive
-  - ~128MB max decompressed text budget
-  - 5,000 max files per package
-  - 1MB max per file
+- App limits defined in `src/lib/archive/limits.ts` and enforced client-side in `src/lib/archive/extractor.ts`:
+  - 100MB max compressed archive
+  - ~256MB max decompressed budget
+  - 10,000 max files per package
+  - 2MB max per file (larger single files are skipped)
+  - Users can bypass all caps via `?limits=off`, offered on the diff page when a limit is hit
 - Security headers (including `frame-ancestors` CSP) come from `static/_headers`.
 
 ## Standard Release Flow
@@ -57,4 +58,4 @@ There is no server to fail, so incidents reduce to upstream problems:
 ### Archive download failures
 
 - Verify `downloads.wordpress.org` / npm tarball URLs are reachable and still CORS-enabled.
-- Confirm failures are not caused by the client-side size/decompression limits before escalating upstream.
+- Confirm failures are not caused by the client-side size/decompression limits before escalating upstream; users can bypass those limits themselves via `?limits=off`.

@@ -1,9 +1,10 @@
 import type { PackageType, DiffResult, DiffError, FileTree, CompareProgress } from "#lib/types/index.js";
 import type { Registry } from "#lib/registries/types.js";
 import { fetchAndExtract } from "#lib/archive/extractor.js";
+import { DEFAULT_LIMITS, type ArchiveLimits } from "#lib/archive/limits.js";
 import { formatInvalidVersionError } from "#lib/utils/versions.js";
 import { computeDiff } from "./engine.js";
-import { getErrorMessage } from "#lib/errors.js";
+import { LimitExceededError, getErrorMessage } from "#lib/errors.js";
 
 export interface LoadDiffPageOptions {
 	registry: Registry;
@@ -12,6 +13,8 @@ export interface LoadDiffPageOptions {
 	fromVersion: string;
 	toVersion: string;
 	archiveFormat: "tgz" | "zip";
+	/** Extraction guardrails; `NO_LIMITS` bypasses them at the user's explicit request. */
+	limits?: ArchiveLimits;
 	/** Optional observer for the extracted trees, used by the compare pipeline to keep file contents available. */
 	onTrees?: (fromTree: FileTree, toTree: FileTree) => void;
 	/** Optional progress observer for pipeline stages (metadata, downloads, diff). */
@@ -31,7 +34,17 @@ interface LoadDiffPageError {
 export type LoadDiffPageResult = LoadDiffPageSuccess | LoadDiffPageError;
 
 export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<LoadDiffPageResult> {
-	const { registry, packageType, packageName, fromVersion, toVersion, archiveFormat, onTrees, onProgress } = options;
+	const {
+		registry,
+		packageType,
+		packageName,
+		fromVersion,
+		toVersion,
+		archiveFormat,
+		limits = DEFAULT_LIMITS,
+		onTrees,
+		onProgress,
+	} = options;
 	onProgress?.({ stage: "metadata" });
 	const versions = await registry.getVersions(packageName);
 	onProgress?.({ stage: "metadata", done: true });
@@ -56,15 +69,25 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 			registry.getDownloadUrl(packageName, toVersion),
 		]);
 
-		const fromTreePromise = fetchAndExtract(fromUrl, archiveFormat, (bytes, totalBytes) => {
-			onProgress?.({ stage: "download", side: "from", bytes, totalBytes });
-		}).then((tree) => {
+		const fromTreePromise = fetchAndExtract(
+			fromUrl,
+			archiveFormat,
+			(bytes, totalBytes) => {
+				onProgress?.({ stage: "download", side: "from", bytes, totalBytes });
+			},
+			limits,
+		).then((tree) => {
 			onProgress?.({ stage: "download", side: "from", done: true });
 			return tree;
 		});
-		const toTreePromise = fetchAndExtract(toUrl, archiveFormat, (bytes, totalBytes) => {
-			onProgress?.({ stage: "download", side: "to", bytes, totalBytes });
-		}).then((tree) => {
+		const toTreePromise = fetchAndExtract(
+			toUrl,
+			archiveFormat,
+			(bytes, totalBytes) => {
+				onProgress?.({ stage: "download", side: "to", bytes, totalBytes });
+			},
+			limits,
+		).then((tree) => {
 			onProgress?.({ stage: "download", side: "to", done: true });
 			return tree;
 		});
@@ -76,6 +99,16 @@ export async function loadDiffPageData(options: LoadDiffPageOptions): Promise<Lo
 
 		return { diff, versions };
 	} catch (e) {
+		if (e instanceof LimitExceededError) {
+			return {
+				error: {
+					type: "limit_exceeded",
+					message: getErrorMessage(e, "Package exceeds size limits"),
+				},
+				versions,
+			};
+		}
+
 		return {
 			error: {
 				type: "fetch_error",

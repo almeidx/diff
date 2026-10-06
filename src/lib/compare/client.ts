@@ -7,6 +7,10 @@ import type {
 } from "./protocol.js";
 import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
+import type { ArchiveLimits } from "#lib/archive/limits.js";
+
+/** Message used to reject every pending call after the worker died; route loaders match on it. */
+export const WORKER_CRASH_MESSAGE = "Compare worker crashed";
 
 type Pending = {
 	resolve: (value: VersionsPayload | ComparePayload | FileContentsPayload) => void;
@@ -44,7 +48,7 @@ function getWorker(): Worker {
 			entry.resolve(response.value);
 		}
 	};
-	w.onerror = () => failAll("Compare worker crashed");
+	w.onerror = () => failAll(WORKER_CRASH_MESSAGE);
 	w.onmessageerror = () => failAll("Compare worker returned an unserializable message");
 
 	worker = w;
@@ -77,12 +81,21 @@ export function compare(
 	fromVersion: string,
 	toVersion: string,
 	onProgress?: (progress: CompareProgress) => void,
+	limits?: ArchiveLimits,
 ): Promise<LoadDiffPageResult> {
 	const id = nextId++;
 	const { promise, resolve, reject } = Promise.withResolvers<VersionsPayload | ComparePayload | FileContentsPayload>();
 	pending.set(id, { resolve, reject, onProgress });
 	try {
-		getWorker().postMessage({ kind: "compare", type, name, fromVersion, toVersion, id } satisfies WorkerRequest);
+		getWorker().postMessage({
+			kind: "compare",
+			type,
+			name,
+			fromVersion,
+			toVersion,
+			limits,
+			id,
+		} satisfies WorkerRequest);
 	} catch (error) {
 		pending.delete(id);
 		reject(error instanceof Error ? error : new Error(String(error)));
