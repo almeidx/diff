@@ -1,7 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import { compare } from "#lib/compare/client.js";
-import { resolveNpmCompareUrl } from "#lib/registries/github.js";
 import { isNotFoundError } from "#lib/errors.js";
 import { parseVersionRange } from "#lib/utils/versions.js";
 
@@ -59,13 +58,10 @@ export const load: PageLoad = async ({ params }) => {
 		error(502, "Failed to fetch package metadata from npm");
 	}
 
-	const compareUrl = "diff" in result ? await resolveNpmCompareUrl(packageName, fromVersion, toVersion) : null;
-
 	return {
 		packageName,
 		fromVersion,
 		toVersion,
 		...result,
-		compareUrl,
 	};
 };

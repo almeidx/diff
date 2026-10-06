@@ -6,7 +6,7 @@ Diff is a fully static, client-only SvelteKit application (adapter-static with a
 
 1. Fetching package metadata and archive URLs from a registry — directly from the browser.
 2. Downloading and extracting archives into in-memory file trees.
-3. Computing file-level and line-level diffs on the main thread (moving to a Web Worker).
+3. Computing file-level and line-level diffs inside a Web Worker.
 4. Rendering results with a file tree and unified/split diff views.
 
 ## Major Components
@@ -30,7 +30,7 @@ Diff is a fully static, client-only SvelteKit application (adapter-static with a
 
 1. User selects package type/name and versions.
 2. The browser fetches registry metadata directly from the npm registry / WordPress.org API (both send `access-control-allow-origin: *`; the CSP `connect-src` in `vite.config.ts` whitelists these hosts).
-3. `compare()` validates versions, downloads and extracts the archives client-side, and computes the diff from the retained file trees.
+3. `compare()` validates versions, downloads and extracts the archives in the compare Web Worker, and computes the diff from the retained file trees.
 4. Page renders file tree + diff view; UI state controls split/unified mode and wrapping.
 5. Expanding a collapsed region reads that file's full contents from the in-memory trees via `fileContents()` — no network round-trip. Patches only carry three lines of context, so the renderer needs the whole file to reveal more.
 

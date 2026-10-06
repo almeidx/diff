@@ -6,13 +6,10 @@ import { npmRegistry, wordpressRegistry } from "#lib/registries/index.js";
 /** Trees retained from the last successful compare(), so fileContents() never re-downloads archives. */
 let lastFromTree: FileTree | null = null;
 let lastToTree: FileTree | null = null;
-
-function registryFor(type: PackageType) {
-	return type === "npm" ? npmRegistry : wordpressRegistry;
-}
+let compareSeq = 0;
 
 export function versions(type: PackageType, name: string): Promise<string[]> {
-	return registryFor(type).getVersions(name);
+	return (type === "npm" ? npmRegistry : wordpressRegistry).getVersions(name);
 }
 
 export function compare(
@@ -21,14 +18,18 @@ export function compare(
 	fromVersion: string,
 	toVersion: string,
 ): Promise<LoadDiffPageResult> {
+	// Worker message handlers run concurrently: an older comparison can finish
+	// after a newer one started. Only the newest compare may update the trees.
+	const seq = ++compareSeq;
 	return loadDiffPageData({
-		registry: registryFor(type),
+		registry: type === "npm" ? npmRegistry : wordpressRegistry,
 		packageType: type,
 		packageName: name,
 		fromVersion,
 		toVersion,
 		archiveFormat: type === "npm" ? "tgz" : "zip",
 		onTrees: (fromTree, toTree) => {
+			if (seq !== compareSeq) return;
 			lastFromTree = fromTree;
 			lastToTree = toTree;
 		},

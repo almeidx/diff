@@ -68,7 +68,7 @@ No server code is involved: registry metadata is memoized in-session only, and n
 
 ## Limits
 
-The following client-side guardrails apply identically everywhere (local dev and production):
+The following client-side guardrails apply in production builds:
 
 - Maximum compressed archive size: 50MB
 - Maximum decompressed size: ~128MB
@@ -76,6 +76,8 @@ The following client-side guardrails apply identically everywhere (local dev and
 - Maximum file size: 1MB per file
 
 These are constants in `src/lib/archive/extractor.ts`; adjust them there if you need larger packages. They are enforced before expensive decompression/diff work, with clear user-facing errors.
+
+`pnpm dev` skips these limits so you can diff larger packages locally.
 
 ## Performance Notes
 

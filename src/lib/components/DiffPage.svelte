@@ -2,6 +2,7 @@
 	import { navigating } from '$app/state';
 	import type { DiffError, DiffFile, DiffResult } from '#lib/types/index.js';
 	import { fileContents } from '#lib/compare/client.js';
+	import { resolveNpmCompareUrl } from '#lib/registries/github.js';
 	import FileTree from '#lib/components/FileTree/FileTree.svelte';
 	import DiffView from '#lib/components/DiffView/DiffView.svelte';
 	import StatsBar from '#lib/components/StatsBar.svelte';
@@ -18,7 +19,6 @@
 		versions: string[];
 		diff?: DiffResult;
 		error?: DiffError;
-		compareUrl?: string | null;
 		onNavigate: (fromVersion: string, toVersion: string) => void;
 	}
 
@@ -30,16 +30,34 @@
 		versions,
 		diff,
 		error,
-		compareUrl = null,
 		onNavigate
 	}: Props = $props();
 
+	// Resolved out-of-band so the GitHub lookup never blocks rendering the diff.
+	let compareUrl = $state<string | null>(null);
 	let selectedPath = $state<string | undefined>(undefined);
 	let isNavigating = $derived(navigating.to !== null);
 
 	$effect(() => {
 		diff;
 		selectedPath = undefined;
+	});
+
+	$effect(() => {
+		if (packageLabel !== 'npm' || !diff) {
+			compareUrl = null;
+			return;
+		}
+
+		let stale = false;
+		resolveNpmCompareUrl(packageName, fromVersion, toVersion)
+			.then((url) => {
+				if (!stale) compareUrl = url;
+			})
+			.catch(() => {});
+		return () => {
+			stale = true;
+		};
 	});
 
 	function handleFileSelect(file: DiffFile) {

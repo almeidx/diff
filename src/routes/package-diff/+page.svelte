@@ -13,7 +13,9 @@
 
 		redirected = true;
 		const encodedName = name.split("/").map(encodeURIComponent).join("/");
-		void goto(`/npm/${encodedName}/${encodeURIComponent(from)}...${encodeURIComponent(to)}`);
+		void goto(`/npm/${encodedName}/${encodeURIComponent(from)}...${encodeURIComponent(to)}`, {
+			replaceState: true,
+		});
 	});
 </script>
 

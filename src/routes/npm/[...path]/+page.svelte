@@ -19,6 +19,5 @@
 	versions={data.versions}
 	diff={data.diff}
 	error={data.error}
-	compareUrl={data.compareUrl}
 	onNavigate={handleNavigate}
 />

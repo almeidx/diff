@@ -95,4 +95,32 @@ describe("compare tree retention", () => {
 		expect(await fileContents("a.js")).toBeNull();
 		expect(await fileContents("b.js")).toEqual({ oldContents: "second-old", newContents: "second-new" });
 	});
+
+	it("ignores trees from a compare superseded by a newer one", async () => {
+		const fakeResult = {
+			diff: { files: [], stats: { files: 0, insertions: 0, deletions: 0 } },
+			versions: [],
+		};
+		const loadDiffPageDataSpy = vi
+			.spyOn(loadDiffPage, "loadDiffPageData")
+			.mockReturnValue(Promise.resolve(fakeResult as never));
+
+		const firstFrom = tree([{ path: "a.js", content: "first-old" }]);
+		const firstTo = tree([{ path: "a.js", content: "first-new" }]);
+		const secondFrom = tree([{ path: "b.js", content: "second-old" }]);
+		const secondTo = tree([{ path: "b.js", content: "second-new" }]);
+
+		await compare("npm", "pkg", "1.0.0", "2.0.0");
+		const staleOptions = loadDiffPageDataSpy.mock.calls.at(-1)![0] as LoadDiffPageOptions;
+
+		await compare("npm", "pkg", "3.0.0", "4.0.0");
+		const latestOptions = loadDiffPageDataSpy.mock.calls.at(-1)![0] as LoadDiffPageOptions;
+
+		// The newer compare finishes first; the stale one must not overwrite its trees.
+		latestOptions.onTrees!(secondFrom, secondTo);
+		staleOptions.onTrees!(firstFrom, firstTo);
+
+		expect(await fileContents("b.js")).toEqual({ oldContents: "second-old", newContents: "second-new" });
+		expect(await fileContents("a.js")).toBeNull();
+	});
 });
