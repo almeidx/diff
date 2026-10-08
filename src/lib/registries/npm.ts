@@ -1,6 +1,6 @@
-import type { Registry, NpmPackageMetadata } from "./types.js";
-import { compareVersions } from "#lib/utils/versions.js";
 import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/http.js";
+import { compareVersions } from "#lib/utils/versions.js";
+import type { Registry, NpmPackageMetadata } from "./types.js";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const NPM_ALLOWED_HOSTS = ["registry.npmjs.org", "registry.npmjs.com"];

@@ -1,6 +1,6 @@
-import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
-import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 import type { ArchiveLimits } from "#lib/archive/limits.js";
+import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
+import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
 
 export type VersionsPayload = string[];
 export type ComparePayload = LoadDiffPageResult;

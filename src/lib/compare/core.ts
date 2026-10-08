@@ -1,8 +1,8 @@
-import type { CompareProgress, FileContentsPair, FileTree, PackageType } from "#lib/types/index.js";
+import { DEFAULT_LIMITS, type ArchiveLimits } from "#lib/archive/limits.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
 import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
-import { DEFAULT_LIMITS, type ArchiveLimits } from "#lib/archive/limits.js";
 import { npmRegistry, wordpressRegistry } from "#lib/registries/index.js";
+import type { CompareProgress, FileContentsPair, FileTree, PackageType } from "#lib/types/index.js";
 
 /** Trees retained from the last successful compare(), so fileContents() never re-downloads archives. */
 let lastFromTree: FileTree | null = null;

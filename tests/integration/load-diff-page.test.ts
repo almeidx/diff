@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { FileTree } from "#lib/types/index.js";
-import type { Registry } from "#lib/registries/types.js";
-import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
 import * as extractor from "#lib/archive/extractor.js";
 import { DEFAULT_LIMITS, NO_LIMITS } from "#lib/archive/limits.js";
+import { loadDiffPageData } from "#lib/diff/load-diff-page.js";
 import { LimitExceededError } from "#lib/errors.js";
+import type { Registry } from "#lib/registries/types.js";
+import type { FileTree } from "#lib/types/index.js";
 
 function createTree(path: string, content: string): FileTree {
 	return {

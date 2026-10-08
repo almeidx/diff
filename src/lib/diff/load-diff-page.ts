@@ -1,10 +1,10 @@
-import type { PackageType, DiffResult, DiffError, FileTree, CompareProgress } from "#lib/types/index.js";
-import type { Registry } from "#lib/registries/types.js";
 import { fetchAndExtract } from "#lib/archive/extractor.js";
 import { DEFAULT_LIMITS, type ArchiveLimits } from "#lib/archive/limits.js";
+import { LimitExceededError, getErrorMessage } from "#lib/errors.js";
+import type { Registry } from "#lib/registries/types.js";
+import type { PackageType, DiffResult, DiffError, FileTree, CompareProgress } from "#lib/types/index.js";
 import { formatInvalidVersionError } from "#lib/utils/versions.js";
 import { computeDiff } from "./engine.js";
-import { LimitExceededError, getErrorMessage } from "#lib/errors.js";
 
 export interface LoadDiffPageOptions {
 	registry: Registry;

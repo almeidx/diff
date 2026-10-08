@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { gzipSync, strToU8, zipSync } from "fflate";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { LimitExceededError } from "#lib/errors.js";
 import { fetchAndExtract } from "./extractor";
 import { NO_LIMITS, type ArchiveLimits } from "./limits";
-import { LimitExceededError } from "#lib/errors.js";
 
 const WP_ZIP_URL = "https://downloads.wordpress.org/plugin/plugin-name.zip";
 const NPM_TGZ_URL = "https://registry.npmjs.org/pkg/pkg-1.0.0.tgz";

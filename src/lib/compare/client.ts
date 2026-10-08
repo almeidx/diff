@@ -1,3 +1,6 @@
+import type { ArchiveLimits } from "#lib/archive/limits.js";
+import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
+import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
 import type {
 	ComparePayload,
 	FileContentsPayload,
@@ -5,9 +8,6 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "./protocol.js";
-import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
-import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
-import type { ArchiveLimits } from "#lib/archive/limits.js";
 
 /** Message used to reject every pending call after the worker died; route loaders match on it. */
 export const WORKER_CRASH_MESSAGE = "Compare worker crashed";

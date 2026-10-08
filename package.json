@@ -12,14 +12,14 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"deploy": "wrangler deploy",
 		"dev": "vite dev",
-		"fmt": "oxfmt && oxlint --fix",
-		"lint": "oxfmt --check && oxlint --deny-warnings",
+		"fmt": "oxlint --fix && oxfmt",
+		"lint": "svelte-kit sync && oxlint && oxfmt --check",
 		"preview": "wrangler dev",
 		"test": "vitest run",
 		"test:ci": "pnpm test",
 		"test:e2e": "pnpm test:smoke",
-		"test:watch": "vitest",
-		"test:smoke": "svelte-kit sync && playwright test"
+		"test:smoke": "svelte-kit sync && playwright test",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@pierre/diffs": "^1.5.1",
@@ -39,7 +39,8 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^25.9.9",
 		"oxfmt": "^0.71.0",
-		"oxlint": "^1.86.0",
+		"oxlint": "^1.87.0",
+		"oxlint-tsgolint": "^7.0.2003",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.7.6",
 		"tailwindcss": "^4.3.3",

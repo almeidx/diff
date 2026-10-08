@@ -1,5 +1,5 @@
-import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
 
 const appEnvStub = fileURLToPath(new URL("./tests/helpers/app-env.stub.ts", import.meta.url));
 

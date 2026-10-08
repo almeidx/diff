@@ -1,3 +1,6 @@
+import { getErrorMessage } from "#lib/errors.js";
+import type { CompareProgress } from "#lib/types/index.js";
+import { compare, fileContents, versions } from "./core.js";
 import type {
 	ComparePayload,
 	FileContentsPayload,
@@ -5,9 +8,6 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "./protocol.js";
-import type { CompareProgress } from "#lib/types/index.js";
-import { compare, fileContents, versions } from "./core.js";
-import { getErrorMessage } from "#lib/errors.js";
 
 export async function handleRequest(
 	request: WorkerRequest,

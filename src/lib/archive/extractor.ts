@@ -1,7 +1,10 @@
 import { Gunzip, Unzip, UnzipInflate, gunzipSync } from "fflate";
 import type { UnzipFile } from "fflate";
-import { shouldInclude, isBinaryContent } from "../diff/filters.js";
+import { LimitExceededError } from "#lib/errors.js";
+import { fetchWithTimeout } from "#lib/http.js";
 import type { FileEntry, FileTree } from "#lib/types/index.js";
+import { shouldInclude, isBinaryContent } from "../diff/filters.js";
+import { DEFAULT_LIMITS, type ArchiveLimits } from "./limits.js";
 import {
 	createTarRootStripper,
 	getCommonZipRoot,
@@ -9,9 +12,6 @@ import {
 	normalizeArchivePath,
 	stripZipRoot,
 } from "./path.js";
-import { fetchWithTimeout } from "#lib/http.js";
-import { LimitExceededError } from "#lib/errors.js";
-import { DEFAULT_LIMITS, type ArchiveLimits } from "./limits.js";
 
 const TAR_BLOCK_SIZE = 512;
 const BINARY_CHECK_LENGTH = 8000;

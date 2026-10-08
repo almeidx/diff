@@ -1,5 +1,5 @@
-import { npmRegistry } from "./npm.js";
 import { fetchWithTimeout } from "#lib/http.js";
+import { npmRegistry } from "./npm.js";
 
 const GITHUB_ALLOWED_HOSTS = ["api.github.com"];
 

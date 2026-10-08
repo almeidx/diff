@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { FileTree } from "#lib/types/index.js";
-import type { LoadDiffPageOptions } from "#lib/diff/load-diff-page.js";
-import { compare, fileContents, getFileContentsPair } from "./core.js";
-import * as loadDiffPage from "#lib/diff/load-diff-page.js";
 import { DEFAULT_LIMITS, NO_LIMITS } from "#lib/archive/limits.js";
+import type { LoadDiffPageOptions } from "#lib/diff/load-diff-page.js";
+import * as loadDiffPage from "#lib/diff/load-diff-page.js";
+import type { FileTree } from "#lib/types/index.js";
+import { compare, fileContents, getFileContentsPair } from "./core.js";
 
 function tree(entries: Array<{ path: string; content: string; isBinary?: boolean }>): FileTree {
 	return {

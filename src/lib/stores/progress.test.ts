@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { CompareProgress } from "#lib/types/index.js";
+import * as client from "#lib/compare/client.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
+import type { CompareProgress } from "#lib/types/index.js";
 import type { ProgressStep } from "./progress.js";
 import {
 	applyCompareProgress,
@@ -10,7 +10,6 @@ import {
 	compareWithProgress,
 	endCompareProgress,
 } from "./progress.js";
-import * as client from "#lib/compare/client.js";
 
 vi.mock("#lib/compare/client.js", () => ({ compare: vi.fn() }));
 

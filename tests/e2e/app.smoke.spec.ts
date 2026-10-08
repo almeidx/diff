@@ -1,5 +1,5 @@
-import { gzipSync, strToU8 } from "fflate";
 import { expect, test } from "@playwright/test";
+import { gzipSync, strToU8 } from "fflate";
 
 test("home page renders with hardened headers and accessible controls", async ({ page }) => {
 	// "/" is prerendered; security headers come from static/_headers deployed via wrangler.

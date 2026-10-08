@@ -1,6 +1,6 @@
-import type { Registry, WordPressPluginInfo } from "./types.js";
-import { compareVersions } from "#lib/utils/versions.js";
 import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/http.js";
+import { compareVersions } from "#lib/utils/versions.js";
+import type { Registry, WordPressPluginInfo } from "./types.js";
 
 const WP_API = "https://api.wordpress.org/plugins/info/1.2/";
 const WP_DOWNLOADS = "https://downloads.wordpress.org/plugin";

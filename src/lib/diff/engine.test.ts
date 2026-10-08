@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { processFile } from "@pierre/diffs";
-import { computeDiff } from "./engine";
+import { describe, expect, it } from "vitest";
 import type { FileEntry, FileTree } from "#lib/types/index.js";
+import { computeDiff } from "./engine";
 
 function entry(path: string, content: string | null, overrides: Partial<FileEntry> = {}): FileEntry {
 	return {

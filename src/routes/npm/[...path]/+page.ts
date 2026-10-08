@@ -1,10 +1,10 @@
 import { error } from "@sveltejs/kit";
-import type { PageLoad } from "./$types";
-import { WORKER_CRASH_MESSAGE } from "#lib/compare/client.js";
-import { compareWithProgress } from "#lib/stores/progress.js";
-import { isNotFoundError } from "#lib/errors.js";
 import { limitsFromSearchParams } from "#lib/archive/limits.js";
+import { WORKER_CRASH_MESSAGE } from "#lib/compare/client.js";
+import { isNotFoundError } from "#lib/errors.js";
+import { compareWithProgress } from "#lib/stores/progress.js";
 import { parseVersionRange } from "#lib/utils/versions.js";
+import type { PageLoad } from "./$types";
 
 interface ParsedPath {
 	packageName: string;

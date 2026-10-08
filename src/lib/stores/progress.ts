@@ -1,8 +1,8 @@
 import { writable } from "svelte/store";
-import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
-import type { CompareProgress, PackageType } from "#lib/types/index.js";
 import type { ArchiveLimits } from "#lib/archive/limits.js";
 import { compare } from "#lib/compare/client.js";
+import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
+import type { CompareProgress, PackageType } from "#lib/types/index.js";
 
 export type ProgressStepStatus = "pending" | "active" | "done";
 

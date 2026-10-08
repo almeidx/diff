@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { CompareProgress } from "#lib/types/index.js";
 import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
-import { handleRequest } from "./worker.js";
+import type { CompareProgress } from "#lib/types/index.js";
 import * as core from "./core.js";
+import { handleRequest } from "./worker.js";
 
 vi.mock("./core.js", () => ({ versions: vi.fn(), compare: vi.fn(), fileContents: vi.fn() }));
 
