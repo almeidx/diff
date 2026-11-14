@@ -1,59 +1,52 @@
-import { getErrorMessage } from "#lib/errors.js";
-import type { CompareProgress } from "#lib/types/index.js";
-import { compare, fileContents, versions } from "./core.js";
-import type {
-	ComparePayload,
-	FileContentsPayload,
-	VersionsPayload,
-	WorkerRequest,
-	WorkerResponse,
-} from "./protocol.js";
+/// <reference lib="webworker" />
+import { AppError, toErrorPayload } from "#lib/errors.js";
+import { getRegistry } from "#lib/registries/index.js";
+import { runCompare } from "./pipeline.js";
+import type { CompareEvent, RequestResults, WorkerCall, WorkerRequest, WorkerResponse } from "./protocol.js";
 
-export async function handleRequest(
-	request: WorkerRequest,
-	emitProgress?: (progress: CompareProgress) => void,
-): Promise<WorkerResponse> {
-	try {
-		let value: VersionsPayload | ComparePayload | FileContentsPayload;
-		switch (request.kind) {
-			case "versions":
-				value = await versions(request.type, request.name);
-				break;
-			case "compare":
-				value = await compare(
-					request.type,
-					request.name,
-					request.fromVersion,
-					request.toVersion,
-					emitProgress,
-					request.limits,
-				);
-				break;
-			case "fileContents":
-				value = await fileContents(request.path);
-				break;
-		}
-		return { id: request.id, kind: "result", value };
-	} catch (error) {
-		return { id: request.id, kind: "error", message: getErrorMessage(error, "Failed to run comparison") };
+declare const self: DedicatedWorkerGlobalScope;
+
+const controllers = new Map<number, AbortController>();
+
+async function handle(
+	call: WorkerCall,
+	signal: AbortSignal,
+	emit: (event: CompareEvent) => void,
+): Promise<RequestResults[WorkerCall["type"]]> {
+	const registryId = call.type === "compare" ? call.request.registry : call.registry;
+	const registry = getRegistry(registryId);
+	if (!registry) throw new AppError(`Unknown registry "${registryId}".`, "not-found");
+
+	switch (call.type) {
+		case "search":
+			return registry.search(call.query, signal);
+		case "package":
+			return registry.getPackage(call.name, signal);
+		case "compare":
+			await runCompare(registry, call.request, emit, signal);
+			return null;
 	}
 }
 
-if (typeof self !== "undefined") {
-	self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-		const request = event.data;
-		const response = await handleRequest(request, (progress) => {
-			const message: WorkerResponse = { id: request.id, kind: "progress", progress };
-			try {
-				self.postMessage(message);
-			} catch {
-				// Port closed; nothing to recover.
-			}
-		});
-		try {
-			self.postMessage(response);
-		} catch {
-			// Port closed or message failed to serialize; nothing to recover.
-		}
+self.onmessage = async ({ data }: MessageEvent<WorkerRequest>) => {
+	const { id } = data;
+	if (data.type === "cancel") {
+		controllers.get(id)?.abort();
+		return;
+	}
+
+	const controller = new AbortController();
+	controllers.set(id, controller);
+	const post = (response: WorkerResponse) => {
+		if (!controller.signal.aborted) self.postMessage(response);
 	};
-}
+
+	try {
+		const value = await handle(data, controller.signal, (event) => post({ id, type: "event", event }));
+		post({ id, type: "result", value });
+	} catch (error) {
+		post({ id, type: "error", error: toErrorPayload(error) });
+	} finally {
+		controllers.delete(id);
+	}
+};

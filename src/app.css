@@ -1,129 +1,72 @@
 @import "tailwindcss";
 
+/* Palette mirrors the pierre-light / pierre-dark syntax themes so the chrome and the diff read as one surface. */
 @theme {
-	--color-bg-primary: var(--bg-primary);
-	--color-bg-secondary: var(--bg-secondary);
-	--color-bg-tertiary: var(--bg-tertiary);
-	--color-text-primary: var(--text-primary);
-	--color-text-secondary: var(--text-secondary);
-	--color-text-muted: var(--text-muted);
-	--color-border: var(--border-color);
-	--color-border-muted: var(--border-muted);
-	--color-link: var(--link-color);
-	--color-focus-ring: var(--focus-ring);
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-raised: var(--raised);
+	--color-border: var(--border);
+	--color-fg: var(--fg);
+	--color-muted: var(--muted);
+	--color-faint: var(--faint);
+	--color-accent: var(--accent);
+	--color-added: var(--added);
+	--color-deleted: var(--deleted);
 
-	--color-diff-add-bg: var(--diff-add-bg);
-	--color-diff-add-text: var(--diff-add-text);
-	--color-diff-add-highlight: var(--diff-add-highlight);
-	--color-diff-delete-bg: var(--diff-delete-bg);
-	--color-diff-delete-text: var(--diff-delete-text);
-	--color-diff-delete-highlight: var(--diff-delete-highlight);
-	--color-diff-hunk-bg: var(--diff-hunk-bg);
-	--color-diff-hunk-text: var(--diff-hunk-text);
-
-	--color-syntax-bg: var(--syntax-bg);
-
+	--font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 :root {
-	--bg-primary: #ffffff;
-	--bg-secondary: #f6f8fa;
-	--bg-tertiary: #f0f0f0;
-	--text-primary: #24292f;
-	--text-secondary: #57606a;
-	--text-muted: #8b949e;
-	--border-color: #d0d7de;
-	--border-muted: #d8dee4;
-
-	--diff-add-bg: #dafbe1;
-	--diff-add-text: #1a7f37;
-	--diff-add-highlight: #aceebb;
-	--diff-delete-bg: #ffebe9;
-	--diff-delete-text: #cf222e;
-	--diff-delete-highlight: #ffc0c0;
-	--diff-hunk-bg: #ddf4ff;
-	--diff-hunk-text: #0969da;
-
-	--syntax-bg: #f6f8fa;
-
-	--link-color: #0969da;
-	--focus-ring: #0969da;
+	color-scheme: light;
+	--bg: #ffffff;
+	--surface: #f5f5f5;
+	--raised: #ededed;
+	--border: #e5e5e5;
+	--fg: #0a0a0a;
+	--muted: #525252;
+	--faint: #a3a3a3;
+	--accent: #009fff;
+	--added: #18a46c;
+	--deleted: #d52c36;
 }
 
-[data-theme="dark"] {
-	--bg-primary: #0d1117;
-	--bg-secondary: #161b22;
-	--bg-tertiary: #21262d;
-	--text-primary: #c9d1d9;
-	--text-secondary: #8b949e;
-	--text-muted: #6e7681;
-	--border-color: #30363d;
-	--border-muted: #21262d;
-
-	--diff-add-bg: #1a3d29;
-	--diff-add-text: #3fb950;
-	--diff-add-highlight: #2ea043;
-	--diff-delete-bg: #3d1a1a;
-	--diff-delete-text: #f85149;
-	--diff-delete-highlight: #da3633;
-	--diff-hunk-bg: #1f2937;
-	--diff-hunk-text: #58a6ff;
-
-	--syntax-bg: #161b22;
-
-	--link-color: #58a6ff;
-	--focus-ring: #58a6ff;
+:root[data-theme="dark"] {
+	color-scheme: dark;
+	--bg: #0a0a0a;
+	--surface: #141414;
+	--raised: #1d1d1d;
+	--border: #262626;
+	--fg: #fafafa;
+	--muted: #a3a3a3;
+	--faint: #525252;
+	--accent: #009fff;
+	--added: #07c480;
+	--deleted: #ff2e3f;
 }
 
 @layer base {
-	*,
-	*::before,
-	*::after {
-		box-sizing: border-box;
-		margin: 0;
-		padding: 0;
-	}
-
 	html,
 	body {
 		height: 100%;
-		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+		background: var(--bg);
+		color: var(--fg);
+		font-family: var(--font-sans);
 		font-size: 14px;
 		line-height: 1.5;
-		background-color: var(--bg-primary);
-		color: var(--text-primary);
-	}
-
-	a {
-		color: var(--link-color);
-		text-decoration: none;
-	}
-
-	a:hover {
-		text-decoration: underline;
+		-webkit-font-smoothing: antialiased;
 	}
 
 	button {
 		cursor: pointer;
-		font-family: inherit;
-		font-size: inherit;
 	}
 
-	input,
-	select {
-		font-family: inherit;
-		font-size: inherit;
-	}
-
-	code,
-	pre {
-		font-family: var(--font-mono);
-		font-size: 12px;
+	button:disabled {
+		cursor: not-allowed;
 	}
 
 	:focus-visible {
-		outline: 2px solid var(--focus-ring);
+		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
 }
@@ -134,6 +77,12 @@
 	}
 }
 
-@utility animate-spin {
-	animation: spin 0.8s linear infinite;
+@utility spinner {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border-radius: 9999px;
+	border: 2px solid var(--border);
+	border-top-color: var(--accent);
+	animation: spin 0.7s linear infinite;
 }

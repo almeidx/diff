@@ -1,19 +1,39 @@
 /**
- * Thrown when an archive trips an extraction limit. Kept distinct from plain
- * fetch failures so the UI can offer the user-opted "without limits" bypass.
+ * `not-found`: unknown package or version. `limit`: an archive tripped an
+ * extraction guardrail, so the UI can offer the explicit "no limits" opt-in.
  */
-export class LimitExceededError extends Error {}
+export type ErrorCode = "not-found" | "limit" | "failed";
 
-export function isNotFoundError(error: unknown): boolean {
-	return error instanceof Error && /not found/i.test(error.message);
+export interface ErrorPayload {
+	message: string;
+	code: ErrorCode;
 }
 
-export function getErrorMessage(error: unknown, fallback: string): string {
-	if (!(error instanceof Error) || !error.message) return fallback;
+export class AppError extends Error {
+	readonly code: ErrorCode;
 
-	const msg = error.message;
-	if (/https?:\/\//i.test(msg)) return fallback;
-	if (msg.length > 300) return fallback;
+	constructor(message: string, code: ErrorCode = "failed") {
+		super(message);
+		this.name = "AppError";
+		this.code = code;
+	}
+}
 
-	return msg;
+/** Serializes any thrown value for the worker boundary without leaking raw upstream URLs. */
+export function toErrorPayload(error: unknown): ErrorPayload {
+	if (error instanceof AppError) return { message: error.message, code: error.code };
+	if (error instanceof RangeError) {
+		return { message: "Ran out of memory while extracting the package.", code: "limit" };
+	}
+	if (error instanceof DOMException && error.name === "TimeoutError") {
+		return { message: "The registry took too long to respond.", code: "failed" };
+	}
+	if (error instanceof TypeError) {
+		return { message: "Network request failed. Check your connection and try again.", code: "failed" };
+	}
+	const message = error instanceof Error ? error.message : "";
+	if (!message || message.length > 300 || /https?:\/\//i.test(message)) {
+		return { message: "Something went wrong while comparing.", code: "failed" };
+	}
+	return { message, code: "failed" };
 }

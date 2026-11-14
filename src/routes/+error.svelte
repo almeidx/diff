@@ -1,20 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import SiteHeader from '#lib/components/SiteHeader.svelte';
 </script>
 
 <svelte:head>
-	<title>Error {page.status} - Diff</title>
+	<title>{page.status} · diff</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-6">
-	<div class="text-center max-w-[500px]">
-		<h1 class="text-7xl font-bold mb-4 text-text-primary">{page.status}</h1>
-		<p class="text-lg text-text-secondary mb-8 leading-relaxed">{page.error?.message || 'Something went wrong'}</p>
-		<a
-			href="/"
-			class="inline-block px-6 py-3 bg-link text-white rounded-lg font-medium no-underline transition-opacity hover:opacity-90 hover:no-underline"
-		>
-			Go back home
-		</a>
-	</div>
+<div class="flex min-h-full flex-col">
+	<SiteHeader />
+	<main class="grid flex-1 place-items-center p-6 text-center">
+		<div>
+			<h1 class="text-5xl font-semibold tracking-tight">{page.status}</h1>
+			<p class="mt-3 text-muted">{page.error?.message || 'Something went wrong'}</p>
+			<a href="/" class="mt-6 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Compare packages</a>
+		</div>
+	</main>
 </div>

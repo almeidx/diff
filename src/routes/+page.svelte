@@ -1,295 +1,236 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
-	import { versions as fetchVersions } from "#lib/compare/client.js";
-	import * as radioGroup from "@zag-js/radio-group";
-	import { normalizeProps, useMachine } from "@zag-js/svelte";
-	import ThemeToggle from "#lib/components/ThemeToggle.svelte";
-	import VersionSelector from "#lib/components/VersionSelector.svelte";
+	import { goto } from '$app/navigation';
+	import { getPackage, searchPackages } from '#lib/compare/client.js';
+	import Combobox from '#lib/components/Combobox.svelte';
+	import SiteHeader from '#lib/components/SiteHeader.svelte';
+	import VersionSelect from '#lib/components/VersionSelect.svelte';
+	import { getRegistry, registries, type PackageInfo, type PackageSuggestion } from '#lib/registries/index.js';
+	import { defaultRange } from '#lib/registries/versions.js';
+	import { comparePath } from '#lib/url.js';
+	import { onMount } from 'svelte';
 
-	let packageType = $state<"npm" | "wp">("npm");
-	let packageName = $state("");
-	let fromVersion = $state("");
-	let toVersion = $state("");
-	let isLoading = $state(false);
-	let isLoadingVersions = $state(false);
-	let versions = $state<string[]>([]);
+	const SEARCH_DEBOUNCE_MS = 200;
+
+	let registry = $state(registries[0]);
+	let name = $state('');
+	let suggestions = $state.raw<PackageSuggestion[]>([]);
+	let searching = $state(false);
+	let info = $state.raw<PackageInfo | null>(null);
+	let loadingInfo = $state(false);
 	let error = $state<string | null>(null);
+	let from = $state('');
+	let to = $state('');
 
-	const packageTypeMachineId = $props.id();
-	const packageTypeOptions: Array<{ value: "npm" | "wp"; label: string; iconPath: string }> = [
-		{
-			value: "npm",
-			label: "npm",
-			iconPath:
-				"M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0v1.336H8.001V8.667h5.334v5.332h-2.669v-.001zm12.001 0h-1.33v-4h-1.336v4h-1.335v-4h-1.33v4h-2.671V8.667h8.002v5.331z",
-		},
-		{
-			value: "wp",
-			label: "WordPress",
-			iconPath:
-				"M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zM3.443 12c0-1.156.238-2.256.659-3.262l3.63 9.939A8.564 8.564 0 013.443 12zm8.557 8.557c-.883 0-1.736-.122-2.546-.348l2.703-7.858 2.768 7.585c.018.044.039.085.063.123a8.508 8.508 0 01-2.988.498zm1.172-12.584c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.884 0-2.37-.114-2.37-.114-.485-.028-.542.713-.057.742 0 0 .459.057.943.085l1.401 3.838-1.968 5.901-3.274-9.739c.542-.028 1.03-.085 1.03-.085.485-.057.428-.77-.057-.742 0 0-1.458.114-2.4.114-.169 0-.367-.004-.58-.01A8.538 8.538 0 0112 3.443c2.258 0 4.318.874 5.855 2.3-.037-.002-.072-.008-.11-.008-.884 0-1.512.77-1.512 1.598 0 .742.428 1.37.884 2.113.343.599.742 1.37.742 2.483 0 .77-.296 1.663-.685 2.908l-.898 2.998-3.104-9.239zm4.534 10.946l2.748-7.946c.514-1.284.685-2.31.685-3.224 0-.332-.021-.64-.061-.927a8.558 8.558 0 01-3.372 12.097z",
-		},
-	];
+	let searchController: AbortController | null = null;
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	let infoController: AbortController | null = null;
 
-	const packageTypeService = useMachine(radioGroup.machine, () => ({
-		id: `package-type-${packageTypeMachineId}`,
-		name: "package-type",
-		value: packageType,
-		orientation: "horizontal" as const,
-		onValueChange: ({ value }) => {
-			if (value === "npm" || value === "wp") {
-				packageType = value;
-			}
-		},
-	}));
+	const canCompare = $derived(info !== null && from !== '' && to !== '' && from !== to);
 
-	const packageTypeApi = $derived(radioGroup.connect(packageTypeService, normalizeProps));
+	function reset() {
+		searchController?.abort();
+		infoController?.abort();
+		clearTimeout(searchTimer);
+		name = '';
+		suggestions = [];
+		searching = false;
+		info = null;
+		loadingInfo = false;
+		error = null;
+		from = '';
+		to = '';
+	}
 
-	$effect(() => {
-		packageType;
-		versions = [];
-		fromVersion = "";
-		toVersion = "";
-	});
-
-	$effect(() => {
-		if (packageTypeApi.value !== packageType) {
-			packageTypeApi.setValue(packageType);
-		}
-	});
-
-	async function loadVersions() {
-		if (!packageName.trim()) {
-			error = "Please enter a package name";
+	function search(query: string) {
+		clearTimeout(searchTimer);
+		searchController?.abort();
+		const text = query.trim();
+		// npm rejects one-character queries, and they are too broad to be useful anyway.
+		if (text.length < 2) {
+			suggestions = [];
+			searching = false;
 			return;
 		}
 
-		error = null;
-		isLoadingVersions = true;
-		versions = [];
-
-		try {
-			versions = await fetchVersions(packageType, packageName.trim());
-
-			if (versions.length >= 2) {
-				toVersion = versions[0];
-				fromVersion = versions[1];
-			} else if (versions.length === 1) {
-				toVersion = versions[0];
+		searching = true;
+		const target = registry;
+		searchTimer = setTimeout(async () => {
+			const controller = (searchController = new AbortController());
+			try {
+				suggestions = await searchPackages(target.id, text, controller.signal);
+			} catch {
+				// Suggestions are a convenience; typing a full name still works.
+				if (!controller.signal.aborted) suggestions = [];
+			} finally {
+				if (!controller.signal.aborted) searching = false;
 			}
-		} catch (e) {
-			error = e instanceof Error ? e.message : "Failed to fetch versions";
+		}, SEARCH_DEBOUNCE_MS);
+	}
+
+	async function choose(value: string) {
+		const target = registry;
+		const packageName = value.trim();
+		searchController?.abort();
+		clearTimeout(searchTimer);
+		searching = false;
+		infoController?.abort();
+
+		name = packageName;
+		info = null;
+		from = '';
+		to = '';
+		error = null;
+		if (!target.isValidName(packageName)) {
+			error = `"${packageName}" is not a valid ${target.nameLabel.toLowerCase()} name.`;
+			return;
+		}
+
+		const controller = (infoController = new AbortController());
+		loadingInfo = true;
+		try {
+			const loaded = await getPackage(target.id, packageName, controller.signal);
+			const range = defaultRange(
+				loaded.versions.map((entry) => entry.version),
+				loaded.latest,
+			);
+			info = loaded;
+			from = range?.from ?? '';
+			to = range?.to ?? loaded.versions[0]?.version ?? '';
+			if (!range) error = `${packageName} has only one published version.`;
+		} catch (caught) {
+			if (!controller.signal.aborted) error = caught instanceof Error ? caught.message : String(caught);
 		} finally {
-			isLoadingVersions = false;
+			if (!controller.signal.aborted) loadingInfo = false;
 		}
 	}
 
-	async function handleSubmit(e: Event) {
-		e.preventDefault();
-		error = null;
-
-		if (!packageName.trim()) {
-			error = "Please enter a package name";
-			return;
-		}
-
-		if (!fromVersion.trim() || !toVersion.trim()) {
-			error = "Please enter both versions";
-			return;
-		}
-
-		isLoading = true;
-
-		try {
-			const encodedFrom = encodeURIComponent(fromVersion.trim());
-			const encodedTo = encodeURIComponent(toVersion.trim());
-			if (packageType === "npm") {
-				const encodedName = packageName.trim().split("/").map(encodeURIComponent).join("/");
-				await goto(`/npm/${encodedName}/${encodedFrom}...${encodedTo}`);
-			} else {
-				await goto(`/wp/${encodeURIComponent(packageName.trim())}/${encodedFrom}...${encodedTo}`);
-			}
-		} catch {
-			error = "Failed to navigate. Please check the package name and versions.";
-			isLoading = false;
-		}
+	function submit(event: SubmitEvent) {
+		event.preventDefault();
+		if (canCompare) void goto(comparePath(registry.id, name, from, to));
 	}
+
+	onMount(() => {
+		const params = new URLSearchParams(location.search);
+		const preset = getRegistry(params.get('registry') ?? '');
+		if (preset) registry = preset;
+		const presetName = params.get('name');
+		if (presetName) void choose(presetName);
+	});
 </script>
 
 <svelte:head>
-	<title>Diff - Compare package versions</title>
-	<meta name="description" content="Compare different versions of npm packages and WordPress plugins" />
+	<title>diff · Compare package releases</title>
+	<meta name="description" content="See exactly what changed between two releases of an npm package or WordPress plugin." />
 </svelte:head>
 
-<div class="min-h-screen flex flex-col">
-	<a href="#main-content" class="absolute -top-full left-4 px-4 py-2 bg-link text-white rounded no-underline font-medium z-[1000] transition-[top] duration-200 focus:top-4">Skip to main content</a>
+<div class="flex min-h-full flex-col">
+	<SiteHeader />
 
-	<header class="flex items-center justify-between px-6 py-4 border-b border-border">
-		<span class="text-2xl font-bold text-text-primary">diff</span>
-		<div class="flex items-center gap-2">
-			<a href="https://github.com/almeidx/diff" class="flex items-center justify-center w-9 h-9 rounded-md text-text-secondary transition-all hover:bg-bg-secondary hover:text-text-primary hover:no-underline" target="_blank" rel="noopener" aria-label="View source on GitHub">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-					<path
-						d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
-					/>
-				</svg>
-			</a>
-			<a href="https://almeidx.dev" class="flex items-center justify-center w-9 h-9 rounded-md text-text-secondary transition-all hover:bg-bg-secondary hover:text-text-primary hover:no-underline" target="_blank" rel="noopener" aria-label="Visit almeidx.dev">
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-					<path
-						d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-					/>
-				</svg>
-			</a>
-			<ThemeToggle />
-		</div>
-	</header>
+	<main class="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 pb-24 pt-10">
+		<h1 class="text-3xl font-semibold tracking-tight">Compare package releases</h1>
+		<p class="mt-2 text-muted">See exactly what changed between two versions. Everything runs in your browser.</p>
 
-	<main id="main-content" class="flex-1 flex flex-col items-center px-6 py-12 max-w-[600px] mx-auto w-full">
-		<div class="text-center mb-8">
-			<h1 class="text-3xl font-bold mb-2">Compare package versions</h1>
-			<p class="text-text-secondary text-base">View the diff between two versions of npm packages or WordPress plugins</p>
-		</div>
-		<div class="sr-only" aria-live="polite">
-			{#if isLoadingVersions}
-				Loading versions
-			{:else if versions.length > 0}
-				Loaded {versions.length} versions
-			{:else if isLoading}
-				Opening diff page
-			{/if}
-		</div>
-
-		<form class="w-full flex flex-col gap-5" onsubmit={handleSubmit}>
-			<div class="flex gap-2 max-[480px]:flex-col" {...packageTypeApi.getRootProps()}>
-				<span class="sr-only" {...packageTypeApi.getLabelProps()}>Package type</span>
-				{#each packageTypeOptions as option}
-					{@const optionState = packageTypeApi.getItemState({ value: option.value })}
+		<form class="mt-8 flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5" onsubmit={submit}>
+			<fieldset class="flex gap-1 rounded-lg bg-raised p-1">
+				<legend class="sr-only">Registry</legend>
+				{#each registries as option (option.id)}
 					<label
-						class="flex-1"
-						{...packageTypeApi.getItemProps({ value: option.value })}
+						class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted transition-colors has-checked:bg-bg has-checked:text-fg has-checked:shadow-sm has-focus-visible:outline-2 has-focus-visible:outline-accent"
 					>
-						<input {...packageTypeApi.getItemHiddenInputProps({ value: option.value })} />
-						<span
-							class="flex items-center justify-center gap-2 px-4 py-3 border rounded-lg text-sm font-medium transition-all w-full"
-							class:border-border={!optionState.checked}
-							class:bg-bg-secondary={!optionState.checked}
-							class:text-text-secondary={!optionState.checked}
-							class:hover:border-text-muted={!optionState.checked}
-							class:hover:text-text-primary={!optionState.checked}
-							class:border-link={optionState.checked}
-							class:bg-[color-mix(in_srgb,var(--link-color)_10%,transparent)]={optionState.checked}
-							class:text-link={optionState.checked}
-							{...packageTypeApi.getItemControlProps({ value: option.value })}
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-								<path d={option.iconPath} />
-							</svg>
-							<span {...packageTypeApi.getItemTextProps({ value: option.value })}>{option.label}</span>
-						</span>
+						<input
+							type="radio"
+							name="registry"
+							class="sr-only"
+							value={option.id}
+							checked={registry.id === option.id}
+							onchange={() => {
+								registry = option;
+								reset();
+							}}
+						/>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={option.icon} /></svg>
+						{option.label}
 					</label>
 				{/each}
-			</div>
+			</fieldset>
 
-			<div class="flex gap-3 items-end max-[480px]:flex-col max-[480px]:items-stretch">
-				<div class="flex flex-col gap-1.5 flex-1">
-					<label for="package-name" class="text-xs font-medium text-text-secondary">
-						{packageType === "npm" ? "Package name" : "Plugin slug"}
-					</label>
-					<input
-						type="text"
-						id="package-name"
-						bind:value={packageName}
-						placeholder={packageType === "npm" ? "e.g. lodash, @types/node" : "e.g. akismet, jetpack"}
-						onkeydown={(e) => e.key === "Enter" && (e.preventDefault(), loadVersions())}
-						class="px-3.5 py-2.5 border border-border rounded-lg bg-bg-primary text-text-primary text-sm focus:border-link focus:outline-none"
-					/>
-				</div>
+			{#key registry.id}
+				<Combobox
+					id="package-{registry.id}"
+					label={registry.nameLabel}
+					items={suggestions}
+					toValue={(suggestion) => suggestion.name}
+					value={name}
+					placeholder={registry.namePlaceholder}
+					loading={searching || loadingInfo}
+					allowCustomValue
+					onQuery={search}
+					onSelect={choose}
+				>
+					{#snippet item(suggestion)}
+						<div class="flex items-baseline gap-2">
+							<span class="truncate font-mono text-sm">{suggestion.name}</span>
+							{#if suggestion.version}
+								<span class="shrink-0 font-mono text-xs text-faint">{suggestion.version}</span>
+							{/if}
+						</div>
+						{#if suggestion.description}
+							<p class="truncate text-xs text-muted">{suggestion.description}</p>
+						{/if}
+					{/snippet}
+				</Combobox>
+			{/key}
+
+			<div class="flex items-end gap-2">
+				<VersionSelect
+					id="from-version"
+					label="From"
+					class="flex-1"
+					versions={info?.versions ?? []}
+					value={from}
+					other={to}
+					disabled={!info}
+					onSelect={(version) => (from = version)}
+				/>
 				<button
 					type="button"
-					class="flex items-center justify-center gap-2 px-4 py-2.5 border border-border rounded-lg bg-bg-secondary text-text-primary text-sm font-medium whitespace-nowrap transition-all hover:border-link hover:text-link disabled:opacity-60 disabled:cursor-not-allowed"
-					onclick={loadVersions}
-					disabled={isLoadingVersions || !packageName.trim()}
+					class="mb-1 grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-raised hover:text-fg disabled:opacity-40"
+					aria-label="Swap versions"
+					title="Swap versions"
+					disabled={!info}
+					onclick={() => ([from, to] = [to, from])}
 				>
-					{#if isLoadingVersions}
-						<span class="w-4 h-4 border-2 border-transparent border-t-current rounded-full animate-spin"></span>
-						Loading...
-					{:else}
-						Load versions
-					{/if}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M7 7h13l-4-4M17 17H4l4 4" />
+					</svg>
 				</button>
-			</div>
-
-			<div class="flex items-end gap-3 max-[480px]:flex-col max-[480px]:items-stretch">
-				{#if versions.length > 0}
-					<div class="flex-1 min-w-0">
-						<VersionSelector
-							{versions}
-							value={fromVersion}
-							onchange={(v) => (fromVersion = v)}
-							label="From version"
-							id="from-version"
-							disabledVersion={toVersion}
-							loading={isLoading}
-						/>
-					</div>
-					<span class="pb-3 text-text-muted text-lg max-[480px]:hidden">→</span>
-					<div class="flex-1 min-w-0">
-						<VersionSelector
-							{versions}
-							value={toVersion}
-							onchange={(v) => (toVersion = v)}
-							label="To version"
-							id="to-version"
-							disabledVersion={fromVersion}
-							loading={isLoading}
-						/>
-					</div>
-				{:else}
-					<div class="flex flex-col gap-1.5 flex-1 min-w-0">
-						<label for="from-version" class="text-xs font-medium text-text-secondary">From version</label>
-						<input
-							type="text"
-							id="from-version"
-							bind:value={fromVersion}
-							placeholder="e.g. 1.0.0"
-							class="px-3.5 py-2.5 border border-border rounded-lg bg-bg-primary text-text-primary text-sm focus:border-link focus:outline-none"
-						/>
-					</div>
-					<span class="pb-3 text-text-muted text-lg max-[480px]:hidden">→</span>
-					<div class="flex flex-col gap-1.5 flex-1 min-w-0">
-						<label for="to-version" class="text-xs font-medium text-text-secondary">To version</label>
-						<input
-							type="text"
-							id="to-version"
-							bind:value={toVersion}
-							placeholder="e.g. 2.0.0"
-							class="px-3.5 py-2.5 border border-border rounded-lg bg-bg-primary text-text-primary text-sm focus:border-link focus:outline-none"
-						/>
-					</div>
-				{/if}
+				<VersionSelect
+					id="to-version"
+					label="To"
+					class="flex-1"
+					versions={info?.versions ?? []}
+					value={to}
+					other={from}
+					disabled={!info}
+					onSelect={(version) => (to = version)}
+				/>
 			</div>
 
 			{#if error}
-				<div class="px-4 py-3 bg-diff-delete-bg border border-diff-delete-text rounded-lg text-diff-delete-text text-sm" role="alert" aria-live="assertive">{error}</div>
+				<p class="rounded-lg border border-deleted/30 bg-deleted/10 px-3 py-2 text-sm text-deleted" role="alert">{error}</p>
 			{/if}
 
 			<button
 				type="submit"
-				class="flex items-center justify-center gap-2 px-6 py-3 border-none rounded-lg bg-link text-white text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-				disabled={isLoading}
+				class="h-10 rounded-lg bg-accent px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+				disabled={!canCompare}
 			>
-				{#if isLoading}
-					<span class="w-4 h-4 border-2 border-transparent border-t-current rounded-full animate-spin"></span>
-					Loading...
+				{#if canCompare}
+					Compare <span class="font-mono">{from}</span> → <span class="font-mono">{to}</span>
 				{:else}
-					Compare versions
+					Compare
 				{/if}
 			</button>
 		</form>
-
-		<div class="mt-8 p-4 bg-bg-secondary border border-border rounded-lg text-center">
-			<p class="text-sm text-text-secondary m-0">Everything runs in your browser.</p>
-		</div>
 	</main>
 </div>

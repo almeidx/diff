@@ -22,7 +22,8 @@ export default defineConfig({
 					"base-uri": ["self"],
 					"object-src": ["none"],
 					"form-action": ["self"],
-					"script-src": ["self"],
+					// The Highlights syntax highlighter compiles WebAssembly.
+					"script-src": ["self", "wasm-unsafe-eval"],
 					"style-src": ["self", "unsafe-inline"],
 					"img-src": ["self", "data:"],
 					"font-src": ["self", "data:"],
@@ -32,7 +33,6 @@ export default defineConfig({
 						"https://registry.npmjs.com",
 						"https://api.wordpress.org",
 						"https://downloads.wordpress.org",
-						"https://api.github.com",
 					],
 				},
 			},

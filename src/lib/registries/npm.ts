@@ -1,106 +1,122 @@
-import { fetchWithTimeout, assertSafeUpstreamUrl } from "#lib/http.js";
-import { compareVersions } from "#lib/utils/versions.js";
-import type { Registry, NpmPackageMetadata } from "./types.js";
+import { AppError } from "#lib/errors.js";
+import { assertAllowedUrl, upstreamFetch } from "#lib/http.js";
+import type { PackageInfo, PackageSuggestion, Registry } from "./types.js";
+import { compareVersions } from "./versions.js";
 
-const NPM_REGISTRY = "https://registry.npmjs.org";
-const NPM_ALLOWED_HOSTS = ["registry.npmjs.org", "registry.npmjs.com"];
+const REGISTRY = "https://registry.npmjs.org";
+const HOSTS = ["registry.npmjs.org", "registry.npmjs.com"] as const;
+const NAME_PATTERN = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
 
-export class NpmRegistry implements Registry {
-	private metadataMemo = new Map<string, Promise<NpmPackageMetadata>>();
-	private repoMemo = new Map<string, Promise<{ url: string; type?: string } | string | null>>();
-
-	/**
-	 * Memoize the fetch promise per key in-session. On rejection the entry is
-	 * deleted so a retry refetches (failures are not sticky).
-	 */
-	private memo<T>(memo: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> {
-		const existing = memo.get(key);
-		if (existing) return existing;
-
-		const promise = load().catch((error: unknown) => {
-			memo.delete(key);
-			throw error;
-		});
-		memo.set(key, promise);
-		return promise;
-	}
-
-	private getMetadata(packageName: string): Promise<NpmPackageMetadata> {
-		return this.memo(this.metadataMemo, packageName, async () => {
-			const encodedName = packageName.startsWith("@")
-				? `@${encodeURIComponent(packageName.slice(1))}`
-				: encodeURIComponent(packageName);
-
-			const response = await fetchWithTimeout(`${NPM_REGISTRY}/${encodedName}`, {
-				headers: { Accept: "application/vnd.npm.install.v1+json" },
-				allowedHosts: NPM_ALLOWED_HOSTS,
-			});
-
-			if (!response.ok) {
-				if (response.status === 404) {
-					throw new Error(`Package "${packageName}" not found on npm`);
-				}
-				throw new Error(`Failed to fetch npm package: ${response.statusText}`);
-			}
-
-			return (await response.json()) as NpmPackageMetadata;
-		});
-	}
-
-	async getVersions(packageName: string): Promise<string[]> {
-		const metadata = await this.getMetadata(packageName);
-		return Object.keys(metadata.versions).sort(compareVersions).reverse();
-	}
-
-	async getDownloadUrl(packageName: string, version: string): Promise<string> {
-		const metadata = await this.getMetadata(packageName);
-		const versionData = metadata.versions[version];
-
-		if (!versionData) {
-			throw new Error(`Version "${version}" not found for package "${packageName}"`);
-		}
-
-		const tarballCandidate = new URL(versionData.dist.tarball);
-		if (
-			tarballCandidate.protocol === "http:" &&
-			(tarballCandidate.hostname === "registry.npmjs.org" || tarballCandidate.hostname === "registry.npmjs.com")
-		) {
-			tarballCandidate.protocol = "https:";
-		}
-
-		const tarballUrl = assertSafeUpstreamUrl(tarballCandidate, {
-			allowedHosts: NPM_ALLOWED_HOSTS,
-		});
-		return tarballUrl.toString();
-	}
-
-	async getRepositoryUrl(packageName: string): Promise<string | null> {
-		const repoInfo = await this.memo(this.repoMemo, packageName, async () => {
-			const encodedName = packageName.startsWith("@")
-				? `@${encodeURIComponent(packageName.slice(1))}`
-				: encodeURIComponent(packageName);
-
-			const response = await fetchWithTimeout(`${NPM_REGISTRY}/${encodedName}`, {
-				headers: { Accept: "application/json" },
-				allowedHosts: NPM_ALLOWED_HOSTS,
-			});
-
-			if (!response.ok) return null;
-
-			const data = (await response.json()) as NpmPackageMetadata;
-			return data.repository ?? null;
-		});
-
-		const repo = repoInfo;
-		if (!repo) return null;
-
-		const raw = typeof repo === "string" ? repo : repo.url;
-
-		const match = raw.match(/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
-		if (!match) return null;
-
-		return `https://github.com/${match[1]}/${match[2]}`;
-	}
+interface Packument {
+	name: string;
+	"dist-tags"?: Record<string, string>;
+	time?: Record<string, string>;
+	versions?: Record<string, { dist?: { tarball?: string }; deprecated?: string }>;
 }
 
-export const npmRegistry = new NpmRegistry();
+interface SearchResponse {
+	objects: Array<{ package: { name: string; description?: string; version?: string } }>;
+}
+
+interface ResolvedPackage {
+	info: PackageInfo;
+	tarballs: Map<string, string>;
+}
+
+const packages = new Map<string, Promise<ResolvedPackage>>();
+
+function encodeName(name: string): string {
+	return name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
+}
+
+/** Memoized per session; failures are evicted so a retry refetches. */
+function resolve(name: string, signal?: AbortSignal): Promise<ResolvedPackage> {
+	let pending = packages.get(name);
+	if (!pending) {
+		pending = load(name, signal);
+		packages.set(name, pending);
+		pending.catch(() => packages.delete(name));
+	}
+	return pending;
+}
+
+async function load(name: string, signal?: AbortSignal): Promise<ResolvedPackage> {
+	// The full document (not the abbreviated install format) carries publish
+	// times; gzipped they are nearly the same size.
+	const response = await upstreamFetch(`${REGISTRY}/${encodeName(name)}`, {
+		hosts: HOSTS,
+		signal,
+		headers: { Accept: "application/json" },
+	});
+	if (response.status === 404) throw new AppError(`Package "${name}" was not found on npm.`, "not-found");
+	if (!response.ok) throw new AppError(`npm responded with ${response.status} for "${name}".`);
+
+	const doc = (await response.json()) as Packument;
+	const versions = doc.versions ?? {};
+	const tagsByVersion = new Map<string, string[]>();
+	for (const [tag, version] of Object.entries(doc["dist-tags"] ?? {})) {
+		tagsByVersion.set(version, [...(tagsByVersion.get(version) ?? []), tag]);
+	}
+
+	const tarballs = new Map<string, string>();
+	for (const [version, manifest] of Object.entries(versions)) {
+		if (manifest.dist?.tarball) tarballs.set(version, manifest.dist.tarball);
+	}
+
+	return {
+		tarballs,
+		info: {
+			name: doc.name ?? name,
+			latest: doc["dist-tags"]?.latest,
+			versions: Object.keys(versions)
+				.sort(compareVersions)
+				.reverse()
+				.map((version) => ({
+					version,
+					publishedAt: doc.time?.[version],
+					deprecated: Boolean(versions[version].deprecated),
+					tags: tagsByVersion.get(version) ?? [],
+				})),
+		},
+	};
+}
+
+export const npm: Registry = {
+	id: "npm",
+	label: "npm",
+	icon: "M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0v1.336H8.001V8.667h5.334v5.332h-2.669v-.001zm12.001 0h-1.33v-4h-1.336v4h-1.335v-4h-1.33v4h-2.671V8.667h8.002v5.331z",
+	nameLabel: "Package",
+	namePlaceholder: "minimatch, chalk…",
+	archiveFormat: "tgz",
+	hosts: HOSTS,
+
+	isValidName: (name) => name.length <= 214 && NAME_PATTERN.test(name),
+
+	async search(query, signal) {
+		const url = new URL(`${REGISTRY}/-/v1/search`);
+		url.searchParams.set("text", query);
+		url.searchParams.set("size", "8");
+		const response = await upstreamFetch(url, { hosts: HOSTS, signal });
+		if (!response.ok) throw new AppError(`npm search responded with ${response.status}.`);
+		const data = (await response.json()) as SearchResponse;
+		return data.objects.map(({ package: pkg }): PackageSuggestion => ({
+			name: pkg.name,
+			description: pkg.description,
+			version: pkg.version,
+		}));
+	},
+
+	async getPackage(name, signal) {
+		return (await resolve(name, signal)).info;
+	},
+
+	async getDownloadUrl(name, version, signal) {
+		const tarball = (await resolve(name, signal)).tarballs.get(version);
+		if (!tarball) throw new AppError(`Version ${version} of "${name}" was not found on npm.`, "not-found");
+
+		const url = new URL(tarball);
+		// Old packuments still list plain-http tarball URLs for the same host.
+		if (url.protocol === "http:") url.protocol = "https:";
+		return assertAllowedUrl(url, HOSTS).href;
+	},
+};

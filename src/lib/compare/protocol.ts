@@ -1,25 +1,41 @@
-import type { ArchiveLimits } from "#lib/archive/limits.js";
-import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
-import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
+import type { ErrorPayload } from "#lib/errors.js";
+import type { PackageInfo, PackageSuggestion } from "#lib/registries/types.js";
+import type { ChangedFile, DiffItem } from "./diff.js";
 
-export type VersionsPayload = string[];
-export type ComparePayload = LoadDiffPageResult;
-export type FileContentsPayload = FileContentsPair | null;
+export interface CompareRequest {
+	registry: string;
+	name: string;
+	from: string;
+	to: string;
+	/** The user explicitly opted out of the archive limits. */
+	unlimited: boolean;
+}
 
-export type WorkerRequest =
-	| { id: number; kind: "versions"; type: PackageType; name: string }
-	| {
-			id: number;
-			kind: "compare";
-			type: PackageType;
-			name: string;
-			fromVersion: string;
-			toVersion: string;
-			limits?: ArchiveLimits;
-	  }
-	| { id: number; kind: "fileContents"; path: string };
+/**
+ * Emitted in order: `metadata`, interleaved `download` progress for both
+ * sides, one `files` with every change in tree order, then `diffs` batches
+ * in that same order.
+ */
+export type CompareEvent =
+	| { type: "metadata" }
+	| { type: "download"; side: "from" | "to"; loaded: number; total: number | null; done: boolean }
+	| { type: "files"; files: ChangedFile[] }
+	| { type: "diffs"; items: DiffItem[]; completed: number; total: number };
+
+export interface RequestResults {
+	search: PackageSuggestion[];
+	package: PackageInfo;
+	compare: null;
+}
+
+export type WorkerCall =
+	| { type: "search"; registry: string; query: string }
+	| { type: "package"; registry: string; name: string }
+	| { type: "compare"; request: CompareRequest };
+
+export type WorkerRequest = (WorkerCall & { id: number }) | { id: number; type: "cancel" };
 
 export type WorkerResponse =
-	| { id: number; kind: "progress"; progress: CompareProgress }
-	| { id: number; kind: "result"; value: VersionsPayload | ComparePayload | FileContentsPayload }
-	| { id: number; kind: "error"; message: string };
+	| { id: number; type: "result"; value: RequestResults[WorkerCall["type"]] }
+	| { id: number; type: "event"; event: CompareEvent }
+	| { id: number; type: "error"; error: ErrorPayload };

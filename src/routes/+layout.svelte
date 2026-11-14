@@ -1,33 +1,7 @@
 <script lang="ts">
 	import '../app.css';
-	import { theme, type Theme } from '#lib/stores/ui.js';
-	import { browser } from '$app/env';
-	import CompareProgress from '#lib/components/CompareProgress.svelte';
 
 	let { children } = $props();
-
-	let initialized = false;
-
-	$effect(() => {
-		if (browser && !initialized) {
-			const current = document.documentElement.dataset.theme as Theme;
-			if (current === 'light' || current === 'dark') {
-				theme.set(current);
-			}
-			initialized = true;
-		}
-	});
-
-	$effect(() => {
-		if (browser && initialized) {
-			document.documentElement.dataset.theme = $theme;
-			localStorage.setItem('theme', $theme);
-		}
-	});
 </script>
 
-<div class="min-h-screen flex flex-col">
-	{@render children()}
-</div>
-
-<CompareProgress />
+{@render children()}

@@ -25,9 +25,7 @@
 		"@pierre/diffs": "^1.6.4",
 		"@pierre/trees": "^1.0.0",
 		"@zag-js/combobox": "^1.47.0",
-		"@zag-js/radio-group": "^1.47.0",
 		"@zag-js/svelte": "^1.47.0",
-		"@zag-js/switch": "^1.47.0",
 		"diff": "^9.0.0",
 		"fflate": "^0.8.3"
 	},

@@ -1,18 +1,19 @@
 # Diff
 
-A web application for comparing different versions of npm packages and WordPress plugins. View the diff between any two versions with syntax highlighting, word-level diff detection, and a file tree navigator.
+See exactly what changed between two releases of an npm package or a WordPress plugin. Everything runs in your browser.
 
 **Live:** [diff.almeidx.dev](https://diff.almeidx.dev)
 
-## Features
+## Usage
 
-- Compare npm packages and WordPress plugins
-- Unified and split diff views
-- Syntax highlighting for common languages
-- Word-level diff highlighting within changed lines
-- Expandable context around changes
-- File tree filtering and keyboard navigation
-- Dark/light theme support
+1. Pick a registry (npm or WordPress).
+2. Search for a package or plugin.
+3. Pick the two versions (defaults to the latest release and the stable one before it).
+4. Compare. Both archives are downloaded and diffed in a Web Worker while the page shows progress; results stream into a virtualized file tree and diff view.
+
+Comparisons are shareable links: `/npm/<package>/<from>...<to>` and `/wp/<plugin>/<from>...<to>`.
+
+Diffs are rendered with [Diffs](https://diffs.com) and the file tree with [Trees](https://trees.software), both by The Pierre Computer Company.
 
 ## Running Locally
 
@@ -24,8 +25,6 @@ cd diff
 pnpm install --frozen-lockfile
 pnpm dev
 ```
-
-The app will be available at `http://localhost:5173`.
 
 | Command           | Description                                |
 | ----------------- | ------------------------------------------ |
@@ -39,25 +38,18 @@ The app will be available at `http://localhost:5173`.
 | `pnpm test:smoke` | Run browser smoke tests (Playwright)       |
 | `pnpm run deploy` | Deploy static assets to Cloudflare Workers |
 
-## How It Works
-
-Everything runs in your browser.
-
 ## Limits
 
-- Maximum compressed archive size: 100MB
-- Maximum decompressed size: ~256MB
-- Maximum files per package: 10,000
-- Maximum file size: 2MB (larger files are skipped)
+- Maximum download size: 100 MB
+- Maximum decompressed size: 256 MB
+- Maximum text files per package: 10,000
+- Text files over 2 MB are listed as changed but not diffed; binary files are compared by size and content hash
 
-Exceeding a limit surfaces a **Compare without limits** opt-in on the diff page. Defaults live in `src/lib/archive/limits.ts`.
+Exceeding a limit offers **Compare without limits**. Defaults live in `src/lib/archive/limits.ts`.
 
-## Troubleshooting
+## Adding a registry
 
-- `Package too large`: use **Compare without limits** on the diff page.
-- `Corrupted or truncated tar archive`: the upstream tarball is malformed; retry or verify the version exists.
-- No versions returned: check the package name/slug spelling and that your network can reach the npm/WordPress APIs.
-- UI slows down on huge diffs: use file-tree filtering to narrow the diff.
+Implement `Registry` (`src/lib/registries/types.ts`) in a new module, add it to `registries` in `src/lib/registries/index.ts`, and add its hosts to the CSP `connect-src` in `vite.config.ts`. The home page, the `/<id>/...` route and the compare worker pick it up from there.
 
 ## License
 

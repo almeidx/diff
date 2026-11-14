@@ -27,12 +27,15 @@ miss while changing the code.
 
 ## Useful areas
 
-- `src/lib/registries/` — package metadata and downloads
-- `src/lib/archive/` — archive extraction and validation
-- `src/lib/diff/` — comparison work
-- `src/lib/compare/` — client-facing compare pipeline
-- `src/lib/components/DiffView/` — unified and split rendering
-- `src/routes/npm/` and `src/routes/wp/` — registry-specific pages
+- `src/lib/registries/` — one module per registry behind the `Registry`
+  interface; adding a registry means adding a module and listing it in
+  `index.ts`
+- `src/lib/archive/` — streaming tar/zip extraction, filtering and limits
+- `src/lib/compare/` — the compare Web Worker (`pipeline.ts`, `diff.ts`), its
+  message protocol, the main-thread client and the reactive `CompareSession`
+- `src/lib/components/` — `DiffViewer` wraps `@pierre/diffs` `CodeView`,
+  `FileTree` wraps `@pierre/trees`; both are imperative and fed in tree order
+- `src/routes/[registry]/[...path]/` — the diff page for every registry
 
 ## Validation
 

@@ -175,15 +175,9 @@ importers:
       '@zag-js/combobox':
         specifier: ^1.47.0
         version: 1.47.0
-      '@zag-js/radio-group':
-        specifier: ^1.47.0
-        version: 1.47.0
       '@zag-js/svelte':
         specifier: ^1.47.0
         version: 1.47.0(svelte@5.57.3)
-      '@zag-js/switch':
-        specifier: ^1.47.0
-        version: 1.47.0
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -1343,16 +1337,10 @@ packages:
   '@zag-js/popper@1.47.0':
     resolution: {integrity: sha512-WghqqpfO/gMVMkvgxg4fWmKpvEXnZkKckQL3orW2e2FZDt/YfcOwLvxnM/mFLXNzWshLFtydZGw6Rz3iaAL40A==}
 
-  '@zag-js/radio-group@1.47.0':
-    resolution: {integrity: sha512-pnXsQP9U4Y7gVSAPGP7O1en8Rvh5GCp0kuemTUCcr6q1PEUeFn0oTcu1rxbHTjAr68R9h8kmmpV3Za1lZ+EM/w==}
-
   '@zag-js/svelte@1.47.0':
     resolution: {integrity: sha512-Lj1NMUM7n88kZH4ODcF7lxoWv117emaquiPCwmtC3gl/p67YVCxHpUWZSxzIvnzY5BvVjbjOkY4rJPOc0GZlLw==}
     peerDependencies:
       svelte: '>=5.29.0'
-
-  '@zag-js/switch@1.47.0':
-    resolution: {integrity: sha512-61jm3G+QnwMTzpLyOC0eZU9yXRNKnEnd63iruAmOxTmaQWCCdRdxPVn0qnwm2Ve6W/9VdNvwPyt4U9KoC+Y9uw==}
 
   '@zag-js/types@1.47.0':
     resolution: {integrity: sha512-3TTiZR+PnODKSLl5PgpzS7QjBTQfB5K+M6q6NHXpr80Z9Rn2UxNoMFK3TA68lec5mryOvvum1P3EIS8Ho9NCGA==}
@@ -2758,30 +2746,12 @@ snapshots:
       '@zag-js/dom-query': 1.47.0
       '@zag-js/utils': 1.47.0
 
-  '@zag-js/radio-group@1.47.0':
-    dependencies:
-      '@zag-js/anatomy': 1.47.0
-      '@zag-js/core': 1.47.0
-      '@zag-js/dom-query': 1.47.0
-      '@zag-js/focus-visible': 1.47.0
-      '@zag-js/types': 1.47.0
-      '@zag-js/utils': 1.47.0
-
   '@zag-js/svelte@1.47.0(svelte@5.57.3)':
     dependencies:
       '@zag-js/core': 1.47.0
       '@zag-js/types': 1.47.0
       '@zag-js/utils': 1.47.0
       svelte: 5.57.3
-
-  '@zag-js/switch@1.47.0':
-    dependencies:
-      '@zag-js/anatomy': 1.47.0
-      '@zag-js/core': 1.47.0
-      '@zag-js/dom-query': 1.47.0
-      '@zag-js/focus-visible': 1.47.0
-      '@zag-js/types': 1.47.0
-      '@zag-js/utils': 1.47.0
 
   '@zag-js/types@1.47.0':
     dependencies:

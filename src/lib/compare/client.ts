@@ -1,108 +1,93 @@
-import type { ArchiveLimits } from "#lib/archive/limits.js";
-import type { LoadDiffPageResult } from "#lib/diff/load-diff-page.js";
-import type { CompareProgress, FileContentsPair, PackageType } from "#lib/types/index.js";
+import { AppError } from "#lib/errors.js";
+import type { PackageInfo, PackageSuggestion } from "#lib/registries/types.js";
 import type {
-	ComparePayload,
-	FileContentsPayload,
-	VersionsPayload,
+	CompareEvent,
+	CompareRequest,
+	RequestResults,
+	WorkerCall,
 	WorkerRequest,
 	WorkerResponse,
 } from "./protocol.js";
 
-/** Message used to reject every pending call after the worker died; route loaders match on it. */
-export const WORKER_CRASH_MESSAGE = "Compare worker crashed";
-
-type Pending = {
-	resolve: (value: VersionsPayload | ComparePayload | FileContentsPayload) => void;
+interface Pending {
+	resolve: (value: never) => void;
 	reject: (error: Error) => void;
-	onProgress?: (progress: CompareProgress) => void;
-};
+	onEvent?: (event: CompareEvent) => void;
+}
 
+/**
+ * One long-lived worker runs every registry request and comparison, so
+ * package metadata memoized while picking versions is reused by the compare.
+ */
 let worker: Worker | null = null;
 let nextId = 0;
 const pending = new Map<number, Pending>();
 
-function failAll(message: string) {
-	const error = new Error(message);
-	for (const entry of pending.values()) entry.reject(error);
-	pending.clear();
-	worker = null;
-}
-
 function getWorker(): Worker {
 	if (worker) return worker;
 
-	const w = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-	w.onmessage = (event: MessageEvent<WorkerResponse>) => {
-		const response = event.data;
-		const entry = pending.get(response.id);
+	worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "compare" });
+	worker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
+		const entry = pending.get(data.id);
 		if (!entry) return;
-		if (response.kind === "progress") {
-			entry.onProgress?.(response.progress);
+		if (data.type === "event") {
+			entry.onEvent?.(data.event);
 			return;
 		}
-		pending.delete(response.id);
-		if (response.kind === "error") {
-			entry.reject(new Error(response.message));
-		} else {
-			entry.resolve(response.value);
-		}
+		pending.delete(data.id);
+		if (data.type === "error") entry.reject(new AppError(data.error.message, data.error.code));
+		else entry.resolve(data.value as never);
 	};
-	w.onerror = () => failAll(WORKER_CRASH_MESSAGE);
-	w.onmessageerror = () => failAll("Compare worker returned an unserializable message");
-
-	worker = w;
-	return w;
+	worker.onerror = (event) => {
+		event.preventDefault();
+		worker?.terminate();
+		worker = null;
+		const error = new AppError("The comparison crashed, most likely because the browser ran out of memory.", "limit");
+		for (const entry of pending.values()) entry.reject(error);
+		pending.clear();
+	};
+	return worker;
 }
 
-/** Distributive so each request variant keeps its own fields (plain Omit would collapse the union). */
-type WithoutId<T> = T extends { id: number } ? Omit<T, "id"> : never;
-
-function call(request: WithoutId<WorkerRequest>): Promise<VersionsPayload | ComparePayload | FileContentsPayload> {
-	const id = nextId++;
-	const { promise, resolve, reject } = Promise.withResolvers<VersionsPayload | ComparePayload | FileContentsPayload>();
-	pending.set(id, { resolve, reject });
-	try {
-		getWorker().postMessage({ ...request, id } satisfies WorkerRequest);
-	} catch (error) {
-		pending.delete(id);
-		reject(error instanceof Error ? error : new Error(String(error)));
+function call<T extends WorkerCall["type"]>(
+	message: Extract<WorkerCall, { type: T }>,
+	signal?: AbortSignal,
+	onEvent?: (event: CompareEvent) => void,
+): Promise<RequestResults[T]> {
+	const { promise, resolve, reject } = Promise.withResolvers<RequestResults[T]>();
+	if (signal?.aborted) {
+		reject(signal.reason);
+		return promise;
 	}
+
+	const id = nextId++;
+	pending.set(id, { resolve, reject, onEvent });
+	signal?.addEventListener(
+		"abort",
+		() => {
+			if (!pending.delete(id)) return;
+			worker?.postMessage({ id, type: "cancel" } satisfies WorkerRequest);
+			reject(signal.reason);
+		},
+		{ once: true },
+	);
+	getWorker().postMessage({ ...message, id } satisfies WorkerRequest);
 	return promise;
 }
 
-export function versions(type: PackageType, name: string): Promise<string[]> {
-	return call({ kind: "versions", type, name }) as Promise<string[]>;
+export function searchPackages(registry: string, query: string, signal?: AbortSignal): Promise<PackageSuggestion[]> {
+	return call({ type: "search", registry, query }, signal);
 }
 
-export function compare(
-	type: PackageType,
-	name: string,
-	fromVersion: string,
-	toVersion: string,
-	onProgress?: (progress: CompareProgress) => void,
-	limits?: ArchiveLimits,
-): Promise<LoadDiffPageResult> {
-	const id = nextId++;
-	const { promise, resolve, reject } = Promise.withResolvers<VersionsPayload | ComparePayload | FileContentsPayload>();
-	pending.set(id, { resolve, reject, onProgress });
-	try {
-		getWorker().postMessage({
-			kind: "compare",
-			type,
-			name,
-			fromVersion,
-			toVersion,
-			limits,
-			id,
-		} satisfies WorkerRequest);
-	} catch (error) {
-		pending.delete(id);
-		reject(error instanceof Error ? error : new Error(String(error)));
-	}
-	return promise as Promise<LoadDiffPageResult>;
+export function getPackage(registry: string, name: string, signal?: AbortSignal): Promise<PackageInfo> {
+	return call({ type: "package", registry, name }, signal);
 }
 
-export function fileContents(path: string): Promise<FileContentsPair | null> {
-	return call({ kind: "fileContents", path }) as Promise<FileContentsPair | null>;
+/** Resolves once every diff has been delivered through `onEvent`. */
+export async function compare(
+	request: CompareRequest,
+	onEvent: (event: CompareEvent) => void,
+	signal: AbortSignal,
+): Promise<void> {
+	await call({ type: "compare", request }, signal, onEvent);
 }

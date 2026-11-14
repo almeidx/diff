@@ -1,98 +1,36 @@
-interface UrlValidationOptions {
-	allowedHosts?: string[];
+import { AppError } from "./errors.js";
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+export interface FetchOptions {
+	/** Exact hostnames this request may reach; must also be listed in the CSP `connect-src`. */
+	hosts: readonly string[];
+	signal?: AbortSignal;
+	/** `null` disables the timeout: archive downloads report progress instead. */
+	timeoutMs?: number | null;
+	headers?: HeadersInit;
 }
 
-interface AbortSetup {
-	signal: AbortSignal;
-	cleanup: () => void;
-}
-
-export interface FetchWithTimeoutOptions extends RequestInit, UrlValidationOptions {
-	timeoutMs?: number;
-}
-
-const DEFAULT_TIMEOUT_MS = 15_000;
-
-function isHostAllowed(hostname: string, allowedHosts: string[]): boolean {
-	return allowedHosts.some((allowedHost) => {
-		const normalizedAllowedHost = allowedHost.toLowerCase();
-		const normalizedHost = hostname.toLowerCase();
-		return normalizedHost === normalizedAllowedHost || normalizedHost.endsWith(`.${normalizedAllowedHost}`);
-	});
-}
-
-export function assertSafeUpstreamUrl(input: string | URL, options: UrlValidationOptions = {}): URL {
+export function assertAllowedUrl(input: string | URL, hosts: readonly string[]): URL {
 	let url: URL;
 	try {
-		url = input instanceof URL ? new URL(input.toString()) : new URL(input);
+		url = new URL(input);
 	} catch {
-		throw new Error("Invalid upstream URL");
+		throw new AppError("The registry returned an invalid URL.");
 	}
-
-	if (url.protocol !== "https:") {
-		throw new Error("Only HTTPS upstream URLs are allowed");
+	if (url.protocol !== "https:" || !hosts.includes(url.hostname)) {
+		throw new AppError(`Refusing to download from untrusted host "${url.hostname}".`);
 	}
-
-	const { allowedHosts } = options;
-	if (allowedHosts && allowedHosts.length > 0 && !isHostAllowed(url.hostname, allowedHosts)) {
-		throw new Error(`Upstream host "${url.hostname}" is not allowed`);
-	}
-
 	return url;
 }
 
-function createAbortSignal(signal: AbortSignal | null, timeoutMs: number): AbortSetup {
-	const timeoutController = new AbortController();
-	let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-		timeoutController.abort(new Error(`Upstream request timed out after ${timeoutMs}ms`));
-	}, timeoutMs);
-
-	const controller = new AbortController();
-
-	function abortFromTimeout(): void {
-		controller.abort(timeoutController.signal.reason);
-	}
-
-	function abortFromSignal(): void {
-		controller.abort(signal?.reason);
-	}
-
-	timeoutController.signal.addEventListener("abort", abortFromTimeout, { once: true });
-
-	if (signal) {
-		if (signal.aborted) {
-			abortFromSignal();
-		} else {
-			signal.addEventListener("abort", abortFromSignal, { once: true });
-		}
-	}
-
-	return {
-		signal: controller.signal,
-		cleanup: () => {
-			if (timeoutId) {
-				clearTimeout(timeoutId);
-				timeoutId = null;
-			}
-			timeoutController.signal.removeEventListener("abort", abortFromTimeout);
-			if (signal) {
-				signal.removeEventListener("abort", abortFromSignal);
-			}
-		},
-	};
-}
-
-export async function fetchWithTimeout(input: string | URL, options: FetchWithTimeoutOptions = {}): Promise<Response> {
-	const { timeoutMs = DEFAULT_TIMEOUT_MS, allowedHosts, signal, ...requestInit } = options;
-	const url = assertSafeUpstreamUrl(input, { allowedHosts });
-	const abort = createAbortSignal(signal ?? null, timeoutMs);
-
-	try {
-		return await fetch(url.toString(), {
-			...requestInit,
-			signal: abort.signal,
-		});
-	} finally {
-		abort.cleanup();
-	}
+export function upstreamFetch(
+	input: string | URL,
+	{ hosts, signal, timeoutMs = DEFAULT_TIMEOUT_MS, headers }: FetchOptions,
+): Promise<Response> {
+	const url = assertAllowedUrl(input, hosts);
+	const signals: AbortSignal[] = [];
+	if (signal) signals.push(signal);
+	if (timeoutMs !== null) signals.push(AbortSignal.timeout(timeoutMs));
+	return fetch(url, { headers, signal: signals.length > 0 ? AbortSignal.any(signals) : undefined });
 }
