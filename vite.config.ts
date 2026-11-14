@@ -3,6 +3,7 @@ import { sveltekit } from "@sveltejs/kit/vite";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
+import { registries } from "./src/lib/registries/index.ts";
 
 export default defineConfig({
 	plugins: [
@@ -29,10 +30,9 @@ export default defineConfig({
 					"font-src": ["self", "data:"],
 					"connect-src": [
 						"self",
-						"https://registry.npmjs.org",
-						"https://registry.npmjs.com",
-						"https://api.wordpress.org",
-						"https://downloads.wordpress.org",
+						...registries.flatMap((registry) =>
+							registry.hosts.map((host) => `https://${host}` as `https://${string}.${string}`),
+						),
 					],
 				},
 			},

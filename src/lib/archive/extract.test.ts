@@ -1,41 +1,12 @@
-import { gzipSync, strToU8, zipSync } from "fflate";
+import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { AppError } from "#lib/errors.js";
+import { tgz as buildTgz, type TarInput } from "../../../tests/helpers/tar.js";
 import { extractArchive } from "./extract";
 import { DEFAULT_LIMITS, NO_LIMITS, type ArchiveLimits } from "./limits";
 
-const encoder = new TextEncoder();
-
-interface TarInput {
-	name: string;
-	content: string | Uint8Array;
-	type?: string;
-}
-
-/** Builds a gzipped ustar archive: 512-byte headers, padded contents, zero-block terminator. */
 function tgz(entries: TarInput[]): Response {
-	const blocks: Uint8Array[] = [];
-	for (const entry of entries) {
-		const bytes = typeof entry.content === "string" ? strToU8(entry.content) : entry.content;
-		const header = new Uint8Array(512);
-		header.set(encoder.encode(entry.name.slice(0, 100)), 0);
-		header.set(encoder.encode(bytes.length.toString(8).padStart(11, "0") + " "), 124);
-		header[156] = (entry.type ?? "0").charCodeAt(0);
-		header.set(encoder.encode("ustar\0"), 257);
-		blocks.push(header);
-		const body = new Uint8Array(Math.ceil(bytes.length / 512) * 512);
-		body.set(bytes);
-		blocks.push(body);
-	}
-	blocks.push(new Uint8Array(1024));
-
-	const tar = new Uint8Array(blocks.reduce((sum, block) => sum + block.length, 0));
-	let offset = 0;
-	for (const block of blocks) {
-		tar.set(block, offset);
-		offset += block.length;
-	}
-	return new Response(new Uint8Array(gzipSync(tar)));
+	return new Response(new Uint8Array(buildTgz(entries)));
 }
 
 function zip(files: Parameters<typeof zipSync>[0]): Response {

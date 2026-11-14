@@ -1,7 +1,6 @@
 import { AppError } from "#lib/errors.js";
-import { assertAllowedUrl, upstreamFetch } from "#lib/http.js";
-import type { PackageInfo, PackageSuggestion, Registry } from "./types.js";
-import { compareVersions } from "./versions.js";
+import { upstreamFetch } from "#lib/http.js";
+import type { PackageSuggestion, PackageVersion, Registry } from "./types.js";
 
 const REGISTRY = "https://registry.npmjs.org";
 const HOSTS = ["registry.npmjs.org", "registry.npmjs.com"] as const;
@@ -18,67 +17,8 @@ interface SearchResponse {
 	objects: Array<{ package: { name: string; description?: string; version?: string } }>;
 }
 
-interface ResolvedPackage {
-	info: PackageInfo;
-	tarballs: Map<string, string>;
-}
-
-const packages = new Map<string, Promise<ResolvedPackage>>();
-
 function encodeName(name: string): string {
 	return name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
-}
-
-/** Memoized per session; failures are evicted so a retry refetches. */
-function resolve(name: string, signal?: AbortSignal): Promise<ResolvedPackage> {
-	let pending = packages.get(name);
-	if (!pending) {
-		pending = load(name, signal);
-		packages.set(name, pending);
-		pending.catch(() => packages.delete(name));
-	}
-	return pending;
-}
-
-async function load(name: string, signal?: AbortSignal): Promise<ResolvedPackage> {
-	// The full document (not the abbreviated install format) carries publish
-	// times; gzipped they are nearly the same size.
-	const response = await upstreamFetch(`${REGISTRY}/${encodeName(name)}`, {
-		hosts: HOSTS,
-		signal,
-		headers: { Accept: "application/json" },
-	});
-	if (response.status === 404) throw new AppError(`Package "${name}" was not found on npm.`, "not-found");
-	if (!response.ok) throw new AppError(`npm responded with ${response.status} for "${name}".`);
-
-	const doc = (await response.json()) as Packument;
-	const versions = doc.versions ?? {};
-	const tagsByVersion = new Map<string, string[]>();
-	for (const [tag, version] of Object.entries(doc["dist-tags"] ?? {})) {
-		tagsByVersion.set(version, [...(tagsByVersion.get(version) ?? []), tag]);
-	}
-
-	const tarballs = new Map<string, string>();
-	for (const [version, manifest] of Object.entries(versions)) {
-		if (manifest.dist?.tarball) tarballs.set(version, manifest.dist.tarball);
-	}
-
-	return {
-		tarballs,
-		info: {
-			name: doc.name ?? name,
-			latest: doc["dist-tags"]?.latest,
-			versions: Object.keys(versions)
-				.sort(compareVersions)
-				.reverse()
-				.map((version) => ({
-					version,
-					publishedAt: doc.time?.[version],
-					deprecated: Boolean(versions[version].deprecated),
-					tags: tagsByVersion.get(version) ?? [],
-				})),
-		},
-	};
 }
 
 export const npm: Registry = {
@@ -106,17 +46,36 @@ export const npm: Registry = {
 		}));
 	},
 
-	async getPackage(name, signal) {
-		return (await resolve(name, signal)).info;
-	},
+	async fetchPackage(name) {
+		// The full document (not the abbreviated install format) carries publish
+		// times; gzipped they are nearly the same size.
+		const response = await upstreamFetch(`${REGISTRY}/${encodeName(name)}`, {
+			hosts: HOSTS,
+			headers: { Accept: "application/json" },
+		});
+		if (response.status === 404) throw new AppError(`Package "${name}" was not found on npm.`, "not-found");
+		if (!response.ok) throw new AppError(`npm responded with ${response.status} for "${name}".`);
 
-	async getDownloadUrl(name, version, signal) {
-		const tarball = (await resolve(name, signal)).tarballs.get(version);
-		if (!tarball) throw new AppError(`Version ${version} of "${name}" was not found on npm.`, "not-found");
+		const doc = (await response.json()) as Packument;
+		const tagsByVersion = new Map<string, string[]>();
+		for (const [tag, version] of Object.entries(doc["dist-tags"] ?? {})) {
+			tagsByVersion.set(version, [...(tagsByVersion.get(version) ?? []), tag]);
+		}
 
-		const url = new URL(tarball);
-		// Old packuments still list plain-http tarball URLs for the same host.
-		if (url.protocol === "http:") url.protocol = "https:";
-		return assertAllowedUrl(url, HOSTS).href;
+		const versions: PackageVersion[] = [];
+		for (const [version, manifest] of Object.entries(doc.versions ?? {})) {
+			const downloadUrl = URL.parse(manifest.dist?.tarball ?? "");
+			if (!downloadUrl) continue;
+			// Old packuments still list plain-http tarball URLs for the same host.
+			if (downloadUrl.protocol === "http:") downloadUrl.protocol = "https:";
+			versions.push({
+				version,
+				publishedAt: doc.time?.[version],
+				deprecated: Boolean(manifest.deprecated),
+				tags: tagsByVersion.get(version) ?? [],
+				downloadUrl: downloadUrl.href,
+			});
+		}
+		return { name: doc.name ?? name, latest: doc["dist-tags"]?.latest, versions };
 	},
 };

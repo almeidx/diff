@@ -1,9 +1,10 @@
 import { Gunzip, Unzip, UnzipInflate } from "fflate";
 import { AppError } from "#lib/errors.js";
-import type { ArchiveFormat } from "#lib/registries/types.js";
 import { classifyPath } from "./filters.js";
 import type { ArchiveLimits } from "./limits.js";
 import { normalizeArchivePath, stripCommonRoot } from "./path.js";
+
+export type ArchiveFormat = "tgz" | "zip";
 
 /**
  * `binary` and `too-large` entries keep only what change detection needs.
@@ -15,7 +16,7 @@ export type ArchiveEntry =
 
 export type ArchiveFiles = Map<string, ArchiveEntry>;
 
-export type ProgressCallback = (loaded: number, total: number | null) => void;
+type ProgressCallback = (loaded: number, total: number | null) => void;
 
 const TAR_BLOCK = 512;
 const BINARY_SNIFF_BYTES = 8000;
@@ -28,7 +29,6 @@ function limitError(what: string, actual: number, max: number): AppError {
 	);
 }
 
-/** Streams the response through the matching decoder, enforcing `limits` as bytes arrive. */
 export async function extractArchive(
 	response: Response,
 	format: ArchiveFormat,
@@ -111,7 +111,7 @@ class EntryCollector {
 			return new DigestSink((size, digest) => this.entries.set(path, { kind: opaque, size, digest }));
 		}
 
-		return new TextSink(fileSize, !lazy, (entry) => {
+		return new TextSink(fileSize, lazy, (entry) => {
 			if (entry.kind === "text") {
 				const max = this.limits.fileCount;
 				if (max !== null && ++this.textFiles > max) {
@@ -148,8 +148,8 @@ class DigestSink implements EntrySink {
 
 /**
  * Buffers a file expected to be text. It turns into a digest when content
- * sniffing finds NUL bytes or the file outgrows `fileSize`; without
- * `digestOverflow` an oversized file is recorded without a digest instead.
+ * sniffing finds NUL bytes or the file outgrows `fileSize`; with `lazy` an
+ * oversized file stops reading and is recorded without a digest instead.
  */
 class TextSink implements EntrySink {
 	private chunks: Uint8Array[] = [];
@@ -158,12 +158,12 @@ class TextSink implements EntrySink {
 	private fallback: DigestSink | null = null;
 	private stopped: ArchiveEntry | null = null;
 	private readonly maxSize: number | null;
-	private readonly digestOverflow: boolean;
+	private readonly lazy: boolean;
 	private readonly onEnd: (entry: ArchiveEntry) => void;
 
-	constructor(maxSize: number | null, digestOverflow: boolean, onEnd: (entry: ArchiveEntry) => void) {
+	constructor(maxSize: number | null, lazy: boolean, onEnd: (entry: ArchiveEntry) => void) {
 		this.maxSize = maxSize;
-		this.digestOverflow = digestOverflow;
+		this.lazy = lazy;
 		this.onEnd = onEnd;
 	}
 
@@ -182,7 +182,7 @@ class TextSink implements EntrySink {
 		if (!binary && !tooLarge) return true;
 
 		const kind = binary ? "binary" : "too-large";
-		if (!binary && !this.digestOverflow) {
+		if (!binary && this.lazy) {
 			this.stopped = { kind, size: this.size, digest: null };
 			this.chunks = [];
 			return false;
@@ -197,12 +197,7 @@ class TextSink implements EntrySink {
 		if (this.stopped) return this.onEnd(this.stopped);
 		if (this.fallback) return this.fallback.end();
 
-		const bytes = new Uint8Array(this.size);
-		let offset = 0;
-		for (const chunk of this.chunks) {
-			bytes.set(chunk, offset);
-			offset += chunk.length;
-		}
+		const bytes = concat(this.chunks);
 		this.chunks = [];
 		this.onEnd({ kind: "text", size: this.size, content: new TextDecoder().decode(bytes) });
 	}

@@ -9,6 +9,6 @@
 	const to = page.url.searchParams.get('to');
 
 	$effect(() => {
-		void goto(name && from && to ? comparePath('npm', name, from, to) : '/', { replaceState: true });
+		void goto(name && from && to ? comparePath({ registry: 'npm', name, from, to, unlimited: false }) : '/', { replaceState: true });
 	});
 </script>

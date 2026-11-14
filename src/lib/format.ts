@@ -9,9 +9,9 @@ const UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
 ];
 
 /** "3 days ago" style age of an ISO timestamp. */
-export function formatAge(iso: string | undefined, now = Date.now()): string {
+export function formatAge(iso: string | undefined): string {
 	if (!iso) return "";
-	const seconds = (Date.parse(iso) - now) / 1000;
+	const seconds = (Date.parse(iso) - Date.now()) / 1000;
 	if (Number.isNaN(seconds)) return "";
 	for (const [unit, size] of UNITS) {
 		if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);

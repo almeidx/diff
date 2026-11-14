@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { CompareSession, DownloadProgress } from '#lib/compare/session.svelte.js';
+	import type { DownloadProgress } from '#lib/compare/protocol.js';
+	import type { CompareSession } from '#lib/compare/session.svelte.js';
 	import { formatBytes } from '#lib/format.js';
 
 	let { session }: { session: CompareSession } = $props();

@@ -1,13 +1,8 @@
 import { AppError } from "#lib/errors.js";
+import type { PackageInfo } from "#lib/registries/types.js";
 import { compare } from "./client.js";
 import type { ChangedFile, DiffItem } from "./diff.js";
-import type { CompareEvent, CompareRequest } from "./protocol.js";
-
-export interface DownloadProgress {
-	loaded: number;
-	total: number | null;
-	done: boolean;
-}
+import type { CompareEvent, CompareRequest, DownloadProgress, Side } from "./protocol.js";
 
 /**
  * Reactive view of one running comparison. Diff payloads are large, so they
@@ -15,7 +10,8 @@ export interface DownloadProgress {
  */
 export class CompareSession {
 	phase = $state<"metadata" | "download" | "diff" | "done" | "error">("metadata");
-	downloads = $state<Record<"from" | "to", DownloadProgress>>({
+	info = $state.raw<PackageInfo | null>(null);
+	downloads = $state<Record<Side, DownloadProgress>>({
 		from: { loaded: 0, total: null, done: false },
 		to: { loaded: 0, total: null, done: false },
 	});
@@ -59,8 +55,8 @@ export class CompareSession {
 
 	#apply(event: CompareEvent): void {
 		switch (event.type) {
-			case "metadata":
-				this.phase = "metadata";
+			case "package":
+				this.info = event.info;
 				break;
 			case "download":
 				this.phase = "download";

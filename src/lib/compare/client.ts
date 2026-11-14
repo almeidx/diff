@@ -89,5 +89,5 @@ export async function compare(
 	onEvent: (event: CompareEvent) => void,
 	signal: AbortSignal,
 ): Promise<void> {
-	await call({ type: "compare", request }, signal, onEvent);
+	await call({ type: "compare", ...request }, signal, onEvent);
 }

@@ -57,7 +57,7 @@ describe("diffFile", () => {
 		const item = diffFile(change, before.get("a.js"), after.get("a.js"), "key");
 
 		expect(item).toMatchObject({ additions: 2, deletions: 1, approximate: false });
-		expect(item.fileDiff).toMatchObject({ name: "a.js", type: "change", isPartial: false, cacheKey: "key" });
+		expect(item.fileDiff).toMatchObject({ name: "a.js", type: "change", isPartial: false });
 		expect(item.fileDiff.additionLines).toHaveLength(4);
 	});
 

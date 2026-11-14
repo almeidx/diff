@@ -1,7 +1,6 @@
 import { AppError } from "#lib/errors.js";
-import { assertAllowedUrl, upstreamFetch } from "#lib/http.js";
-import type { PackageInfo, PackageSuggestion, Registry } from "./types.js";
-import { compareVersions } from "./versions.js";
+import { upstreamFetch } from "#lib/http.js";
+import type { PackageSuggestion, Registry } from "./types.js";
 
 const API = "https://api.wordpress.org/plugins/info/1.2/";
 const HOSTS = ["api.wordpress.org", "downloads.wordpress.org"] as const;
@@ -32,13 +31,6 @@ interface PluginSearch {
 	plugins: Array<{ name: string; slug: string; version?: string; short_description?: string }>;
 }
 
-interface ResolvedPlugin {
-	info: PackageInfo;
-	downloads: Map<string, string>;
-}
-
-const plugins = new Map<string, Promise<ResolvedPlugin>>();
-
 function apiUrl(action: string, request: Record<string, string>): URL {
 	const url = new URL(API);
 	url.searchParams.set("action", action);
@@ -56,38 +48,6 @@ function decodeEntities(text: string): string {
 		const point = code[1] === "x" || code[1] === "X" ? Number.parseInt(code.slice(2), 16) : Number(code.slice(1));
 		return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : entity;
 	});
-}
-
-function resolve(slug: string, signal?: AbortSignal): Promise<ResolvedPlugin> {
-	let pending = plugins.get(slug);
-	if (!pending) {
-		pending = load(slug, signal);
-		plugins.set(slug, pending);
-		pending.catch(() => plugins.delete(slug));
-	}
-	return pending;
-}
-
-async function load(slug: string, signal?: AbortSignal): Promise<ResolvedPlugin> {
-	const response = await upstreamFetch(apiUrl("plugin_information", { slug }), { hosts: HOSTS, signal });
-	if (response.status === 404) throw new AppError(`Plugin "${slug}" was not found on WordPress.org.`, "not-found");
-	if (!response.ok) throw new AppError(`WordPress.org responded with ${response.status} for "${slug}".`);
-
-	const data = (await response.json()) as PluginInfo;
-	const downloads = new Map(Object.entries(data.versions ?? {}).filter(([version]) => version !== "trunk"));
-	if (data.download_link && !downloads.has(data.version)) downloads.set(data.version, data.download_link);
-
-	return {
-		downloads,
-		info: {
-			name: data.slug,
-			latest: data.version,
-			versions: [...downloads.keys()]
-				.sort(compareVersions)
-				.reverse()
-				.map((version) => ({ version, tags: version === data.version ? ["latest"] : [] })),
-		},
-	};
 }
 
 export const wordpress: Registry = {
@@ -115,13 +75,23 @@ export const wordpress: Registry = {
 		}));
 	},
 
-	async getPackage(slug, signal) {
-		return (await resolve(slug, signal)).info;
-	},
+	async fetchPackage(slug) {
+		const response = await upstreamFetch(apiUrl("plugin_information", { slug }), { hosts: HOSTS });
+		if (response.status === 404) throw new AppError(`Plugin "${slug}" was not found on WordPress.org.`, "not-found");
+		if (!response.ok) throw new AppError(`WordPress.org responded with ${response.status} for "${slug}".`);
 
-	async getDownloadUrl(slug, version, signal) {
-		const url = (await resolve(slug, signal)).downloads.get(version);
-		if (!url) throw new AppError(`Version ${version} of "${slug}" was not found on WordPress.org.`, "not-found");
-		return assertAllowedUrl(url, HOSTS).href;
+		const data = (await response.json()) as PluginInfo;
+		const downloads = new Map(Object.entries(data.versions ?? {}).filter(([version]) => version !== "trunk"));
+		if (data.download_link && !downloads.has(data.version)) downloads.set(data.version, data.download_link);
+
+		return {
+			name: data.slug,
+			latest: data.version,
+			versions: [...downloads].map(([version, downloadUrl]) => ({
+				version,
+				tags: version === data.version ? ["latest"] : [],
+				downloadUrl,
+			})),
+		};
 	},
 };

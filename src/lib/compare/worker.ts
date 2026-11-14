@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { AppError, toErrorPayload } from "#lib/errors.js";
-import { getRegistry } from "#lib/registries/index.js";
+import { getPackage, getRegistry } from "#lib/registries/index.js";
 import { runCompare } from "./pipeline.js";
 import type { CompareEvent, RequestResults, WorkerCall, WorkerRequest, WorkerResponse } from "./protocol.js";
 
@@ -13,17 +13,16 @@ async function handle(
 	signal: AbortSignal,
 	emit: (event: CompareEvent) => void,
 ): Promise<RequestResults[WorkerCall["type"]]> {
-	const registryId = call.type === "compare" ? call.request.registry : call.registry;
-	const registry = getRegistry(registryId);
-	if (!registry) throw new AppError(`Unknown registry "${registryId}".`, "not-found");
+	const registry = getRegistry(call.registry);
+	if (!registry) throw new AppError(`Unknown registry "${call.registry}".`, "not-found");
 
 	switch (call.type) {
 		case "search":
 			return registry.search(call.query, signal);
 		case "package":
-			return registry.getPackage(call.name, signal);
+			return getPackage(registry, call.name);
 		case "compare":
-			await runCompare(registry, call.request, emit, signal);
+			await runCompare(registry, call, emit, signal);
 			return null;
 	}
 }

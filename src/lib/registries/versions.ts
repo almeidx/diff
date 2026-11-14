@@ -1,3 +1,5 @@
+import type { PackageInfo } from "./types.js";
+
 const fallbackVersionCollator = new Intl.Collator(undefined, {
 	numeric: true,
 	sensitivity: "base",
@@ -58,20 +60,15 @@ export function compareVersions(a: string, b: string): number {
 	return 0;
 }
 
-export function isPrerelease(version: string): boolean {
-	return parseComparableVersion(version)?.preRelease != null;
-}
-
-/**
- * Picks the comparison users want most often: the latest release against the
- * stable release right before it. `versions` must be sorted newest first.
- */
-export function defaultRange(versions: readonly string[], latest?: string): { from: string; to: string } | null {
+/** Picks the comparison users want most often: the latest release against the stable release right before it. */
+export function defaultRange(info: PackageInfo): { from: string; to: string } | null {
+	const versions = info.versions.map((entry) => entry.version);
 	if (versions.length < 2) return null;
 
-	const to = latest && versions.includes(latest) ? latest : versions[0];
+	const to = info.latest && versions.includes(info.latest) ? info.latest : versions[0];
 	const older = versions.slice(versions.indexOf(to) + 1);
-	const from = older.find((version) => !isPrerelease(version)) ?? older[0] ?? versions.find((v) => v !== to);
+	const from =
+		older.find((version) => !parseComparableVersion(version)?.preRelease) ?? older[0] ?? versions.find((v) => v !== to);
 	return from ? { from, to } : null;
 }
 

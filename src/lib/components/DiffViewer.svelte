@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { CodeView, type CodeViewItem, type CodeViewOptions } from '@pierre/diffs';
-	import type { ChangedFile, DiffItem } from '#lib/compare/diff.js';
+	import type { DiffItem } from '#lib/compare/diff.js';
 	import type { CompareSession } from '#lib/compare/session.svelte.js';
 	import { formatBytes } from '#lib/format.js';
 	import { DIFF_THEMES, getHighlightPool, preferredHighlighter } from '#lib/highlighter.js';
@@ -9,19 +9,17 @@
 
 	interface Props {
 		session: CompareSession;
-		files: readonly ChangedFile[];
 		/** Reports the file at the top of the viewport while scrolling. */
 		onActiveFile: (path: string) => void;
 	}
 
-	let { session, files, onActiveFile }: Props = $props();
+	let { session, onActiveFile }: Props = $props();
 
 	let root: HTMLDivElement;
 	let viewer: CodeView | null = null;
 	/** Item ids in display order, for locating the file at the scroll position. */
 	const order: string[] = [];
-	const approximate = new Set<string>();
-	const changes = $derived(new Map(files.map((file) => [file.path, file])));
+	const byPath = new Map<string, DiffItem>();
 
 	function badge(text: string, title?: string): HTMLElement {
 		const element = document.createElement('span');
@@ -59,27 +57,26 @@
 			return button;
 		},
 		renderHeaderMetadata: (_, context) => {
-			const change = changes.get(context.item.id);
-			if (!change) return null;
+			const item = byPath.get(context.item.id);
+			if (!item) return null;
+			const { change } = item;
 			const sizes = [change.oldSize, change.newSize].filter((size) => size !== null).map(formatBytes).join(' → ');
 			if (change.kind === 'binary') return badge(`binary · ${sizes}`);
 			if (change.kind === 'too-large') return badge(`too large to diff · ${sizes}`);
-			if (approximate.has(change.path)) {
-				return badge('rewritten', 'The line diff took too long, so the whole file is shown as replaced.');
-			}
+			if (item.approximate) return badge('rewritten', 'The line diff took too long, so the whole file is shown as replaced.');
 			if (change.minified) return badge('minified');
 			return null;
 		},
 	});
 
 	function toItem(item: DiffItem): CodeViewItem<undefined> {
-		if (item.approximate) approximate.add(item.path);
-		order.push(item.path);
-		// Minified and rewritten files are rarely readable; keep them one click away.
-		return { type: 'diff', id: item.path, fileDiff: item.fileDiff, collapsed: item.approximate || changes.get(item.path)?.minified };
+		const id = item.change.path;
+		order.push(id);
+		byPath.set(id, item);
+		return { type: 'diff', id, fileDiff: item.fileDiff, collapsed: item.approximate || item.change.minified };
 	}
 
-	/** Binary search over item tops: the last item starting above the viewport's top edge. */
+	/** The last item starting above the viewport's top edge. */
 	function itemAt(scrollTop: number): string | undefined {
 		let low = 0;
 		let high = order.length - 1;

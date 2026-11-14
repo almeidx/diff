@@ -1,11 +1,17 @@
 import { processFile, type FileDiffMetadata } from "@pierre/diffs";
 import { createTwoFilesPatch } from "diff";
 import type { ArchiveEntry, ArchiveFiles } from "#lib/archive/extract.js";
-import { isMinifiedPath, looksMinified } from "#lib/archive/filters.js";
 
 /** jsdiff is O(N·D); past this budget a file is shown as a whole-file replacement. */
 const DIFF_TIMEOUT_MS = 2_000;
 const MISSING_FILE = "/dev/null";
+const MINIFIED_PATTERNS = [
+	/\.min\.(js|css)$/,
+	/\.bundle\.js$/,
+	/-min\.js$/,
+	/\.prod\.js$/,
+	/\.(js|mjs|cjs|ts|mts|cts|css)\.map$/,
+];
 const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
 export type FileStatus = "added" | "deleted" | "modified";
@@ -14,14 +20,15 @@ export interface ChangedFile {
 	path: string;
 	status: FileStatus;
 	/** Only `text` files carry line diffs; the others are listed with their sizes. */
-	kind: "text" | "binary" | "too-large";
+	kind: ArchiveEntry["kind"];
+	/** Generated code whose diff is rarely readable; shown collapsed. */
 	minified: boolean;
 	oldSize: number | null;
 	newSize: number | null;
 }
 
 export interface DiffItem {
-	path: string;
+	change: ChangedFile;
 	fileDiff: FileDiffMetadata;
 	additions: number;
 	deletions: number;
@@ -55,6 +62,16 @@ function isUnchanged(before: ArchiveEntry, after: ArchiveEntry): boolean {
 	);
 }
 
+/** Bundles without a telltale name are long text whose lines average hundreds of characters. */
+function isMinified(path: string, entry: ArchiveEntry | undefined): boolean {
+	const fileName = path.slice(path.lastIndexOf("/") + 1);
+	if (MINIFIED_PATTERNS.some((pattern) => pattern.test(fileName))) return true;
+	if (entry?.kind !== "text" || entry.content.length < 2_000) return false;
+	let lines = 1;
+	for (let i = entry.content.indexOf("\n"); i !== -1; i = entry.content.indexOf("\n", i + 1)) lines++;
+	return entry.content.length / lines > 250;
+}
+
 export function listChanges(before: ArchiveFiles, after: ArchiveFiles): ChangedFile[] {
 	const changes: ChangedFile[] = [];
 	for (const path of new Set([...before.keys(), ...after.keys()])) {
@@ -67,8 +84,7 @@ export function listChanges(before: ArchiveFiles, after: ArchiveFiles): ChangedF
 			path,
 			status: !old ? "added" : !next ? "deleted" : "modified",
 			kind: kinds.includes("binary") ? "binary" : kinds.includes("too-large") ? "too-large" : "text",
-			minified:
-				isMinifiedPath(path) || [old, next].some((entry) => entry?.kind === "text" && looksMinified(entry.content)),
+			minified: isMinified(path, old) || isMinified(path, next),
 			oldSize: old?.size ?? null,
 			newSize: next?.size ?? null,
 		});
@@ -76,7 +92,6 @@ export function listChanges(before: ArchiveFiles, after: ArchiveFiles): ChangedF
 	return changes.sort((a, b) => comparePaths(a.path, b.path));
 }
 
-/** A single hunk deleting every old line and adding every new one. */
 function replacementPatch(path: string, oldText: string, newText: string): string {
 	const out = [`--- ${path}`, `+++ ${path}`];
 	const sides = [
@@ -102,7 +117,7 @@ export function diffFile(
 
 	if (change.kind !== "text") {
 		return {
-			path: change.path,
+			change,
 			approximate: false,
 			additions: 0,
 			deletions: 0,
@@ -149,5 +164,5 @@ export function diffFile(
 		additions += hunk.additionLines;
 		deletions += hunk.deletionLines;
 	}
-	return { path: change.path, fileDiff, additions, deletions, approximate: exact === undefined };
+	return { change, fileDiff, additions, deletions, approximate: exact === undefined };
 }

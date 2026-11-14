@@ -1,22 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gzipSync, strToU8 } from "fflate";
+import { tgz } from "../helpers/tar.js";
 
-/** Gzipped ustar archive, wrapped in `package/` like `npm pack` output. */
-function tgz(files: Record<string, string>): Buffer {
-	const entries = Object.entries(files);
-	const tar = new Uint8Array(
-		entries.reduce((sum, [, body]) => sum + 512 + Math.ceil(strToU8(body).length / 512) * 512, 1024),
-	);
-	let offset = 0;
-	for (const [name, body] of entries) {
-		const bytes = strToU8(body);
-		tar.set(strToU8(`package/${name}`), offset);
-		tar.set(strToU8(bytes.length.toString(8).padStart(11, "0") + " "), offset + 124);
-		tar[offset + 156] = 48;
-		tar.set(bytes, offset + 512);
-		offset += 512 + Math.ceil(bytes.length / 512) * 512;
-	}
-	return Buffer.from(gzipSync(tar));
+/** Wrapped in `package/` like `npm pack` output. */
+function npmTarball(files: Record<string, string>): Buffer {
+	return Buffer.from(tgz(Object.entries(files).map(([name, content]) => ({ name: `package/${name}`, content }))));
 }
 
 const releases: Record<string, Record<string, string>> = {
@@ -56,7 +43,7 @@ async function mockRegistry(page: Page, packageName = "demo-pkg", archives = rel
 			.request()
 			.url()
 			.match(/-(\d+\.\d+\.\d+)\.tgz$/)![1];
-		return route.fulfill({ body: tgz(archives[version]), contentType: "application/octet-stream" });
+		return route.fulfill({ body: npmTarball(archives[version]), contentType: "application/octet-stream" });
 	});
 	await page.route("https://registry.npmjs.org/-/v1/search?*", (route) =>
 		route.fulfill({
@@ -121,7 +108,6 @@ test("diff page lists changes in tree order and renders each diff", async ({ pag
 	await expect(titles.first()).toHaveText("dist/bundle.min.js");
 	await expect(page.locator("diffs-container [data-title]", { hasText: "lib/index.js" })).toBeVisible();
 
-	// Minified bundles start collapsed behind an expand toggle.
 	await expect(page.getByRole("button", { name: "Expand dist/bundle.min.js" })).toBeVisible();
 });
 
@@ -165,6 +151,20 @@ test("unknown versions and malformed links explain what went wrong", async ({ pa
 
 	await page.goto("/nope/react/1...2");
 	await expect(page.getByRole("heading", { level: 1 })).toHaveText("404");
+});
+
+test("a failed comparison can be retried", async ({ page }) => {
+	await mockRegistry(page);
+	let failures = 1;
+	await page.route("https://registry.npmjs.org/demo-pkg/-/demo-pkg-2.0.0.tgz", (route) =>
+		failures-- > 0 ? route.fulfill({ status: 500 }) : route.fallback(),
+	);
+
+	await page.goto("/npm/demo-pkg/1.0.0...2.0.0");
+	await expect(page.getByRole("alert")).toContainText("Downloading 2.0.0 failed with status 500.");
+
+	await page.getByRole("button", { name: "Try again" }).click();
+	await expect(page.getByRole("tree", { name: "Changed files" })).toBeVisible();
 });
 
 test("oversized packages offer an explicit bypass that reruns without limits", async ({ page }) => {

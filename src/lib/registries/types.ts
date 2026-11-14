@@ -1,4 +1,4 @@
-export type ArchiveFormat = "tgz" | "zip";
+import type { ArchiveFormat } from "#lib/archive/extract.js";
 
 export interface PackageSuggestion {
 	name: string;
@@ -13,20 +13,21 @@ export interface PackageVersion {
 	deprecated?: boolean;
 	/** Registry tags pointing at this version, e.g. `latest`, `next`. */
 	tags: string[];
+	downloadUrl: string;
 }
 
 export interface PackageInfo {
 	name: string;
-	/** Newest first. */
+	/** Newest first, as returned by `getPackage`. */
 	versions: PackageVersion[];
 	latest?: string;
 }
 
 /**
  * Everything registry-specific lives behind this interface. Adding a registry
- * means adding one module and listing it in `./index.ts`; routes, the worker
- * pipeline and the UI pick it up from there. Implementations run inside the
- * compare worker and must only use Web APIs.
+ * means adding one module and listing it in `./index.ts`; routes, the CSP, the
+ * worker pipeline and the UI pick it up from there. Implementations run inside
+ * the compare worker and must only use Web APIs.
  */
 export interface Registry {
 	/** First URL segment, e.g. `/npm/...`. */
@@ -37,10 +38,10 @@ export interface Registry {
 	nameLabel: string;
 	namePlaceholder: string;
 	archiveFormat: ArchiveFormat;
-	/** Every host this registry fetches from. Mirror them in the CSP `connect-src`. */
+	/** Every host this registry fetches from, including download URLs. */
 	hosts: readonly string[];
 	isValidName(name: string): boolean;
 	search(query: string, signal?: AbortSignal): Promise<PackageSuggestion[]>;
-	getPackage(name: string, signal?: AbortSignal): Promise<PackageInfo>;
-	getDownloadUrl(name: string, version: string, signal?: AbortSignal): Promise<string>;
+	/** Versions may come in any order. */
+	fetchPackage(name: string): Promise<PackageInfo>;
 }

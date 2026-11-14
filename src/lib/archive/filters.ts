@@ -80,14 +80,6 @@ const BINARY_EXTENSIONS = new Set([
 	"obj",
 ]);
 
-const MINIFIED_PATTERNS = [
-	/\.min\.(js|css)$/,
-	/\.bundle\.js$/,
-	/-min\.js$/,
-	/\.prod\.js$/,
-	/\.(js|mjs|cjs|ts|mts|cts|css)\.map$/,
-];
-
 /**
  * `exclude`: dependency folders, VCS metadata and lockfiles are noise in a
  * package diff and are never read. `binary`: tracked by size/digest only.
@@ -100,18 +92,4 @@ export function classifyPath(path: string): "exclude" | "binary" | "text" {
 
 	const dot = fileName.lastIndexOf(".");
 	return dot > 0 && BINARY_EXTENSIONS.has(fileName.slice(dot + 1).toLowerCase()) ? "binary" : "text";
-}
-
-/** Generated files whose diffs are rarely readable; the viewer collapses them by default. */
-export function isMinifiedPath(path: string): boolean {
-	const fileName = path.slice(path.lastIndexOf("/") + 1);
-	return MINIFIED_PATTERNS.some((pattern) => pattern.test(fileName));
-}
-
-/** Bundles without a telltale name: long text whose lines average hundreds of characters. */
-export function looksMinified(content: string): boolean {
-	if (content.length < 2_000) return false;
-	let lines = 1;
-	for (let i = content.indexOf("\n"); i !== -1; i = content.indexOf("\n", i + 1)) lines++;
-	return content.length / lines > 250;
 }

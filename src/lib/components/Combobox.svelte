@@ -163,7 +163,7 @@
 		</button>
 	</div>
 
-	<!-- Package search opens on focus before any suggestion exists; never show an empty panel. -->
+	<!-- The list opens on focus, possibly before any item exists; never show an empty panel. -->
 	<div class="z-50" class:hidden={items.length === 0 && !emptyText && !footer} {...api.getPositionerProps()}>
 		<ul
 			class="max-h-80 min-w-72 overflow-y-auto rounded-lg border border-border bg-bg p-1 shadow-xl shadow-black/20 outline-none"

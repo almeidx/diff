@@ -12,9 +12,13 @@ miss while changing the code.
 
 - All runtime code is browser client code: use Web APIs only. No Node-only
   modules in anything bundled for the client. Build-time tooling may use Node.
-- Any new upstream fetch host must be added to the CSP `connect-src` in
-  `vite.config.ts`; security headers (including `frame-ancestors`) belong in
-  `static/_headers`.
+- Upstream fetch hosts are declared once, in each registry's `hosts`; the CSP
+  `connect-src` in `vite.config.ts` is derived from them, and `upstreamFetch`
+  refuses anything else. Because the config imports the registries, registry
+  modules must not touch browser globals at module load. Security headers
+  (including `frame-ancestors`) belong in `static/_headers`.
+- `src/lib/archive/` must not import app code (registries, compare, UI): it is
+  the most stable layer and everything else depends on it.
 - Archive handling is resource-sensitive. Keep the size/count limits in
   `src/lib/archive/limits.ts` as the default — the only bypass is the explicit
   user opt-in surfaced on the diff page — reject unsafe paths, and filter
@@ -29,8 +33,10 @@ miss while changing the code.
 
 - `src/lib/registries/` — one module per registry behind the `Registry`
   interface; adding a registry means adding a module and listing it in
-  `index.ts`
+  `index.ts`, which also memoizes and sorts package metadata
 - `src/lib/archive/` — streaming tar/zip extraction, filtering and limits
+- `src/lib/url.ts` — every app URL (compare links incl. `?limits=off`, picker
+  presets), written and parsed in one place
 - `src/lib/compare/` — the compare Web Worker (`pipeline.ts`, `diff.ts`), its
   message protocol, the main-thread client and the reactive `CompareSession`
 - `src/lib/components/` — `DiffViewer` wraps `@pierre/diffs` `CodeView`,

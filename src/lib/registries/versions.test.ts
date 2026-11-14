@@ -15,19 +15,23 @@ describe("compareVersions", () => {
 	});
 });
 
+function info(versions: string[], latest?: string) {
+	return { name: "pkg", latest, versions: versions.map((version) => ({ version, tags: [], downloadUrl: "" })) };
+}
+
 describe("defaultRange", () => {
 	it("compares latest against the previous stable release, skipping prereleases", () => {
-		expect(defaultRange(["3.0.0-rc.1", "2.1.0", "2.1.0-beta.1", "2.0.0"], "2.1.0")).toEqual({
+		expect(defaultRange(info(["3.0.0-rc.1", "2.1.0", "2.1.0-beta.1", "2.0.0"], "2.1.0"))).toEqual({
 			from: "2.0.0",
 			to: "2.1.0",
 		});
 	});
 
 	it("falls back to the newest version and an older prerelease", () => {
-		expect(defaultRange(["1.0.0-beta.2", "1.0.0-beta.1"])).toEqual({ from: "1.0.0-beta.1", to: "1.0.0-beta.2" });
+		expect(defaultRange(info(["1.0.0-beta.2", "1.0.0-beta.1"]))).toEqual({ from: "1.0.0-beta.1", to: "1.0.0-beta.2" });
 	});
 
 	it("returns null when there is nothing to compare", () => {
-		expect(defaultRange(["1.0.0"])).toBeNull();
+		expect(defaultRange(info(["1.0.0"]))).toBeNull();
 	});
 });

@@ -3,10 +3,10 @@
 	import { getPackage, searchPackages } from '#lib/compare/client.js';
 	import Combobox from '#lib/components/Combobox.svelte';
 	import SiteHeader from '#lib/components/SiteHeader.svelte';
-	import VersionSelect from '#lib/components/VersionSelect.svelte';
+	import VersionRange from '#lib/components/VersionRange.svelte';
 	import { getRegistry, registries, type PackageInfo, type PackageSuggestion } from '#lib/registries/index.js';
 	import { defaultRange } from '#lib/registries/versions.js';
-	import { comparePath } from '#lib/url.js';
+	import { comparePath, parsePickerPath } from '#lib/url.js';
 	import { onMount } from 'svelte';
 
 	const SEARCH_DEBOUNCE_MS = 200;
@@ -89,10 +89,7 @@
 		loadingInfo = true;
 		try {
 			const loaded = await getPackage(target.id, packageName, controller.signal);
-			const range = defaultRange(
-				loaded.versions.map((entry) => entry.version),
-				loaded.latest,
-			);
+			const range = defaultRange(loaded);
 			info = loaded;
 			from = range?.from ?? '';
 			to = range?.to ?? loaded.versions[0]?.version ?? '';
@@ -106,15 +103,13 @@
 
 	function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (canCompare) void goto(comparePath(registry.id, name, from, to));
+		if (canCompare) void goto(comparePath({ registry: registry.id, name, from, to, unlimited: false }));
 	}
 
 	onMount(() => {
-		const params = new URLSearchParams(location.search);
-		const preset = getRegistry(params.get('registry') ?? '');
-		if (preset) registry = preset;
-		const presetName = params.get('name');
-		if (presetName) void choose(presetName);
+		const preset = parsePickerPath(new URLSearchParams(location.search));
+		registry = getRegistry(preset.registry ?? '') ?? registry;
+		if (preset.name) void choose(preset.name);
 	});
 </script>
 
@@ -181,40 +176,16 @@
 				</Combobox>
 			{/key}
 
-			<div class="flex items-end gap-2">
-				<VersionSelect
-					id="from-version"
-					label="From"
-					class="flex-1"
-					versions={info?.versions ?? []}
-					value={from}
-					other={to}
-					disabled={!info}
-					onSelect={(version) => (from = version)}
-				/>
-				<button
-					type="button"
-					class="mb-1 grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-raised hover:text-fg disabled:opacity-40"
-					aria-label="Swap versions"
-					title="Swap versions"
-					disabled={!info}
-					onclick={() => ([from, to] = [to, from])}
-				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<path d="M7 7h13l-4-4M17 17H4l4 4" />
-					</svg>
-				</button>
-				<VersionSelect
-					id="to-version"
-					label="To"
-					class="flex-1"
-					versions={info?.versions ?? []}
-					value={to}
-					other={from}
-					disabled={!info}
-					onSelect={(version) => (to = version)}
-				/>
-			</div>
+			<VersionRange
+				versions={info?.versions ?? []}
+				{from}
+				{to}
+				disabled={!info}
+				onChange={(nextFrom, nextTo) => {
+					from = nextFrom;
+					to = nextTo;
+				}}
+			/>
 
 			{#if error}
 				<p class="rounded-lg border border-deleted/30 bg-deleted/10 px-3 py-2 text-sm text-deleted" role="alert">{error}</p>

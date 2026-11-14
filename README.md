@@ -49,7 +49,7 @@ Exceeding a limit offers **Compare without limits**. Defaults live in `src/lib/a
 
 ## Adding a registry
 
-Implement `Registry` (`src/lib/registries/types.ts`) in a new module, add it to `registries` in `src/lib/registries/index.ts`, and add its hosts to the CSP `connect-src` in `vite.config.ts`. The home page, the `/<id>/...` route and the compare worker pick it up from there.
+Implement `Registry` (`src/lib/registries/types.ts`) in a new module and add it to `registries` in `src/lib/registries/index.ts`. The home page, the `/<id>/...` route, the compare worker and the CSP `connect-src` (from the registry's `hosts`) pick it up from there.
 
 ## License
 

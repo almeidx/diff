@@ -2,9 +2,9 @@ import { extractArchive, type ArchiveEntry, type ArchiveFiles } from "#lib/archi
 import { DEFAULT_LIMITS, NO_LIMITS } from "#lib/archive/limits.js";
 import { AppError } from "#lib/errors.js";
 import { upstreamFetch } from "#lib/http.js";
-import type { Registry } from "#lib/registries/types.js";
+import { getPackage, type PackageVersion, type Registry } from "#lib/registries/index.js";
 import { diffFile, listChanges, type DiffItem } from "./diff.js";
-import type { CompareEvent, CompareRequest } from "./protocol.js";
+import type { CompareEvent, CompareRequest, Side } from "./protocol.js";
 
 /** Batches diffs so the UI receives a few messages per frame, not one per file. */
 const BATCH_INTERVAL_MS = 32;
@@ -17,19 +17,19 @@ export async function runCompare(
 	signal: AbortSignal,
 ): Promise<void> {
 	const { name, from, to } = request;
-	emit({ type: "metadata" });
+	const info = await getPackage(registry, name);
+	emit({ type: "package", info });
 
-	const info = await registry.getPackage(name, signal);
-	const missing = [from, to].filter((version) => !info.versions.some((entry) => entry.version === version));
+	const versions = new Map(info.versions.map((entry) => [entry.version, entry]));
+	const missing = [from, to].filter((version) => !versions.has(version));
 	if (missing.length > 0) {
 		throw new AppError(`Version ${missing.join(" and ")} of "${name}" does not exist.`, "not-found");
 	}
 
 	const limits = request.unlimited ? NO_LIMITS : DEFAULT_LIMITS;
-	const download = async (side: "from" | "to"): Promise<ArchiveFiles> => {
-		const url = await registry.getDownloadUrl(name, request[side], signal);
-		const response = await upstreamFetch(url, { hosts: registry.hosts, signal, timeoutMs: null });
-		if (!response.ok) throw new AppError(`Downloading ${request[side]} failed with status ${response.status}.`);
+	const download = async (side: Side, version: PackageVersion): Promise<ArchiveFiles> => {
+		const response = await upstreamFetch(version.downloadUrl, { hosts: registry.hosts, signal, timeoutMs: null });
+		if (!response.ok) throw new AppError(`Downloading ${version.version} failed with status ${response.status}.`);
 
 		let loaded = 0;
 		let total: number | null = null;
@@ -45,7 +45,7 @@ export async function runCompare(
 		emit({ type: "download", side, loaded, total, done: true });
 		return files;
 	};
-	const [before, after] = await Promise.all([download("from"), download("to")]);
+	const [before, after] = await Promise.all([download("from", versions.get(from)!), download("to", versions.get(to)!)]);
 
 	const changes = listChanges(before, after);
 	emit({ type: "files", files: changes });
@@ -70,7 +70,7 @@ export async function runCompare(
 
 		const last = i === changes.length - 1;
 		if (last || performance.now() - flushedAt >= BATCH_INTERVAL_MS) {
-			emit({ type: "diffs", items: batch, completed: i + 1, total: changes.length });
+			emit({ type: "diffs", items: batch, completed: i + 1 });
 			batch = [];
 			// Let a pending cancel message run before the next batch.
 			if (!last) {
