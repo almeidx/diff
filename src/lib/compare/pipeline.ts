@@ -27,8 +27,15 @@ export async function runCompare(
 	}
 
 	const limits = request.unlimited ? NO_LIMITS : DEFAULT_LIMITS;
+	// One failed side fails the compare, so the other side's download is wasted.
+	const downloads = new AbortController();
+	const downloadSignal = AbortSignal.any([signal, downloads.signal]);
 	const download = async (side: Side, version: PackageVersion): Promise<ArchiveFiles> => {
-		const response = await upstreamFetch(version.downloadUrl, { hosts: registry.hosts, signal, timeoutMs: null });
+		const response = await upstreamFetch(version.downloadUrl, {
+			hosts: registry.hosts,
+			signal: downloadSignal,
+			timeoutMs: null,
+		});
 		if (!response.ok) throw new AppError(`Downloading ${version.version} failed with status ${response.status}.`);
 
 		let loaded = 0;
@@ -45,7 +52,13 @@ export async function runCompare(
 		emit({ type: "download", side, loaded, total, done: true });
 		return files;
 	};
-	const [before, after] = await Promise.all([download("from", versions.get(from)!), download("to", versions.get(to)!)]);
+	const [before, after] = await Promise.all([
+		download("from", versions.get(from)!),
+		download("to", versions.get(to)!),
+	]).catch((error: unknown) => {
+		downloads.abort(error);
+		throw error;
+	});
 
 	const changes = listChanges(before, after);
 	emit({ type: "files", files: changes });
